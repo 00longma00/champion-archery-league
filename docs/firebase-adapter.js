@@ -406,6 +406,26 @@ export async function createScoringEvent({ event, participants }) {
     }
   }
 
+  // Construct and save initial groups so they exist immediately in Firestore
+  const baleSet = new Set();
+  (participants || []).forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
+  const bales = Array.from(baleSet).sort((a, b) => a - b);
+  if (bales.length === 0) bales.push(1);
+
+  for (let i = 0; i < bales.length; i += 2) {
+    const groupBales = bales.slice(i, i + 2);
+    const gId = 'grp_' + eventId + '_' + (Math.floor(i / 2) + 1);
+    await setDoc(doc(db, "scoring_groups", gId), {
+      id: gId,
+      event_id: eventId,
+      name: 'Bales ' + groupBales.join(' & '),
+      bales: groupBales,
+      nominated_scorer: '',
+      current_round: 1,
+      current_end: 1
+    });
+  }
+
   return { success: true, eventId };
 }
 

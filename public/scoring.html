@@ -631,7 +631,7 @@
         </button>
       </div>
 
-      <form id="create-event-form" onsubmit="window.handleCreateEventSubmit(event); return false;" class="space-y-3.5 text-xs">
+      <div class="space-y-3.5 text-xs">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div class="sm:col-span-2">
             <label class="block text-slate-300 font-semibold mb-1">Event Name</label>
@@ -759,10 +759,10 @@
           <p class="text-[10px] text-slate-400">Archers will be automatically assigned to Bales (A/B or AB/CD) and default Scoring Groups upon creation.</p>
         </div>
 
-        <button type="submit" id="btn-create-event-submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+        <button type="button" onclick="handleCreateEventSubmit(event)" id="btn-create-event-submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
           <span>Create Event &amp; Auto-Assign Bales</span>
         </button>
-      </form>
+      </div>
     </div>
   </div>
 
@@ -2760,7 +2760,7 @@
     }
 
     async function handleCreateEventSubmit(e) {
-      e.preventDefault();
+      if (e && typeof e.preventDefault === 'function') e.preventDefault();
       const activeBales = getSelectedCreateBalesList();
       const shouldRandomize = document.getElementById('new-ev-randomize') ? document.getElementById('new-ev-randomize').checked : true;
 
@@ -2883,7 +2883,7 @@
         } catch (e) {}
         await openEventWorkspace(json.eventId, 'setup', true);
       } catch (err) {
-        console.error(err);
+        console.error('Error creating event:', err);
         alert('Failed to create event: ' + (err.message || err));
       } finally {
         if (submitBtn) {
@@ -2891,7 +2891,6 @@
           submitBtn.innerHTML = `<span>Create Event &amp; Auto-Assign Bales</span>`;
         }
       }
-      return false;
     }
 
     // ========================================================================
@@ -2942,18 +2941,13 @@
         const initialTab = requestedTab || (isEventDone ? 'leaderboard' : 'scoring');
 
         const targetUrl = `${window.location.pathname}?event=${encodeURIComponent(eventId)}${initialTab === 'leaderboard' ? '&tab=leaderboard' : ''}`;
-        if (pushHistory) {
-          // Push a history entry so the browser/mobile Back button returns to the Tournament Selection Hub!
-          window.history.pushState({ view: 'event', eventId, tab: initialTab }, '', targetUrl);
-        } else {
-          // If the user landed directly via a deep link (?event=...), inject the Hub underneath in history so Back still goes to Tournament Selection!
-          if (!window.history.state || window.history.state.view !== 'event') {
-            window.history.replaceState({ view: 'hub' }, '', window.location.pathname);
+        try {
+          if (pushHistory) {
             window.history.pushState({ view: 'event', eventId, tab: initialTab }, '', targetUrl);
           } else {
             window.history.replaceState({ view: 'event', eventId, tab: initialTab }, '', targetUrl);
           }
-        }
+        } catch (e) {}
 
         showActiveEventView(initialTab);
       } catch (err) {
