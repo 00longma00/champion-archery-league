@@ -118,6 +118,11 @@
       "status": "ON",
       "note": "",
       "updatedAt": "2026-10-24T22:43:00.464Z"
+    },
+    "2026-11-01": {
+      "date": "2026-11-01",
+      "status": "PENDING",
+      "note": ""
     }
   },
   "rsvps": {

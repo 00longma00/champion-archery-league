@@ -731,9 +731,13 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <label class="block text-slate-300 font-semibold">Participants (<span id="modal-participant-count">0</span> Archers)</label>
-              <p class="text-[10px] text-slate-400">Add archers, bulk-select from roster, or load tonight's YES RSVPs.</p>
+              <p class="text-[10px] text-slate-400">Drag archers between bales or use the bale selector. Max 4 per bale.</p>
             </div>
             <div class="flex items-center gap-1.5 flex-wrap">
+              <button type="button" onclick="autoDistributeCreateDraft()" class="text-[11px] font-bold text-amber-300 hover:text-amber-200 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+                <i class="fa-solid fa-shuffle"></i>
+                <span>Auto-Assign</span>
+              </button>
               <button type="button" onclick="openBulkRosterSelectModal('create')" class="text-[11px] font-bold text-sky-300 hover:text-sky-200 bg-sky-500/15 border border-sky-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
                 <i class="fa-solid fa-users-viewfinder"></i>
                 <span>Bulk Select</span>
@@ -748,19 +752,24 @@
             </div>
           </div>
 
-          <div id="new-ev-participants-list" class="space-y-1.5 max-h-56 overflow-y-auto pr-1">
-            <!-- Populated by JS: 1 row per archer with name + discipline -->
+          <!-- Capacity Exceeded Warning Banner -->
+          <div id="create-event-capacity-warning" class="hidden rounded-xl bg-rose-950/60 border border-rose-800 p-2.5 text-xs text-rose-300 flex items-center gap-2">
+            <i class="fa-solid fa-triangle-exclamation text-rose-400 shrink-0 text-sm"></i>
+            <span id="create-event-capacity-warning-text">One or more bales exceed the maximum of 4 archers. Please balance archers before creating the session.</span>
+          </div>
+
+          <div id="new-ev-participants-list" class="space-y-3 max-h-72 overflow-y-auto pr-1">
+            <!-- Populated by JS: Grouped by Bale containers for drag-and-drop -->
           </div>
 
           <button type="button" onclick="openAddArcherMenu('create')" class="w-full py-2 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-300 hover:text-amber-300 transition flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-circle-plus text-amber-400"></i>
             <span>Add Archer (Discipline &amp; Previous Archers Autofill)</span>
           </button>
-          <p class="text-[10px] text-slate-400">Archers will be automatically assigned to Bales (A/B or AB/CD) and default Scoring Groups upon creation.</p>
         </div>
 
-        <button type="button" onclick="handleCreateEventSubmit(event)" id="btn-create-event-submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
-          <span>Create Event &amp; Auto-Assign Bales</span>
+        <button type="button" onclick="handleCreateEventSubmit(event)" id="btn-create-event-submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2 disabled:opacity-40 disabled:cursor-not-allowed">
+          <span>Create Event &amp; Save Bales</span>
         </button>
       </div>
     </div>
@@ -2366,46 +2375,217 @@
       renderCreateEventParticipantsList();
     }
 
+    function autoDistributeCreateDraft() {
+      const activeBales = getSelectedCreateBalesList();
+      if (activeBales.length === 0 || createEventParticipantsDraft.length === 0) return;
+      const shouldRandomize = document.getElementById('new-ev-randomize') ? document.getElementById('new-ev-randomize').checked : true;
+
+      let archerIndices = createEventParticipantsDraft.map((_, i) => i);
+      if (shouldRandomize) {
+        for (let i = archerIndices.length - 1; i > 0; i--) {
+          const j = Math.floor(Math.random() * (i + 1));
+          [archerIndices[i], archerIndices[j]] = [archerIndices[j], archerIndices[i]];
+        }
+      }
+
+      const numBales = activeBales.length;
+      archerIndices.forEach((origIdx, slotIdx) => {
+        const baleIdx = Math.floor(slotIdx / 2) % numBales;
+        createEventParticipantsDraft[origIdx].bale_number = activeBales[baleIdx];
+      });
+
+      renderCreateEventParticipantsList();
+    }
+
     function renderCreateEventParticipantsList() {
       const listEl = document.getElementById('new-ev-participants-list');
       if (!listEl) return;
       const countEl = document.getElementById('modal-participant-count');
       if (countEl) countEl.textContent = createEventParticipantsDraft.length;
 
+      const activeBales = getSelectedCreateBalesList();
+      const warningBanner = document.getElementById('create-event-capacity-warning');
+      const submitBtn = document.getElementById('btn-create-event-submit');
+
       if (createEventParticipantsDraft.length === 0) {
+        if (warningBanner) warningBanner.classList.add('hidden');
+        if (submitBtn) submitBtn.disabled = false;
         listEl.innerHTML = `
-          <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-3 text-center text-xs text-slate-500">
-            No archers added yet. Click <strong>+ Add Archer</strong>, <strong>Bulk Select</strong>, or <strong>Load 'YES' RSVPs</strong>.
+          <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-4 text-center text-xs text-slate-500">
+            No archers added yet. Click <strong>+ Archer</strong>, <strong>Bulk Select</strong>, or <strong>RSVPs</strong>.
           </div>
         `;
         return;
       }
-      listEl.innerHTML = createEventParticipantsDraft.map((p, idx) => {
-        const catMeta = getBowCategoryMeta(p.bow_category);
-        return `
-          <div class="rounded-xl bg-slate-950 border border-slate-800 p-2 flex items-center justify-between gap-2 text-xs">
-            <div class="flex items-center gap-2 min-w-0 flex-1">
-              <span class="w-5 h-5 rounded-md bg-slate-800 text-slate-400 font-mono text-[10px] font-bold flex items-center justify-center shrink-0">${idx + 1}</span>
-              ${renderArcherAvatarCircle(p.name, p.avatar_id, 'w-7 h-7')}
-              <div class="w-4 h-4 shrink-0" title="${escapeHtml(catMeta.label)}">${catMeta.svg}</div>
-              <input type="text" value="${escapeHtml(p.name)}" onchange="updateCreateEventParticipant(${idx}, 'name', this.value)"
-                placeholder="Archer name..."
-                class="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-white font-bold px-1 py-0.5 focus:outline-none w-full min-w-[90px]">
+
+      // Ensure every archer in draft has an initial bale number assigned
+      let needsInitialDistribution = false;
+      createEventParticipantsDraft.forEach(p => {
+        if (!p.bale_number || !activeBales.includes(Number(p.bale_number))) {
+          p.bale_number = activeBales[0] || 1;
+          needsInitialDistribution = true;
+        }
+      });
+      if (needsInitialDistribution) {
+        const numBales = activeBales.length;
+        createEventParticipantsDraft.forEach((p, idx) => {
+          const bIdx = Math.floor(idx / 2) % numBales;
+          p.bale_number = activeBales[bIdx];
+        });
+      }
+
+      // Group archers by bale
+      const baleGroups = {};
+      activeBales.forEach(b => { baleGroups[b] = []; });
+      createEventParticipantsDraft.forEach((p, idx) => {
+        const b = Number(p.bale_number) || activeBales[0] || 1;
+        if (!baleGroups[b]) baleGroups[b] = [];
+        baleGroups[b].push({ participant: p, draftIndex: idx });
+      });
+
+      // Check if any bale exceeds 4 archers
+      let hasOvercapacity = false;
+      const overcapacityBales = [];
+      Object.keys(baleGroups).forEach(bNum => {
+        if (baleGroups[bNum].length > 4) {
+          hasOvercapacity = true;
+          overcapacityBales.push(`Bale ${bNum} (${baleGroups[bNum].length}/4)`);
+        }
+      });
+
+      if (warningBanner) {
+        if (hasOvercapacity) {
+          warningBanner.classList.remove('hidden');
+          const warningText = document.getElementById('create-event-capacity-warning-text');
+          if (warningText) {
+            warningText.textContent = `Max capacity exceeded: ${overcapacityBales.join(', ')}. Each bale can hold a maximum of 4 archers (AB/CD).`;
+          }
+        } else {
+          warningBanner.classList.add('hidden');
+        }
+      }
+
+      // Grey out / disable creation button if capacity is exceeded
+      if (submitBtn) {
+        submitBtn.disabled = hasOvercapacity;
+      }
+
+      listEl.innerHTML = activeBales.map(bNum => {
+        const archersInBale = baleGroups[bNum] || [];
+        const isOver = archersInBale.length > 4;
+        const countBadgeColor = isOver
+          ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
+          : (archersInBale.length >= 3 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40');
+
+        let archersHtml = '';
+        if (archersInBale.length === 0) {
+          archersHtml = `
+            <div class="py-3 text-center text-[11px] text-slate-500 italic border border-dashed border-slate-800 rounded-lg">
+              Empty bale (drop archers here)
             </div>
-            <div class="flex items-center gap-1.5 shrink-0">
-              <select onchange="updateCreateEventParticipant(${idx}, 'bow_category', this.value)"
-                class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold ${catMeta.textClass}">
-                <option value="BAREBOW" ${p.bow_category === 'BAREBOW' ? 'selected' : ''}>🏹 Barebow</option>
-                <option value="OLYMPIC_RECURVE" ${p.bow_category === 'OLYMPIC_RECURVE' ? 'selected' : ''}>🎯 Olympic Recurve</option>
-                <option value="TRADITIONAL" ${p.bow_category === 'TRADITIONAL' ? 'selected' : ''}>🪶 Traditional</option>
-              </select>
-              <button type="button" onclick="removeCreateEventParticipant(${idx})" class="text-slate-500 hover:text-rose-400 px-1.5 py-1" title="Remove archer">
-                <i class="fa-solid fa-xmark"></i>
-              </button>
+          `;
+        } else {
+          archersHtml = archersInBale.map(({ participant: p, draftIndex: idx }) => {
+            const catMeta = getBowCategoryMeta(p.bow_category);
+            return `
+              <div draggable="true"
+                ondragstart="onCreateArcherDragStart(event, ${idx})"
+                ondragend="onCreateArcherDragEnd(event)"
+                class="create-archer-draggable rounded-xl bg-slate-900 border border-slate-700/80 hover:border-amber-500/60 p-2 flex items-center justify-between gap-2 text-xs transition cursor-grab active:cursor-grabbing shadow-sm">
+                <div class="flex items-center gap-2 min-w-0 flex-1">
+                  <i class="fa-solid fa-grip-vertical text-slate-600 text-xs shrink-0 mr-0.5"></i>
+                  ${renderArcherAvatarCircle(p.name, p.avatar_id, 'w-7 h-7')}
+                  <div class="w-4 h-4 shrink-0" title="${escapeHtml(catMeta.label)}">${catMeta.svg}</div>
+                  <input type="text" value="${escapeHtml(p.name)}" onchange="updateCreateEventParticipant(${idx}, 'name', this.value)"
+                    placeholder="Archer name..."
+                    class="bg-transparent border-b border-transparent hover:border-slate-700 focus:border-amber-500 text-white font-bold px-1 py-0.5 focus:outline-none w-full min-w-[80px]">
+                </div>
+                <div class="flex items-center gap-1.5 shrink-0">
+                  <select onchange="updateCreateEventParticipant(${idx}, 'bow_category', this.value)"
+                    class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold ${catMeta.textClass}">
+                    <option value="BAREBOW" ${p.bow_category === 'BAREBOW' ? 'selected' : ''}>🏹 Barebow</option>
+                    <option value="OLYMPIC_RECURVE" ${p.bow_category === 'OLYMPIC_RECURVE' ? 'selected' : ''}>🎯 Olympic</option>
+                    <option value="TRADITIONAL" ${p.bow_category === 'TRADITIONAL' ? 'selected' : ''}>🪶 Trad</option>
+                  </select>
+                  <select onchange="updateCreateEventParticipant(${idx}, 'bale_number', Number(this.value))"
+                    title="Change Bale"
+                    class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold text-amber-300">
+                    ${activeBales.map(b => `<option value="${b}" ${Number(p.bale_number) === b ? 'selected' : ''}>Bale ${b}</option>`).join('')}
+                  </select>
+                  <button type="button" onclick="removeCreateEventParticipant(${idx})" class="text-slate-500 hover:text-rose-400 px-1 py-1" title="Remove archer">
+                    <i class="fa-solid fa-xmark"></i>
+                  </button>
+                </div>
+              </div>
+            `;
+          }).join('');
+        }
+
+        return `
+          <div ondragover="onCreateBaleDragOver(event)"
+               ondragleave="onCreateBaleDragLeave(event)"
+               ondrop="onCreateBaleDrop(event, ${bNum})"
+               class="create-bale-dropzone rounded-2xl bg-slate-950/80 border ${isOver ? 'border-rose-500 ring-1 ring-rose-500/40' : 'border-slate-800'} p-3 space-y-2 transition">
+            <div class="flex items-center justify-between pb-1 border-b border-slate-800/80">
+              <div class="flex items-center gap-2">
+                <span class="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 font-black text-xs flex items-center justify-center">${bNum}</span>
+                <span class="font-extrabold text-white text-xs">Bale ${bNum}</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${countBadgeColor}">
+                  ${archersInBale.length} / 4 Archers
+                </span>
+              </div>
+            </div>
+            <div class="space-y-1.5 pt-0.5">
+              ${archersHtml}
             </div>
           </div>
         `;
       }).join('');
+    }
+
+    let draggedCreateArcherIndex = null;
+
+    function onCreateArcherDragStart(e, idx) {
+      draggedCreateArcherIndex = idx;
+      if (e.dataTransfer) {
+        e.dataTransfer.effectAllowed = 'move';
+        e.dataTransfer.setData('text/plain', String(idx));
+      }
+      e.target.classList.add('opacity-50');
+    }
+
+    function onCreateArcherDragEnd(e) {
+      draggedCreateArcherIndex = null;
+      document.querySelectorAll('.create-bale-dropzone').forEach(dz => dz.classList.remove('border-amber-400', 'bg-amber-500/5'));
+      e.target.classList.remove('opacity-50');
+    }
+
+    function onCreateBaleDragOver(e) {
+      e.preventDefault();
+      if (e.dataTransfer) e.dataTransfer.dropEffect = 'move';
+      const dropzone = e.currentTarget;
+      if (dropzone) dropzone.classList.add('border-amber-400', 'bg-amber-500/5');
+    }
+
+    function onCreateBaleDragLeave(e) {
+      const dropzone = e.currentTarget;
+      if (dropzone) dropzone.classList.remove('border-amber-400', 'bg-amber-500/5');
+    }
+
+    function onCreateBaleDrop(e, targetBaleNumber) {
+      e.preventDefault();
+      const dropzone = e.currentTarget;
+      if (dropzone) dropzone.classList.remove('border-amber-400', 'bg-amber-500/5');
+
+      const idxStr = e.dataTransfer ? e.dataTransfer.getData('text/plain') : null;
+      const idx = idxStr !== null && idxStr !== '' ? Number(idxStr) : draggedCreateArcherIndex;
+
+      if (idx !== null && !isNaN(idx) && createEventParticipantsDraft[idx]) {
+        createEventParticipantsDraft[idx].bale_number = targetBaleNumber;
+        renderCreateEventParticipantsList();
+      }
     }
 
     function updateCreateEventParticipant(idx, field, val) {
@@ -2764,46 +2944,69 @@
       const activeBales = getSelectedCreateBalesList();
       const shouldRandomize = document.getElementById('new-ev-randomize') ? document.getElementById('new-ev-randomize').checked : true;
 
-      // Assign participants across specified active bales with optional randomization
-      let participantsToAssign = createEventParticipantsDraft
-        .map(p => ({
-          name: String(p.name || '').trim(),
-          bow_category: p.bow_category || 'BAREBOW',
-          avatar_id: p.avatar_id || null,
-          custom_title: p.custom_title || null
-        }))
-        .filter(p => p.name.length > 0);
+      // Group participants by their assigned bale
+      const baleGroups = {};
+      activeBales.forEach(b => { baleGroups[b] = []; });
 
-      const count = participantsToAssign.length;
-      let archerIndices = participantsToAssign.map((_, i) => i);
-      if (shouldRandomize) {
-        for (let i = archerIndices.length - 1; i > 0; i--) {
-          const j = Math.floor(Math.random() * (i + 1));
-          [archerIndices[i], archerIndices[j]] = [archerIndices[j], archerIndices[i]];
+      createEventParticipantsDraft
+        .filter(p => p.name && p.name.trim().length > 0)
+        .forEach(p => {
+          const b = Number(p.bale_number) || activeBales[0] || 1;
+          if (!baleGroups[b]) baleGroups[b] = [];
+          baleGroups[b].push({
+            name: p.name.trim(),
+            bow_category: p.bow_category || 'BAREBOW',
+            avatar_id: p.avatar_id || null,
+            custom_title: p.custom_title || null,
+            bale_number: b
+          });
+        });
+
+      // Check if any bale has exceeded max 4 archers
+      let hasOvercapacity = false;
+      const overBales = [];
+      Object.keys(baleGroups).forEach(bNum => {
+        if (baleGroups[bNum].length > 4) {
+          hasOvercapacity = true;
+          overBales.push(`Bale ${bNum} (${baleGroups[bNum].length}/4)`);
         }
+      });
+
+      if (hasOvercapacity) {
+        alert(`Cannot create session: ${overBales.join(', ')} exceed the maximum limit of 4 archers per bale. Please reassign archers before submitting.`);
+        return false;
       }
 
+      // Assign position, line, lane, and initial target within each bale
       const assignedParticipants = [];
-      const numBales = activeBales.length;
 
-      if (count > 0 && numBales > 0) {
-        if (count <= numBales * 2) {
-          archerIndices.forEach((origIdx, slotIdx) => {
-            const baleIdx = Math.floor(slotIdx / 2);
-            const baleNum = activeBales[baleIdx % numBales];
-            const isSecond = (slotIdx % 2) === 1;
+      Object.keys(baleGroups).forEach(bNumStr => {
+        const bNum = Number(bNumStr);
+        let archers = baleGroups[bNum];
+        if (archers.length === 0) return;
 
-            let targetA = 'Top';
-            let targetB = 'Bottom';
-            if (shouldRandomize && Math.random() > 0.5) {
-              targetA = 'Bottom';
-              targetB = 'Top';
-            }
+        if (shouldRandomize) {
+          for (let i = archers.length - 1; i > 0; i--) {
+            const j = Math.floor(Math.random() * (i + 1));
+            [archers[i], archers[j]] = [archers[j], archers[i]];
+          }
+        }
 
-            const p = participantsToAssign[origIdx];
+        const count = archers.length;
+        if (count <= 2) {
+          // 1-2 archers: A and B
+          let targetA = 'Top';
+          let targetB = 'Bottom';
+          if (shouldRandomize && Math.random() > 0.5) {
+            targetA = 'Bottom';
+            targetB = 'Top';
+          }
+
+          archers.forEach((p, idx) => {
+            const isSecond = idx === 1;
             assignedParticipants.push({
               ...p,
-              bale_number: baleNum,
+              bale_number: bNum,
               position: isSecond ? 'B' : 'A',
               shooting_line: 'AB',
               lane: isSecond ? 'Right' : 'Left',
@@ -2811,43 +3014,31 @@
             });
           });
         } else {
-          const basePerBale = Math.floor(count / numBales);
-          const extraBales = count % numBales;
-
-          let slotPointer = 0;
-          for (let bIdx = 0; bIdx < numBales; bIdx++) {
-            const baleNum = activeBales[bIdx];
-            const onThisBale = Math.min(4, basePerBale + (bIdx < extraBales ? 1 : 0));
-
-            let targets = ['Top', 'Top', 'Bottom', 'Bottom'];
-            if (shouldRandomize && Math.random() > 0.5) {
-              targets = ['Bottom', 'Bottom', 'Top', 'Top'];
-            }
-
-            const posConfig = [
-              { position: 'A', shooting_line: 'AB', lane: 'Left', initial_target: targets[0] },
-              { position: 'B', shooting_line: 'AB', lane: 'Right', initial_target: targets[1] },
-              { position: 'C', shooting_line: 'CD', lane: 'Left', initial_target: targets[2] },
-              { position: 'D', shooting_line: 'CD', lane: 'Right', initial_target: targets[3] }
-            ];
-
-            for (let s = 0; s < onThisBale && slotPointer < count; s++) {
-              const origIdx = archerIndices[slotPointer];
-              const cfg = posConfig[s];
-              const p = participantsToAssign[origIdx];
-              assignedParticipants.push({
-                ...p,
-                bale_number: baleNum,
-                position: cfg.position,
-                shooting_line: cfg.shooting_line,
-                lane: cfg.lane,
-                initial_target: cfg.initial_target
-              });
-              slotPointer++;
-            }
+          // 3-4 archers: A, B, C, D
+          let targets = ['Top', 'Top', 'Bottom', 'Bottom'];
+          if (shouldRandomize && Math.random() > 0.5) {
+            targets = ['Bottom', 'Bottom', 'Top', 'Top'];
           }
+          const posConfig = [
+            { position: 'A', shooting_line: 'AB', lane: 'Left', initial_target: targets[0] },
+            { position: 'B', shooting_line: 'AB', lane: 'Right', initial_target: targets[1] },
+            { position: 'C', shooting_line: 'CD', lane: 'Left', initial_target: targets[2] },
+            { position: 'D', shooting_line: 'CD', lane: 'Right', initial_target: targets[3] }
+          ];
+
+          archers.forEach((p, idx) => {
+            const cfg = posConfig[idx] || posConfig[3];
+            assignedParticipants.push({
+              ...p,
+              bale_number: bNum,
+              position: cfg.position,
+              shooting_line: cfg.shooting_line,
+              lane: cfg.lane,
+              initial_target: cfg.initial_target
+            });
+          });
         }
-      }
+      });
 
       // Sort by bale number and position
       assignedParticipants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
@@ -4448,6 +4639,12 @@
       onMaxBalesCountChange,
       onBaleCheckboxChange,
       toggleAllBaleCheckboxes,
+      autoDistributeCreateDraft,
+      onCreateArcherDragStart,
+      onCreateArcherDragEnd,
+      onCreateBaleDragOver,
+      onCreateBaleDragLeave,
+      onCreateBaleDrop,
       openQrModal,
       closeQrModal,
       refreshActiveEvent,
