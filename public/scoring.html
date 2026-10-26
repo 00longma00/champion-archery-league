@@ -2363,8 +2363,12 @@
     // ========================================================================
     function openCreateEventModal() {
       const dateInput = document.getElementById('new-ev-date');
-      if (!dateInput.value) {
-        dateInput.value = (hubData.rsvpImport && hubData.rsvpImport.date) || new Date().toISOString().slice(0, 10);
+      if (dateInput) {
+        const now = new Date();
+        const yyyy = now.getFullYear();
+        const mm = String(now.getMonth() + 1).padStart(2, '0');
+        const dd = String(now.getDate()).padStart(2, '0');
+        dateInput.value = `${yyyy}-${mm}-${dd}`;
       }
       const maxBalesInput = document.getElementById('new-ev-max-bales');
       const maxBales = maxBalesInput ? (parseInt(maxBalesInput.value, 10) || 6) : 6;
