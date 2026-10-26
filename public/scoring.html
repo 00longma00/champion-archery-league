@@ -574,12 +574,10 @@
           </div>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
-              <label class="block text-slate-400 font-semibold mb-1">Scoring Type</label>
+              <label class="block text-slate-400 font-semibold mb-1">Scoring Format</label>
               <select id="edit-ev-scoring-type" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
-                <option value="USAA_10">USAA 10-Ring (X, 10..1, M)</option>
-                <option value="NFAA_BLUEFACE">NFAA Blueface 300 (X=5, 5..1, M)</option>
-                <option value="NFAA_5SPOT">NFAA 5-Spot (X=5, 5, 4, M)</option>
-                <option value="NFAA_SINGLE">NFAA Single-Spot (X=5, 5..1, M)</option>
+                <option value="USAA_10">🎯 USAA 10-Ring (X, 10..1, M)</option>
+                <option value="NFAA_BLUEFACE">🔵 NFAA Blueface (X=5, 5..1, M)</option>
               </select>
             </div>
             <div class="grid grid-cols-3 gap-2">
@@ -633,29 +631,6 @@
         </button>
       </div>
 
-      <!-- Format Quick Presets -->
-      <div>
-        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Quick Format Presets</label>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
-          <button type="button" onclick="applyCreatePreset('USAA_300')" class="bg-slate-950 hover:bg-slate-800 border border-amber-500/40 rounded-xl p-2.5 text-left transition">
-            <span class="block text-xs font-bold text-amber-300">USAA 300</span>
-            <span class="block text-[10px] text-slate-400">10 ends × 3 arr (10-ring)</span>
-          </button>
-          <button type="button" onclick="applyCreatePreset('NFAA_BLUEFACE')" class="bg-slate-950 hover:bg-slate-800 border border-blue-500/40 rounded-xl p-2.5 text-left transition">
-            <span class="block text-xs font-bold text-blue-300">Blueface 300</span>
-            <span class="block text-[10px] text-slate-400">12 ends × 5 arr (5-ring)</span>
-          </button>
-          <button type="button" onclick="applyCreatePreset('NFAA_5SPOT')" class="bg-slate-950 hover:bg-slate-800 border border-sky-500/40 rounded-xl p-2.5 text-left transition">
-            <span class="block text-xs font-bold text-sky-300">NFAA 5-Spot</span>
-            <span class="block text-[10px] text-slate-400">12 ends × 5 arr</span>
-          </button>
-          <button type="button" onclick="applyCreatePreset('WA_600')" class="bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 rounded-xl p-2.5 text-left transition">
-            <div class="text-xs font-extrabold text-emerald-300">WA 18m (60 Arr)</div>
-            <div class="text-[10px] text-slate-400">20 Ends × 3 Arr (10-Ring)</div>
-          </button>
-        </div>
-      </div>
-
       <form id="create-event-form" onsubmit="handleCreateEventSubmit(event)" class="space-y-3.5 text-xs">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div class="sm:col-span-2">
@@ -675,43 +650,41 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
-          <div class="sm:col-span-2">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+          <div>
             <label class="block text-slate-300 font-semibold mb-1">Scoring Format</label>
             <select id="new-ev-scoring-type" class="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-2 text-white font-bold">
-              <option value="USAA_10">🎯 USAA 10-Ring: X, 10..1, M</option>
-              <option value="NFAA_BLUEFACE">🔵 NFAA Blueface 300: X, 5..1, M</option>
-              <option value="NFAA_5SPOT">🎯 NFAA 5-Spot: X, 5, 4, M</option>
-              <option value="NFAA_SINGLE">🎯 NFAA Single-Spot: X(5), 5..1, M</option>
+              <option value="USAA_10" selected>🎯 USAA 10-Ring (X, 10..1, M)</option>
+              <option value="NFAA_BLUEFACE">🔵 NFAA Blueface (X=5, 5..1, M)</option>
             </select>
           </div>
-          <div>
-            <label class="block text-slate-300 font-semibold mb-1">Rounds</label>
-            <input type="number" id="new-ev-rounds" min="1" max="4" value="1" required
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
-          </div>
-          <div>
-            <label class="block text-slate-300 font-semibold mb-1">Ends / Round</label>
-            <input type="number" id="new-ev-ends" min="1" max="30" value="10" required
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
+          <div class="grid grid-cols-3 gap-2">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Rounds</label>
+              <input type="number" id="new-ev-rounds" min="1" max="4" value="1" required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Ends/Rnd</label>
+              <input type="number" id="new-ev-ends" min="1" max="30" value="10" required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Arrows/End</label>
+              <select id="new-ev-arrows" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
+                <option value="3" selected>3 Arr</option>
+                <option value="5">5 Arr</option>
+              </select>
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-2 gap-2.5">
+        <div class="flex items-center justify-between bg-slate-950 border border-slate-700 rounded-xl px-3 py-2">
           <div>
-            <label class="block text-slate-300 font-semibold mb-1">Arrows / End</label>
-            <select id="new-ev-arrows" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
-              <option value="3" selected>3 Arrows</option>
-              <option value="5">5 Arrows</option>
-            </select>
+            <span class="text-xs text-white font-bold">Target Swap Rule</span>
+            <p class="text-[10px] text-slate-400">Swap Top &amp; Bottom targets at midpoint</p>
           </div>
-          <div>
-            <label class="block text-slate-300 font-semibold mb-1">Target Swap Rule</label>
-            <div class="flex items-center justify-between bg-slate-950 border border-slate-700 rounded-xl px-3 py-2">
-              <span class="text-[11px] text-slate-300 font-semibold">Midpoint Swap</span>
-              <input type="checkbox" id="new-ev-swap" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
-            </div>
-          </div>
+          <input type="checkbox" id="new-ev-swap" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
         </div>
 
         <!-- Available Bales Customization -->
@@ -2001,22 +1974,8 @@
         values: { 'X': 10, '10': 10, '9': 9, '8': 8, '7': 7, '6': 6, '5': 5, '4': 4, '3': 3, '2': 2, '1': 1, 'M': 0 },
         rank: { 'X': 11, '10': 10, '9': 9, '8': 8, '7': 7, '6': 6, '5': 5, '4': 4, '3': 3, '2': 2, '1': 1, 'M': 0 }
       },
-      NFAA_5SPOT: {
-        label: 'NFAA 5-Spot (X=5, 5, 4, M)',
-        shortLabel: 'NFAA 5-Spot',
-        keys: ['X', '5', '4', 'M'],
-        values: { 'X': 5, '5': 5, '4': 4, 'M': 0 },
-        rank: { 'X': 6, '5': 5, '4': 4, 'M': 0 }
-      },
-      NFAA_SINGLE: {
-        label: 'NFAA Single-Spot (X=5, 5..1, M)',
-        shortLabel: 'NFAA Single-Spot',
-        keys: ['X', '5', '4', '3', '2', '1', 'M'],
-        values: { 'X': 5, '5': 5, '4': 4, '3': 3, '2': 2, '1': 1, 'M': 0 },
-        rank: { 'X': 6, '5': 5, '4': 4, '3': 3, '2': 2, '1': 1, 'M': 0 }
-      },
       NFAA_BLUEFACE: {
-        label: 'NFAA Blueface 300 (X=5, 5..1, M)',
+        label: 'NFAA Blueface (X=5, 5..1, M)',
         shortLabel: 'NFAA Blueface',
         keys: ['X', '5', '4', '3', '2', '1', 'M'],
         values: { 'X': 5, '5': 5, '4': 4, '3': 3, '2': 2, '1': 1, 'M': 0 },
@@ -2028,14 +1987,9 @@
       const a = String(arrow || '').toUpperCase();
       if (!a) return 'bg-slate-900 border-slate-700 text-slate-500';
       if (a === 'M') return 'bg-slate-800 border-slate-600 text-rose-400';
-      if (scoringType === 'NFAA_BLUEFACE' || scoringType === 'NFAA_SINGLE') {
+      if (scoringType === 'NFAA_BLUEFACE') {
         if (a === 'X' || a === '5') return 'bg-white text-blue-900 border-blue-400 font-black ring-1 ring-blue-300';
         return 'bg-blue-600 text-white border-blue-400 font-bold';
-      }
-      if (scoringType.startsWith('NFAA')) {
-        if (a === 'X') return 'bg-sky-500 text-slate-950 border-sky-300 font-black ring-1 ring-sky-300';
-        if (a === '5') return 'bg-sky-600 text-white border-sky-400 font-bold';
-        return 'bg-slate-200 text-slate-950 border-white font-bold';
       }
       // USAA / WA 5-color rings
       if (a === 'X') return 'bg-yellow-400 text-slate-950 border-yellow-200 font-black ring-2 ring-amber-300';
@@ -2353,34 +2307,6 @@
 
     function closeCreateEventModal() {
       document.getElementById('create-event-modal').classList.add('hidden');
-    }
-
-    function applyCreatePreset(preset) {
-      if (preset === 'USAA_300') {
-        document.getElementById('new-ev-rounds').value = 1;
-        document.getElementById('new-ev-ends').value = 10;
-        document.getElementById('new-ev-arrows').value = '3';
-        document.getElementById('new-ev-scoring-type').value = 'USAA_10';
-        document.getElementById('new-ev-swap').checked = true;
-      } else if (preset === 'NFAA_BLUEFACE' || preset === 'BLUEFACE_300') {
-        document.getElementById('new-ev-rounds').value = 1;
-        document.getElementById('new-ev-ends').value = 12;
-        document.getElementById('new-ev-arrows').value = '5';
-        document.getElementById('new-ev-scoring-type').value = 'NFAA_BLUEFACE';
-        document.getElementById('new-ev-swap').checked = true;
-      } else if (preset === 'NFAA_5SPOT') {
-        document.getElementById('new-ev-rounds').value = 1;
-        document.getElementById('new-ev-ends').value = 12;
-        document.getElementById('new-ev-arrows').value = '5';
-        document.getElementById('new-ev-scoring-type').value = 'NFAA_5SPOT';
-        document.getElementById('new-ev-swap').checked = true;
-      } else if (preset === 'WA_600') {
-        document.getElementById('new-ev-rounds').value = 2;
-        document.getElementById('new-ev-ends').value = 10;
-        document.getElementById('new-ev-arrows').value = '3';
-        document.getElementById('new-ev-scoring-type').value = 'USAA_10';
-        document.getElementById('new-ev-swap').checked = true;
-      }
     }
 
     function fillNewEventWithYesRsvps(silentIfEmpty = false) {
@@ -4494,7 +4420,6 @@
       saveSetupAssignments,
       deleteCurrentEvent,
       saveEventFormatSettings,
-      applyCreatePreset,
       fillNewEventWithYesRsvps,
       toggleArcherAutofillPopup,
       selectAddArcherDiscipline,
