@@ -636,21 +636,21 @@
       <!-- Format Quick Presets -->
       <div>
         <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Quick Format Presets</label>
-        <div class="grid grid-cols-3 gap-2">
-          <button type="button" onclick="applyCreatePreset('USAA_300')" class="bg-slate-950 hover:bg-slate-800 border border-amber-500/40 rounded-xl p-2 text-left transition">
+        <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+          <button type="button" onclick="applyCreatePreset('USAA_300')" class="bg-slate-950 hover:bg-slate-800 border border-amber-500/40 rounded-xl p-2.5 text-left transition">
             <span class="block text-xs font-bold text-amber-300">USAA 300</span>
             <span class="block text-[10px] text-slate-400">10 ends × 3 arr (10-ring)</span>
           </button>
-          <button type="button" onclick="applyCreatePreset('NFAA_BLUEFACE')" class="bg-slate-950 hover:bg-slate-800 border border-blue-500/40 rounded-xl p-2 text-left transition">
+          <button type="button" onclick="applyCreatePreset('NFAA_BLUEFACE')" class="bg-slate-950 hover:bg-slate-800 border border-blue-500/40 rounded-xl p-2.5 text-left transition">
             <span class="block text-xs font-bold text-blue-300">Blueface 300</span>
             <span class="block text-[10px] text-slate-400">12 ends × 5 arr (5-ring)</span>
           </button>
-          <button type="button" onclick="applyCreatePreset('NFAA_5SPOT')" class="bg-slate-950 hover:bg-slate-800 border border-sky-500/40 rounded-xl p-2 text-left transition">
+          <button type="button" onclick="applyCreatePreset('NFAA_5SPOT')" class="bg-slate-950 hover:bg-slate-800 border border-sky-500/40 rounded-xl p-2.5 text-left transition">
             <span class="block text-xs font-bold text-sky-300">NFAA 5-Spot</span>
             <span class="block text-[10px] text-slate-400">12 ends × 5 arr</span>
           </button>
-          <button type="button" onclick="applyCreatePreset('WA_600')" class="bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 rounded-xl p-2 text-left transition">
-            <div class="text-xs font-extrabold text-emerald-300">WA 18m (60 Arrows)</div>
+          <button type="button" onclick="applyCreatePreset('WA_600')" class="bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 rounded-xl p-2.5 text-left transition">
+            <div class="text-xs font-extrabold text-emerald-300">WA 18m (60 Arr)</div>
             <div class="text-[10px] text-slate-400">20 Ends × 3 Arr (10-Ring)</div>
           </button>
         </div>
@@ -676,31 +676,41 @@
         </div>
 
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-2.5">
+          <div class="sm:col-span-2">
+            <label class="block text-slate-300 font-semibold mb-1">Scoring Format</label>
+            <select id="new-ev-scoring-type" class="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-2 text-white font-bold">
+              <option value="USAA_10">🎯 USAA 10-Ring: X, 10..1, M</option>
+              <option value="NFAA_BLUEFACE">🔵 NFAA Blueface 300: X, 5..1, M</option>
+              <option value="NFAA_5SPOT">🎯 NFAA 5-Spot: X, 5, 4, M</option>
+              <option value="NFAA_SINGLE">🎯 NFAA Single-Spot: X(5), 5..1, M</option>
+            </select>
+          </div>
           <div>
             <label class="block text-slate-300 font-semibold mb-1">Rounds</label>
             <input type="number" id="new-ev-rounds" min="1" max="4" value="1" required
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
           </div>
           <div>
             <label class="block text-slate-300 font-semibold mb-1">Ends / Round</label>
             <input type="number" id="new-ev-ends" min="1" max="30" value="10" required
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
           </div>
+        </div>
+
+        <div class="grid grid-cols-2 gap-2.5">
           <div>
             <label class="block text-slate-300 font-semibold mb-1">Arrows / End</label>
-            <select id="new-ev-arrows" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
+            <select id="new-ev-arrows" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
               <option value="3" selected>3 Arrows</option>
               <option value="5">5 Arrows</option>
             </select>
           </div>
           <div>
-            <label class="block text-slate-300 font-semibold mb-1">Scoring Format</label>
-            <select id="new-ev-scoring-type" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white">
-              <option value="USAA_10">USAA 10-Ring: X, 10..1, M</option>
-              <option value="NFAA_BLUEFACE">NFAA Blueface 300: X, 5..1, M</option>
-              <option value="NFAA_5SPOT">NFAA 5-Spot: X, 5, 4, M</option>
-              <option value="NFAA_SINGLE">NFAA Single-Spot: X(5), 5..1, M</option>
-            </select>
+            <label class="block text-slate-300 font-semibold mb-1">Target Swap Rule</label>
+            <div class="flex items-center justify-between bg-slate-950 border border-slate-700 rounded-xl px-3 py-2">
+              <span class="text-[11px] text-slate-300 font-semibold">Midpoint Swap</span>
+              <input type="checkbox" id="new-ev-swap" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
+            </div>
           </div>
         </div>
 
@@ -726,20 +736,13 @@
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-          <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+        <div class="rounded-xl bg-slate-950 border border-slate-800 p-2.5">
+          <div class="flex items-center justify-between">
             <div>
               <div class="font-bold text-white text-xs">Randomize Assignment</div>
-              <div class="text-[10px] text-slate-400">Shuffle archers across bales &amp; Top/Bottom targets</div>
+              <div class="text-[10px] text-slate-400">Shuffle archers across active bales &amp; Top/Bottom targets</div>
             </div>
             <input type="checkbox" id="new-ev-randomize" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
-          </div>
-          <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-xl p-2.5">
-            <div>
-              <div class="font-bold text-white text-xs">Midpoint Target Swap</div>
-              <div class="text-[10px] text-slate-400">Swap Top &amp; Bottom targets halfway</div>
-            </div>
-            <input type="checkbox" id="new-ev-swap" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
           </div>
         </div>
 

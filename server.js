@@ -25,6 +25,64 @@ const app = express();
 const PORT = process.env.PORT || 3456;
 
 app.use(express.json());
+// Serve clean landing page with direct links (manual click so archers bookmark new URL)
+app.get(['/', '/index.html', '/scoring.html', '/scoring'], (req, res) => {
+  res.send(`<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Archery League Has Moved</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;600;800&display=swap');
+    body { font-family: 'Plus Jakarta Sans', sans-serif; }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 min-h-screen flex items-center justify-center p-4">
+  <div class="max-w-md w-full bg-slate-900 border border-slate-800 rounded-3xl p-6 sm:p-8 text-center space-y-6 shadow-2xl">
+    <div class="w-16 h-16 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto text-2xl shadow-lg shadow-amber-500/10">
+      <i class="fa-solid fa-bullseye"></i>
+    </div>
+    
+    <div class="space-y-2">
+      <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400 bg-amber-500/10 px-2.5 py-1 rounded-full border border-amber-500/20">
+        Website Moved to Cloud
+      </span>
+      <h1 class="text-xl sm:text-2xl font-black text-white">Archery League Night</h1>
+      <p class="text-xs text-slate-400 leading-relaxed">
+        Our attendance tracker and tournament scoring app has permanently migrated to GitHub Pages &amp; Firebase.
+      </p>
+      <div class="p-3 bg-amber-500/10 border border-amber-500/30 rounded-2xl text-[11px] text-amber-200 text-left flex items-start gap-2.5 mt-2">
+        <i class="fa-solid fa-bookmark text-amber-400 mt-0.5 shrink-0"></i>
+        <span><strong>Please update your bookmarks:</strong> This local server will be decommissioned soon. Please bookmark the new link below!</span>
+      </div>
+    </div>
+
+    <div class="pt-2 space-y-2.5">
+      <a href="https://00longma00.github.io/champion-archery-league/"
+        class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 px-4 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+        <i class="fa-solid fa-calendar-check"></i>
+        <span>RSVP &amp; Attendance Tracker</span>
+        <i class="fa-solid fa-arrow-right ml-1 text-[10px]"></i>
+      </a>
+
+      <a href="https://00longma00.github.io/champion-archery-league/scoring.html"
+        class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 px-4 rounded-xl text-xs border border-slate-700 transition flex items-center justify-center gap-2">
+        <i class="fa-solid fa-calculator text-amber-400"></i>
+        <span>Live Tournament Scoring &amp; Leaderboards</span>
+      </a>
+    </div>
+
+    <div class="pt-2 border-t border-slate-800/80 text-[11px] text-slate-500 font-mono">
+      https://00longma00.github.io/champion-archery-league/
+    </div>
+  </div>
+</body>
+</html>`);
+});
+
 app.use(express.static(path.join(__dirname, 'public')));
 
 // Security Headers
