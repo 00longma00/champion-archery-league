@@ -57,9 +57,13 @@ export async function getAppState() {
   // RSVPs for upcoming Sunday
   const rsvps = [];
   try {
-    const q = query(collection(db, "rsvps"), where("date", "==", currentSunday));
-    const rsvpSnap = await getDocs(q);
-    rsvpSnap.forEach(d => rsvps.push(d.data()));
+    const rsvpSnap = await getDocs(collection(db, "rsvps"));
+    rsvpSnap.forEach(d => {
+      const r = d.data();
+      if (r.date === currentSunday) {
+        rsvps.push(r);
+      }
+    });
   } catch (e) {
     console.error("Error reading rsvps:", e);
   }
@@ -124,20 +128,69 @@ export async function updateAdminStatus({ status, leagueTime }) {
 
 // 4. Scoring: List Events Hub
 export async function getScoringEventsHub() {
-  const events = [];
   const eventsSnap = await getDocs(collection(db, "scoring_events"));
-  eventsSnap.forEach(d => events.push(d.data()));
+  const pSnap = await getDocs(collection(db, "event_participants"));
+
+  const participantsByEvent = {};
+  pSnap.forEach(d => {
+    const p = d.data();
+    if (!participantsByEvent[p.event_id]) participantsByEvent[p.event_id] = [];
+    participantsByEvent[p.event_id].push(p);
+  });
+
+  const events = [];
+  eventsSnap.forEach(d => {
+    const ev = d.data();
+    const pList = participantsByEvent[ev.id] || [];
+    const baleSet = new Set();
+    pList.forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
+    const groupCount = Math.max(1, Math.ceil(baleSet.size / 2));
+
+    events.push({
+      ...ev,
+      participant_count: pList.length,
+      group_count: groupCount,
+      is_locked: ev.status === 'COMPLETED'
+    });
+  });
   events.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
 
-  // Get current roster for event creator modal
+  // Get current roster and RSVPs for event creator modal
   const rosterSnap = await getDocs(collection(db, "roster"));
   const roster = [];
   rosterSnap.forEach(d => roster.push(d.data()));
 
+  const sunday = getUpcomingSundayStr();
+  const yesArchers = [];
+  try {
+    const rsvpSnap = await getDocs(collection(db, "rsvps"));
+    rsvpSnap.forEach(d => {
+      const r = d.data();
+      if (r.date === sunday && r.status === 'YES') {
+        yesArchers.push({
+          name: r.archerName,
+          bow_category: r.bowCategory || 'BAREBOW',
+          avatar_id: r.avatarId,
+          custom_title: r.customTitle
+        });
+      }
+    });
+  } catch (e) {}
+
   return {
     success: true,
     events,
-    roster
+    roster,
+    rsvpImport: {
+      date: sunday,
+      yesArchers,
+      allArchers: roster.map(r => ({
+        name: r.name,
+        bow_category: r.bowCategory || 'BAREBOW',
+        avatar_id: r.avatarId,
+        custom_title: r.customTitle
+      }))
+    }
   };
 }
 

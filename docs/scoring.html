@@ -1996,7 +1996,9 @@
     // ========================================================================
     async function loadEventsHub() {
       try {
+        console.log("Loading events hub from Firebase...");
         hubData = await getScoringEventsHub();
+        console.log("Loaded hub data:", hubData);
         renderEventsHub();
 
         // Check URL query param for direct event & group link
@@ -2011,6 +2013,7 @@
         }
       } catch (err) {
         console.error('Failed to load scoring events hub:', err);
+        alert('Firebase error loading scoring events: ' + (err.message || err));
       }
     }
 
@@ -4133,6 +4136,7 @@
       keypadBackspace,
       keypadClear,
       saveKeypadAndNext,
+      keypadPress,
       openEventWorkspace,
       selectScoringGroup,
       openKeypadForArcher,
@@ -4141,7 +4145,11 @@
       handleScorerSelectChange
     });
 
-    document.addEventListener('DOMContentLoaded', loadEventsHub);
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', loadEventsHub);
+    } else {
+      loadEventsHub();
+    }
   </script>
 </body>
 </html>

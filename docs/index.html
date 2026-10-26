@@ -435,6 +435,7 @@
 
   <script type="module">
     import { getAppState, submitRsvp, updateAdminStatus } from './firebase-adapter.js';
+    let appState = null;
     let currentTab = 'yes';
     let manualAvatarOverride = false;
     let manualTitleOverride = false;
@@ -1274,10 +1275,13 @@
     // Firebase direct state loading
     async function loadState() {
       try {
+        console.log("Loading app state from Firebase...");
         appState = await getAppState();
+        console.log("Loaded app state:", appState);
         render();
       } catch (err) {
         console.error('Failed to load state from Firebase:', err);
+        alert('Firebase error loading state: ' + (err.message || err));
       }
     }
 
@@ -1339,7 +1343,8 @@
       // Render tab list
       renderList();
       renderAvatarPickerButtons();
-    }
+      console.log("Render completed successfully!");
+      }
 
     function selectStatus(status) {
       document.getElementById('selected-status').value = status;
