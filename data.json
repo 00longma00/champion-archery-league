@@ -76,16 +76,6 @@
       "customTitle": null
     },
     {
-      "id": "1792290295963",
-      "name": "Wei",
-      "avatarId": "devon_rex_cat",
-      "bowCategory": "BAREBOW",
-      "customTitle": null,
-      "email": "",
-      "remindMe": true,
-      "createdAt": "2026-10-18T02:24:55.963Z"
-    },
-    {
       "id": "1792368706077",
       "name": "Max",
       "avatarId": "husky_dog",
@@ -189,15 +179,6 @@
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-18T01:37:50.526Z"
-      },
-      {
-        "archerName": "Wei",
-        "avatarId": "devon_rex_cat",
-        "bowCategory": "BAREBOW",
-        "customTitle": null,
-        "status": "NO",
-        "note": "",
-        "updatedAt": "2026-10-18T02:25:17.485Z"
       },
       {
         "archerName": "Max",

@@ -521,14 +521,24 @@
             <div>
               <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center">2</span>
-                <span>Scoring Groups Assignment</span>
+                <span>Scoring Groups &amp; Scorers Setup</span>
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Group bales together so one nominated scorer can enter arrows for their group.</p>
+              <p class="text-xs text-slate-400 mt-0.5">Set how many bales each scorer manages (e.g. 1 scorer per 1 bale, 2 bales, or 3 bales) or customize groups below.</p>
             </div>
-            <div class="flex items-center gap-2">
+            <div class="flex flex-wrap items-center gap-2">
+              <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1">
+                <label for="setup-bales-per-scorer" class="text-[11px] font-bold text-slate-400">Scorer Ratio:</label>
+                <select id="setup-bales-per-scorer" onchange="applyDefaultGroupingInSetup(Number(this.value))" class="bg-slate-900 border border-slate-700 rounded-md px-2 py-0.5 text-[11px] font-extrabold text-amber-300 focus:outline-none focus:border-amber-500">
+                  <option value="1">1 Scorer / 1 Bale</option>
+                  <option value="2" selected>1 Scorer / 2 Bales</option>
+                  <option value="3">1 Scorer / 3 Bales</option>
+                  <option value="4">1 Scorer / 4 Bales</option>
+                  <option value="6">1 Scorer / All Bales</option>
+                </select>
+              </div>
               <button type="button" onclick="applyDefaultGroupingInSetup()" class="text-xs bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
                 <i class="fa-solid fa-object-group"></i>
-                <span>Default Grouping</span>
+                <span>Apply Grouping</span>
               </button>
               <button type="button" onclick="addCustomGroupRow()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-200 border border-slate-700 px-2.5 py-1.5 rounded-lg font-bold transition">
                 + Add Group
@@ -619,8 +629,8 @@
   <!-- ==================================================================== -->
   <!-- MODAL: CREATE NEW LEAGUE EVENT                                       -->
   <!-- ==================================================================== -->
-  <div id="create-event-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl my-8">
+  <div id="create-event-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-4 sm:p-5 space-y-3.5 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-base font-extrabold text-white flex items-center gap-2">
           <i class="fa-solid fa-bullseye text-amber-400"></i>
@@ -632,25 +642,27 @@
       </div>
 
       <div class="space-y-3.5 text-xs">
-        <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-4 gap-2.5 sm:gap-3">
           <div class="sm:col-span-2">
             <label class="block text-slate-300 font-semibold mb-1">Event Name</label>
             <input type="text" id="new-ev-name" required value="Sunday Night League"
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500">
           </div>
-          <div>
-            <label class="block text-slate-300 font-semibold mb-1">Date</label>
-            <input type="date" id="new-ev-date" required
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500">
-          </div>
-          <div>
-            <label class="block text-slate-300 font-semibold mb-1">Start Time</label>
-            <input type="time" id="new-ev-time" required value="18:00"
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white focus:outline-none focus:border-amber-500">
+          <div class="grid grid-cols-2 sm:contents gap-2.5">
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Date</label>
+              <input type="date" id="new-ev-date" required
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-semibold mb-1">Start Time</label>
+              <input type="time" id="new-ev-time" required value="18:00"
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-white focus:outline-none focus:border-amber-500">
+            </div>
           </div>
         </div>
 
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5 sm:gap-3">
           <div>
             <label class="block text-slate-300 font-semibold mb-1">Scoring Format</label>
             <select id="new-ev-scoring-type" class="w-full bg-slate-950 border border-amber-500/50 rounded-xl px-3 py-2 text-white font-bold">
@@ -687,15 +699,15 @@
           <input type="checkbox" id="new-ev-swap" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
         </div>
 
-        <!-- Available Bales Customization -->
+        <!-- Available Bales & Scorer Grouping Setup -->
         <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-bold text-white flex items-center gap-1.5">
                 <i class="fa-solid fa-bullseye text-amber-400"></i>
-                <span>Available Bales</span>
+                <span>Available Bales &amp; Scorer Setup</span>
               </span>
-              <p class="text-[10px] text-slate-400">Set total bales in the range and toggle active ones.</p>
+              <p class="text-[10px] text-slate-400">Set range bales and how many bales each scorer manages.</p>
             </div>
             <div class="flex items-center gap-3">
               <div class="flex items-center gap-1.5">
@@ -713,6 +725,19 @@
           </div>
           <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-0.5" id="bale-checkboxes-grid">
             <!-- Populated dynamically based on Max Bales count -->
+          </div>
+          <div class="pt-2 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-2">
+            <div>
+              <span class="text-xs font-bold text-white">Scorers / Bales Per Scorer</span>
+              <p class="text-[10px] text-slate-400">How many bales does 1 scorer record arrows for?</p>
+            </div>
+            <select id="new-ev-bales-per-group" class="bg-slate-900 border border-amber-500/40 rounded-lg px-2.5 py-1.5 text-xs font-extrabold text-amber-300 focus:outline-none focus:border-amber-500">
+              <option value="1">1 Scorer per 1 Bale</option>
+              <option value="2" selected>1 Scorer per 2 Bales</option>
+              <option value="3">1 Scorer per 3 Bales</option>
+              <option value="4">1 Scorer per 4 Bales</option>
+              <option value="6">1 Scorer for All Bales</option>
+            </select>
           </div>
         </div>
 
@@ -778,8 +803,8 @@
   <!-- ==================================================================== -->
   <!-- MODAL: BULK SELECT ARCHERS FROM ROSTER                               -->
   <!-- ==================================================================== -->
-  <div id="bulk-roster-modal" onclick="if(event.target.id==='bulk-roster-modal') closeBulkRosterSelectModal()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[65] hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-5 space-y-4 shadow-2xl my-8">
+  <div id="bulk-roster-modal" onclick="if(event.target.id==='bulk-roster-modal') closeBulkRosterSelectModal()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[65] hidden flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-4 sm:p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
           <h3 class="text-base font-extrabold text-white flex items-center gap-2">
@@ -821,8 +846,8 @@
   <!-- ==================================================================== -->
   <!-- MODAL: ADD ARCHER MENU (WITH DISCIPLINE & PREVIOUS ARCHERS AUTOFILL) -->
   <!-- ==================================================================== -->
-  <div id="add-archer-modal" onclick="if(event.target.id==='add-archer-modal') closeAddArcherMenu()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] hidden flex items-center justify-center p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl my-8">
+  <div id="add-archer-modal" onclick="if(event.target.id==='add-archer-modal') closeAddArcherMenu()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[60] hidden flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-4 sm:p-5 space-y-4 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <div>
           <h3 class="text-base font-extrabold text-white flex items-center gap-2">
@@ -944,8 +969,8 @@
   <!-- ==================================================================== -->
   <!-- MODAL: QR CODE FOR SCORERS & GROUPS                                  -->
   <!-- ==================================================================== -->
-  <div id="qr-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl text-center">
+  <div id="qr-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl text-center my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-sm font-extrabold text-white flex items-center gap-2">
           <i class="fa-solid fa-qrcode text-amber-400"></i>
@@ -989,8 +1014,8 @@
   <!-- ==================================================================== -->
   <!-- MODAL: ARCHER SCORECARD (PER-END BREAKDOWN TABLE)                    -->
   <!-- ==================================================================== -->
-  <div id="scorecard-modal" onclick="if(event.target.id==='scorecard-modal') closeArcherScorecard()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-3 sm:p-4 overflow-y-auto">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-4 sm:p-5 space-y-4 shadow-2xl my-6 max-h-[90vh] flex flex-col">
+  <div id="scorecard-modal" onclick="if(event.target.id==='scorecard-modal') closeArcherScorecard()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-4 sm:p-5 space-y-4 shadow-2xl my-auto max-h-[90vh] flex flex-col">
       <div class="flex items-start justify-between border-b border-slate-800 pb-3 gap-2 shrink-0">
         <div class="flex items-center gap-3 min-w-0">
           <div id="sc-modal-cat-icon" class="w-10 h-10 rounded-xl bg-slate-950 border border-slate-700 p-1 flex items-center justify-center shrink-0"></div>
@@ -1126,7 +1151,8 @@
       createScoringEvent, 
       updateScoringEvent, 
       deleteScoringEvent, 
-      saveBaleAssignments 
+      saveBaleAssignments,
+      updateScoringGroupState
     } from './firebase-adapter.js';
     let hubData = { events: [], rsvpImport: { yesArchers: [], allArchers: [] } };
     let activeEventData = null; // { event, groups, participants, leaderboard, scores }
@@ -1781,7 +1807,6 @@
       'long ma': 'bengal_cat',
       'weijia': 'devon_rex_cat',
       'weijia li': 'devon_rex_cat',
-      'wei': 'devon_rex_cat',
       'ling': 'maine_coon_cat',
       'ling fang': 'maine_coon_cat',
       'ling fangng': 'maine_coon_cat',
@@ -1806,7 +1831,6 @@
       'alex': 'OLYMPIC_RECURVE',
       'tz': 'BAREBOW',
       'val': 'BAREBOW',
-      'wei': 'BAREBOW',
       'max': 'TRADITIONAL'
     };
 
@@ -2627,7 +2651,7 @@
           });
         }
       });
-      // Ensure defaults like Long, Weijia, Ling, Xianchu, Alex, TZ, Val, Wei, Max are always available in autofill
+      // Ensure defaults like Long, Weijia, Ling, Xianchu, Alex, TZ, Val, Max are always available in autofill
       Object.keys(NAME_TO_DEFAULT_CATEGORY).forEach(key => {
         if (!map.has(key)) {
           const displayName = key === 'tz' ? 'TZ' : (key.charAt(0).toUpperCase() + key.slice(1));
@@ -3044,11 +3068,14 @@
       assignedParticipants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
 
       const maxBaleNum = Math.max(...activeBales, 6);
+      const balesPerGroupEl = document.getElementById('new-ev-bales-per-group');
+      const balesPerGroup = balesPerGroupEl ? (parseInt(balesPerGroupEl.value, 10) || 2) : 2;
       const payload = {
         name: document.getElementById('new-ev-name').value.trim(),
         date: document.getElementById('new-ev-date').value,
         start_time: document.getElementById('new-ev-time').value || '18:00',
         max_bales: maxBaleNum,
+        bales_per_group: balesPerGroup,
         rounds: parseInt(document.getElementById('new-ev-rounds').value, 10) || 1,
         ends_per_round: parseInt(document.getElementById('new-ev-ends').value, 10) || 10,
         arrows_per_end: parseInt(document.getElementById('new-ev-arrows').value, 10) || 3,
@@ -3072,14 +3099,14 @@
         try {
           await loadEventsHub();
         } catch (e) {}
-        await openEventWorkspace(json.eventId, 'setup', true);
+        await openEventWorkspace(json.eventId, 'scoring', true);
       } catch (err) {
         console.error('Error creating event:', err);
         alert('Failed to create event: ' + (err.message || err));
       } finally {
         if (submitBtn) {
           submitBtn.disabled = false;
-          submitBtn.innerHTML = `<span>Create Event &amp; Auto-Assign Bales</span>`;
+          submitBtn.innerHTML = `<span>Create Event &amp; Save Bales</span>`;
         }
       }
     }
@@ -3268,8 +3295,15 @@
       if (!selectedGroupId || !newScorerName) return;
       if (activeEventData && activeEventData.groups) {
         const grp = activeEventData.groups.find(g => g.id === selectedGroupId);
-        if (grp) grp.nominated_scorer = newScorerName;
-        renderScoringSubview();
+        if (grp) {
+          grp.nominated_scorer = newScorerName;
+          renderScoringSubview();
+          try {
+            await updateScoringGroupState(grp.id, { nominated_scorer: newScorerName });
+          } catch (e) {
+            console.error('Error updating scorer:', e);
+          }
+        }
       }
     }
 
@@ -3680,7 +3714,14 @@
         : (localStorage.getItem('archery_league_name') || '');
 
       const currentArcherId = kpParticipantId;
-      const arrowsToSave = [...kpArrowsBuffer];
+      const p = (activeEventData.participants || []).find(a => a.id === currentArcherId);
+      if (!p) return;
+      const arrowsToSave = sortArrowsClient([...kpArrowsBuffer], ev.scoring_type);
+      const endTotal = calcEndTotalClient(arrowsToSave, ev.scoring_type);
+      const fmt = FORMAT_META[ev.scoring_type] || FORMAT_META.USAA_10;
+      const maxVal = ev.scoring_type && ev.scoring_type.startsWith('NFAA') ? 5 : 10;
+      const xCount = arrowsToSave.filter(a => String(a).toUpperCase() === 'X').length;
+      const tenCount = arrowsToSave.filter(a => (fmt.values[String(a).toUpperCase()] || 0) === maxVal).length;
 
       try {
         await submitEndScore({
@@ -3688,11 +3729,11 @@
           participantId: p.id,
           roundNumber: activeRound,
           endNumber: activeEnd,
-          arrows: kpArrowsBuffer,
+          arrows: arrowsToSave,
           endTotal,
           xCount,
           tenCount,
-          scoredBy: p.name
+          scoredBy: scoredBy || p.name
         });
         const refreshRes = await getEventData(ev.id);
         if (refreshRes.success) {
@@ -4058,6 +4099,10 @@
       document.getElementById('edit-ev-arrows').value = String(ev.arrows_per_end);
       document.getElementById('edit-ev-swap').checked = Boolean(ev.swap_top_bottom);
       document.getElementById('setup-max-bales-label').textContent = ev.max_bales;
+      const setupRatioEl = document.getElementById('setup-bales-per-scorer');
+      if (setupRatioEl && ev.bales_per_group) {
+        setupRatioEl.value = String(ev.bales_per_group);
+      }
     }
 
     function renderSetupSubview() {
@@ -4375,37 +4420,35 @@
       applyDefaultGroupingInSetup();
     }
 
-    function applyDefaultGroupingInSetup() {
+    function applyDefaultGroupingInSetup(explicitBalesPerGroup = null) {
       const baleCounts = {};
       setupParticipantsDraft.forEach(p => {
         const b = Number(p.bale_number) || 1;
         baleCounts[b] = (baleCounts[b] || 0) + 1;
       });
       const activeBales = Object.keys(baleCounts).map(Number).sort((a, b) => a - b);
+      const ratioSelect = document.getElementById('setup-bales-per-scorer');
+      const balesPerScorer = explicitBalesPerGroup || (ratioSelect ? Number(ratioSelect.value) : 0) || (activeEventData && activeEventData.event && Number(activeEventData.event.bales_per_group)) || 2;
+      if (ratioSelect) ratioSelect.value = String(balesPerScorer);
+
       if (activeBales.length === 0) {
-        setupGroupsDraft = [{ name: 'Scoring Group 1 (Bales 1 & 2)', bales: [1, 2] }];
+        const defaultBales = [];
+        for (let b = 1; b <= Math.min(balesPerScorer, 6); b++) defaultBales.push(b);
+        const label = defaultBales.length > 1 ? `Bales ${defaultBales.join(' & ')}` : `Bale ${defaultBales[0]}`;
+        setupGroupsDraft = [{ name: `Scoring Group 1 (${label})`, bales: defaultBales }];
         renderSetupSubview();
         return;
       }
 
-      const maxOnAnyBale = Math.max(...Object.values(baleCounts));
+      const step = Math.max(1, balesPerScorer);
       const newGroups = [];
-      if (maxOnAnyBale <= 2) {
-        for (let i = 0; i < activeBales.length; i += 2) {
-          const pair = activeBales.slice(i, i + 2);
-          const gNum = newGroups.length + 1;
-          const label = pair.length === 2 ? `Bales ${pair[0]} & ${pair[1]}` : `Bale ${pair[0]}`;
-          newGroups.push({
-            name: `Scoring Group ${gNum} (${label})`,
-            bales: pair
-          });
-        }
-      } else {
-        activeBales.forEach((b, idx) => {
-          newGroups.push({
-            name: `Scoring Group ${idx + 1} (Bale ${b})`,
-            bales: [b]
-          });
+      for (let i = 0; i < activeBales.length; i += step) {
+        const slice = activeBales.slice(i, i + step);
+        const gNum = newGroups.length + 1;
+        const label = slice.length > 1 ? `Bales ${slice.join(' & ')}` : `Bale ${slice[0]}`;
+        newGroups.push({
+          name: `Scoring Group ${gNum} (${label})`,
+          bales: slice
         });
       }
       setupGroupsDraft = newGroups;
@@ -4452,9 +4495,12 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving Assignments...`;
 
       try {
+        const ratioSelect = document.getElementById('setup-bales-per-scorer');
+        const balesPerGroup = ratioSelect ? Number(ratioSelect.value) : undefined;
         const json = await saveBaleAssignments(activeEventData.event.id, {
           participants: setupParticipantsDraft,
-          groups: setupGroupsDraft
+          groups: setupGroupsDraft,
+          balesPerGroup
         });
         if (!json.success) {
           alert('Error saving assignments: ' + (json.error || 'Unknown error'));
@@ -4526,14 +4572,14 @@
     // ========================================================================
     // QR CODE GENERATOR MODAL (Event-level or Direct Group-level Deep Link)
     // ========================================================================
-    const PUBLIC_BASE_ORIGIN = 'https://cheetos.tail003d44.ts.net';
+    const PUBLIC_BASE_ORIGIN = 'https://00longma00.github.io/champion-archery-league';
 
-    function getPublicOrigin() {
+    function getPublicScoringUrl(eventId) {
       const origin = window.location.origin;
       if (origin.includes('127.0.0.1') || origin.includes('localhost')) {
-        return PUBLIC_BASE_ORIGIN;
+        return `${PUBLIC_BASE_ORIGIN}/scoring.html?event=${encodeURIComponent(eventId)}`;
       }
-      return origin;
+      return `${origin}${window.location.pathname}?event=${encodeURIComponent(eventId)}`;
     }
 
     function openQrModal() {
@@ -4560,7 +4606,7 @@
 
     function getSelectedQrUrlAndTitle() {
       const ev = activeEventData.event;
-      const base = `${getPublicOrigin()}/scoring?event=${encodeURIComponent(ev.id)}`;
+      const base = getPublicScoringUrl(ev.id);
       const choice = document.getElementById('qr-target-select').value;
 
       if (choice === 'leaderboard') {

@@ -130,6 +130,7 @@ export async function updateAdminStatus({ status, leagueTime }) {
 export async function getScoringEventsHub() {
   const eventsSnap = await getDocs(collection(db, "scoring_events"));
   const pSnap = await getDocs(collection(db, "event_participants"));
+  const gSnap = await getDocs(collection(db, "scoring_groups"));
 
   const participantsByEvent = {};
   pSnap.forEach(d => {
@@ -140,13 +141,24 @@ export async function getScoringEventsHub() {
     }
   });
 
+  const groupsByEvent = {};
+  gSnap.forEach(d => {
+    const g = d.data();
+    if (g.event_id) {
+      if (!groupsByEvent[g.event_id]) groupsByEvent[g.event_id] = [];
+      groupsByEvent[g.event_id].push(g);
+    }
+  });
+
   const events = [];
   eventsSnap.forEach(d => {
     const ev = d.data();
     const pList = participantsByEvent[ev.id] || [];
+    const gList = groupsByEvent[ev.id] || [];
     const baleSet = new Set();
     pList.forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
-    const groupCount = Math.max(1, Math.ceil(baleSet.size / 2));
+    const step = Math.max(1, Number(ev.bales_per_group) || 2);
+    const groupCount = gList.length > 0 ? gList.length : Math.max(1, Math.ceil(baleSet.size / step));
 
     events.push({
       ...ev,
@@ -299,34 +311,50 @@ export async function getEventData(eventId) {
     COMPOUND: leaderboard.filter(p => p.bow_category === 'COMPOUND')
   };
 
-  // Groupings
-  const baleSet = new Set();
-  participants.forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
-  const bales = Array.from(baleSet).sort((a, b) => a - b);
-  const groups = [];
-  for (let i = 0; i < bales.length; i += 2) {
-    const groupBales = bales.slice(i, i + 2);
-    groups.push({
-      id: 'grp_' + ev.id + '_' + (Math.floor(i / 2) + 1),
-      event_id: ev.id,
-      name: 'Bales ' + groupBales.join(' & '),
-      bales: groupBales,
-      nominated_scorer: '',
-      current_round: 1,
-      current_end: 1
+    // Groupings: Load from scoring_groups collection first, or generate based on event.bales_per_group
+    const gQuery = query(collection(db, "scoring_groups"), where("event_id", "==", eventId));
+    const gSnap = await getDocs(gQuery);
+    const groups = [];
+    gSnap.forEach(d => {
+      const g = d.data();
+      groups.push({
+        ...g,
+        bales: Array.isArray(g.bales) ? g.bales.map(Number) : []
+      });
     });
-  }
-  if (groups.length === 0) {
-    groups.push({
-      id: 'grp_' + ev.id + '_1',
-      event_id: ev.id,
-      name: 'Main Group',
-      bales: [1],
-      nominated_scorer: '',
-      current_round: 1,
-      current_end: 1
-    });
-  }
+    groups.sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+
+    if (groups.length === 0) {
+      const baleSet = new Set();
+      participants.forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
+      const bales = Array.from(baleSet).sort((a, b) => a - b);
+      const step = Math.max(1, Number(ev.bales_per_group) || 2);
+      for (let i = 0; i < bales.length; i += step) {
+        const groupBales = bales.slice(i, i + step);
+        const gNum = Math.floor(i / step) + 1;
+        const baleLabel = groupBales.length > 1 ? `Bales ${groupBales.join(' & ')}` : `Bale ${groupBales[0]}`;
+        groups.push({
+          id: 'grp_' + ev.id + '_' + gNum,
+          event_id: ev.id,
+          name: `Scoring Group ${gNum} (${baleLabel})`,
+          bales: groupBales,
+          nominated_scorer: '',
+          current_round: 1,
+          current_end: 1
+        });
+      }
+      if (groups.length === 0) {
+        groups.push({
+          id: 'grp_' + ev.id + '_1',
+          event_id: ev.id,
+          name: 'Scoring Group 1 (Bale 1)',
+          bales: [1],
+          nominated_scorer: '',
+          current_round: 1,
+          current_end: 1
+        });
+      }
+    }
 
   return {
     success: true,
@@ -363,9 +391,10 @@ export async function submitEndScore({ eventId, participantId, roundNumber, endN
 }
 
 // 7. Scoring: Create Event
-export async function createScoringEvent({ event, participants }) {
+export async function createScoringEvent({ event, participants, groups }) {
   const now = new Date().toISOString();
   const eventId = event.id || ('evt_' + Date.now());
+  const balesPerGroup = Math.max(1, Number(event.bales_per_group) || 2);
 
   // Clean payload: Firestore rejects undefined values
   const eventData = {
@@ -374,6 +403,7 @@ export async function createScoringEvent({ event, participants }) {
     date: event.date || now.slice(0, 10),
     start_time: event.start_time || '18:00',
     max_bales: Number(event.max_bales) || 6,
+    bales_per_group: balesPerGroup,
     rounds: Number(event.rounds) || 1,
     ends_per_round: Number(event.ends_per_round) || 10,
     arrows_per_end: Number(event.arrows_per_end) || 3,
@@ -385,10 +415,53 @@ export async function createScoringEvent({ event, participants }) {
   };
   await setDoc(doc(db, "scoring_events", eventId), eventData);
 
+  // Construct and save initial groups so they exist immediately in Firestore
+  const baleSet = new Set();
+  (participants || []).forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
+  const bales = Array.from(baleSet).sort((a, b) => a - b);
+  if (bales.length === 0) bales.push(1);
+
+  const baleToGroupId = {};
+  if (Array.isArray(groups) && groups.length > 0) {
+    for (let idx = 0; idx < groups.length; idx++) {
+      const g = groups[idx];
+      const gId = g.id || ('grp_' + eventId + '_' + (idx + 1));
+      const gBales = Array.isArray(g.bales) ? g.bales.map(Number) : [];
+      gBales.forEach(b => { baleToGroupId[b] = gId; });
+      await setDoc(doc(db, "scoring_groups", gId), {
+        id: gId,
+        event_id: eventId,
+        name: g.name || (`Scoring Group ${idx + 1}`),
+        bales: gBales,
+        nominated_scorer: g.nominated_scorer || '',
+        current_round: 1,
+        current_end: 1
+      });
+    }
+  } else {
+    for (let i = 0; i < bales.length; i += balesPerGroup) {
+      const groupBales = bales.slice(i, i + balesPerGroup);
+      const gNum = Math.floor(i / balesPerGroup) + 1;
+      const gId = 'grp_' + eventId + '_' + gNum;
+      const baleLabel = groupBales.length > 1 ? `Bales ${groupBales.join(' & ')}` : `Bale ${groupBales[0]}`;
+      groupBales.forEach(b => { baleToGroupId[b] = gId; });
+      await setDoc(doc(db, "scoring_groups", gId), {
+        id: gId,
+        event_id: eventId,
+        name: `Scoring Group ${gNum} (${baleLabel})`,
+        bales: groupBales,
+        nominated_scorer: '',
+        current_round: 1,
+        current_end: 1
+      });
+    }
+  }
+
   if (participants && participants.length > 0) {
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}`);
+      const bNum = Number(p.bale_number) || 1;
       await setDoc(doc(db, "event_participants", pId), {
         id: pId,
         event_id: eventId,
@@ -396,34 +469,15 @@ export async function createScoringEvent({ event, participants }) {
         bow_category: p.bow_category || 'BAREBOW',
         avatar_id: p.avatar_id || null,
         custom_title: p.custom_title || null,
-        bale_number: Number(p.bale_number) || 1,
+        bale_number: bNum,
         position: p.position || 'A',
         shooting_line: p.shooting_line || 'AB',
         lane: p.lane || 'Left',
         initial_target: p.initial_target || 'Top',
+        group_id: p.group_id || baleToGroupId[bNum] || ('grp_' + eventId + '_1'),
         sort_order: idx
       });
     }
-  }
-
-  // Construct and save initial groups so they exist immediately in Firestore
-  const baleSet = new Set();
-  (participants || []).forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
-  const bales = Array.from(baleSet).sort((a, b) => a - b);
-  if (bales.length === 0) bales.push(1);
-
-  for (let i = 0; i < bales.length; i += 2) {
-    const groupBales = bales.slice(i, i + 2);
-    const gId = 'grp_' + eventId + '_' + (Math.floor(i / 2) + 1);
-    await setDoc(doc(db, "scoring_groups", gId), {
-      id: gId,
-      event_id: eventId,
-      name: 'Bales ' + groupBales.join(' & '),
-      bales: groupBales,
-      nominated_scorer: '',
-      current_round: 1,
-      current_end: 1
-    });
   }
 
   return { success: true, eventId };
@@ -444,27 +498,83 @@ export async function deleteScoringEvent(eventId) {
   await deleteDoc(doc(db, "scoring_events", eventId));
   // Delete associated participants
   const pSnap = await getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId)));
-  pSnap.forEach(async d => await deleteDoc(d.ref));
+  for (const d of pSnap.docs) { await deleteDoc(d.ref); }
+  // Delete associated groups
+  const gSnap = await getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId)));
+  for (const d of gSnap.docs) { await deleteDoc(d.ref); }
   // Delete associated scores
   const sSnap = await getDocs(query(collection(db, "end_scores"), where("event_id", "==", eventId)));
-  sSnap.forEach(async d => await deleteDoc(d.ref));
+  for (const d of sSnap.docs) { await deleteDoc(d.ref); }
   return { success: true };
 }
 
 // 10. Scoring: Save Bale & Group Assignments
-export async function saveBaleAssignments(eventId, { participants, groups }) {
-  if (participants && participants.length > 0) {
+export async function saveBaleAssignments(eventId, { participants, groups, balesPerGroup }) {
+  if (balesPerGroup !== undefined) {
+    await updateDoc(doc(db, "scoring_events", eventId), {
+      bales_per_group: Number(balesPerGroup) || 2,
+      updated_at: new Date().toISOString()
+    });
+  }
+
+  const baleToGroupId = {};
+  if (Array.isArray(groups)) {
+    // Delete old groups for this event and write new ones
+    const oldGSnap = await getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId)));
+    for (const d of oldGSnap.docs) {
+      await deleteDoc(d.ref);
+    }
+
+    for (let idx = 0; idx < groups.length; idx++) {
+      const g = groups[idx];
+      const gId = g.id || (`grp_${eventId}_${idx + 1}`);
+      const gBales = Array.isArray(g.bales) ? g.bales.map(Number) : [];
+      gBales.forEach(b => { baleToGroupId[b] = gId; });
+      await setDoc(doc(db, "scoring_groups", gId), {
+        id: gId,
+        event_id: eventId,
+        name: g.name || (`Scoring Group ${idx + 1}`),
+        bales: gBales,
+        nominated_scorer: g.nominated_scorer || '',
+        current_round: g.current_round || 1,
+        current_end: g.current_end || 1
+      });
+    }
+  }
+
+  if (Array.isArray(participants)) {
+    const oldPSnap = await getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId)));
+    const keepIds = new Set();
+
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
-      const pId = p.id || (`p_${eventId}_${idx}`);
+      const pId = p.id || (`p_${eventId}_${idx}_${Date.now()}`);
+      keepIds.add(pId);
+      const bNum = Number(p.bale_number) || 1;
+      const resolvedGroupId = baleToGroupId[bNum] || p.group_id || (`grp_${eventId}_1`);
       await setDoc(doc(db, "event_participants", pId), {
         ...p,
         id: pId,
         event_id: eventId,
+        bale_number: bNum,
+        group_id: resolvedGroupId,
         sort_order: idx
       }, { merge: true });
     }
+
+    // Delete removed participants
+    for (const d of oldPSnap.docs) {
+      if (!keepIds.has(d.id)) {
+        await deleteDoc(d.ref);
+      }
+    }
   }
   return await getEventData(eventId);
+}
+
+// 11. Scoring: Update Group State (Nominated Scorer, Active Round/End)
+export async function updateScoringGroupState(groupId, fields) {
+  await setDoc(doc(db, "scoring_groups", groupId), fields, { merge: true });
+  return { success: true };
 }
 
