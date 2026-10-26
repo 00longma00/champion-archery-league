@@ -631,7 +631,7 @@
         </button>
       </div>
 
-      <form id="create-event-form" onsubmit="handleCreateEventSubmit(event)" class="space-y-3.5 text-xs">
+      <form id="create-event-form" onsubmit="window.handleCreateEventSubmit(event); return false;" class="space-y-3.5 text-xs">
         <div class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div class="sm:col-span-2">
             <label class="block text-slate-300 font-semibold mb-1">Event Name</label>
@@ -2891,6 +2891,7 @@
           submitBtn.innerHTML = `<span>Create Event &amp; Auto-Assign Bales</span>`;
         }
       }
+      return false;
     }
 
     // ========================================================================
