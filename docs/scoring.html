@@ -687,53 +687,32 @@
           <input type="checkbox" id="new-ev-swap" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
         </div>
 
-        <!-- Available Bales Customization (Checkboxes 1 to 6) -->
-        <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2">
-          <div class="flex items-center justify-between">
+        <!-- Available Bales Customization -->
+        <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2.5">
+          <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-bold text-white flex items-center gap-1.5">
                 <i class="fa-solid fa-bullseye text-amber-400"></i>
                 <span>Available Bales</span>
               </span>
-              <p class="text-[10px] text-slate-400">Uncheck any club bales that are broken or occupied tonight.</p>
+              <p class="text-[10px] text-slate-400">Set total bales in the range and toggle active ones.</p>
             </div>
-            <div class="flex items-center gap-2">
-              <button type="button" onclick="toggleAllBaleCheckboxes(true)" class="text-[10px] font-bold text-amber-400 hover:underline">All</button>
-              <span class="text-slate-600 text-xs">•</span>
-              <button type="button" onclick="toggleAllBaleCheckboxes(false)" class="text-[10px] text-slate-400 hover:underline">None</button>
+            <div class="flex items-center gap-3">
+              <div class="flex items-center gap-1.5">
+                <label class="text-[10px] text-slate-400 font-bold uppercase">Total:</label>
+                <input type="number" id="new-ev-max-bales" min="1" max="24" value="6"
+                  onchange="onMaxBalesCountChange(this.value)"
+                  class="w-14 bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-xs text-amber-300 font-mono font-bold text-center focus:outline-none focus:border-amber-500">
+              </div>
+              <div class="flex items-center gap-1.5 border-l border-slate-800 pl-3">
+                <button type="button" onclick="toggleAllBaleCheckboxes(true)" class="text-[10px] font-bold text-amber-400 hover:underline">All</button>
+                <span class="text-slate-600 text-xs">•</span>
+                <button type="button" onclick="toggleAllBaleCheckboxes(false)" class="text-[10px] text-slate-400 hover:underline">None</button>
+              </div>
             </div>
           </div>
-          <div class="grid grid-cols-6 gap-2 pt-1" id="bale-checkboxes-grid">
-            <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-amber-500/50 bg-amber-500/10 cursor-pointer transition select-none hover:border-amber-400">
-              <input type="checkbox" name="active_bale" value="1" checked onchange="onBaleCheckboxChange(this)" class="sr-only">
-              <span class="text-xs font-black text-amber-300">Bale 1</span>
-              <span class="text-[9px] text-emerald-400 font-semibold mt-0.5">Active</span>
-            </label>
-            <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-amber-500/50 bg-amber-500/10 cursor-pointer transition select-none hover:border-amber-400">
-              <input type="checkbox" name="active_bale" value="2" checked onchange="onBaleCheckboxChange(this)" class="sr-only">
-              <span class="text-xs font-black text-amber-300">Bale 2</span>
-              <span class="text-[9px] text-emerald-400 font-semibold mt-0.5">Active</span>
-            </label>
-            <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-amber-500/50 bg-amber-500/10 cursor-pointer transition select-none hover:border-amber-400">
-              <input type="checkbox" name="active_bale" value="3" checked onchange="onBaleCheckboxChange(this)" class="sr-only">
-              <span class="text-xs font-black text-amber-300">Bale 3</span>
-              <span class="text-[9px] text-emerald-400 font-semibold mt-0.5">Active</span>
-            </label>
-            <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-amber-500/50 bg-amber-500/10 cursor-pointer transition select-none hover:border-amber-400">
-              <input type="checkbox" name="active_bale" value="4" checked onchange="onBaleCheckboxChange(this)" class="sr-only">
-              <span class="text-xs font-black text-amber-300">Bale 4</span>
-              <span class="text-[9px] text-emerald-400 font-semibold mt-0.5">Active</span>
-            </label>
-            <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-amber-500/50 bg-amber-500/10 cursor-pointer transition select-none hover:border-amber-400">
-              <input type="checkbox" name="active_bale" value="5" checked onchange="onBaleCheckboxChange(this)" class="sr-only">
-              <span class="text-xs font-black text-amber-300">Bale 5</span>
-              <span class="text-[9px] text-emerald-400 font-semibold mt-0.5">Active</span>
-            </label>
-            <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-amber-500/50 bg-amber-500/10 cursor-pointer transition select-none hover:border-amber-400">
-              <input type="checkbox" name="active_bale" value="6" checked onchange="onBaleCheckboxChange(this)" class="sr-only">
-              <span class="text-xs font-black text-amber-300">Bale 6</span>
-              <span class="text-[9px] text-emerald-400 font-semibold mt-0.5">Active</span>
-            </label>
+          <div class="grid grid-cols-3 sm:grid-cols-6 gap-2 pt-0.5" id="bale-checkboxes-grid">
+            <!-- Populated dynamically based on Max Bales count -->
           </div>
         </div>
 
@@ -2283,6 +2262,29 @@
       closeBulkRosterSelectModal();
     }
 
+    function renderBaleCheckboxes(maxBales = 6, previouslyChecked = null) {
+      const grid = document.getElementById('bale-checkboxes-grid');
+      if (!grid) return;
+      let html = '';
+      for (let b = 1; b <= maxBales; b++) {
+        const isChecked = previouslyChecked ? previouslyChecked.includes(b) : true;
+        html += `
+          <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border ${isChecked ? 'border-amber-500/50 bg-amber-500/10' : 'border-slate-800 bg-slate-950/60 opacity-50'} cursor-pointer transition select-none hover:border-amber-400">
+            <input type="checkbox" name="active_bale" value="${b}" ${isChecked ? 'checked' : ''} onchange="onBaleCheckboxChange(this)" class="sr-only">
+            <span class="text-xs font-black text-amber-300">Bale ${b}</span>
+            <span class="text-[9px] ${isChecked ? 'text-emerald-400' : 'text-slate-500'} font-semibold mt-0.5">${isChecked ? 'Active' : 'Off'}</span>
+          </label>
+        `;
+      }
+      grid.innerHTML = html;
+    }
+
+    function onMaxBalesCountChange(val) {
+      const num = Math.min(24, Math.max(1, parseInt(val, 10) || 6));
+      const currentSelected = getSelectedCreateBalesList();
+      renderBaleCheckboxes(num, currentSelected);
+    }
+
     function onBaleCheckboxChange(cb) {
       const label = cb.closest('.bale-checkbox-label');
       if (!label) return;
@@ -2322,6 +2324,10 @@
       if (!dateInput.value) {
         dateInput.value = (hubData.rsvpImport && hubData.rsvpImport.date) || new Date().toISOString().slice(0, 10);
       }
+      const maxBalesInput = document.getElementById('new-ev-max-bales');
+      const maxBales = maxBalesInput ? (parseInt(maxBalesInput.value, 10) || 6) : 6;
+      renderBaleCheckboxes(maxBales);
+
       // Pre-fill with YES RSVPs if draft is empty
       if (createEventParticipantsDraft.length === 0 && hubData.rsvpImport && hubData.rsvpImport.yesArchers && hubData.rsvpImport.yesArchers.length > 0) {
         fillNewEventWithYesRsvps(true);
@@ -4427,6 +4433,7 @@
       bulkSelectAllToggle,
       updateBulkSelectedCountBadge,
       confirmBulkRosterSelect,
+      onMaxBalesCountChange,
       onBaleCheckboxChange,
       toggleAllBaleCheckboxes,
       openQrModal,
