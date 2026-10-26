@@ -336,20 +336,26 @@
 
         <!-- Scoring Group Selector Strip -->
         <section class="rounded-2xl bg-slate-900/85 border border-slate-800 p-4 space-y-3">
-          <div class="flex items-center justify-between gap-2">
-            <label class="text-xs font-bold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-users-viewfinder text-amber-400"></i>
-              <span>Active Scoring Group</span>
-            </label>
-            <div class="flex items-center gap-2">
-              <span id="group-bales-hint" class="text-[11px] font-semibold text-amber-300"></span>
-              <button type="button" id="btn-switch-group-toggle" onclick="toggleGroupSwitcher()" class="hidden text-[11px] font-bold bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-2.5 py-1 rounded-lg transition">
-                <i class="fa-solid fa-repeat mr-1 text-amber-400"></i>Switch Group
-              </button>
+          <!-- Obvious Scorer Group Selection Callout Banner -->
+          <div class="rounded-xl bg-amber-950 border border-amber-400/60 p-3 flex items-center justify-between gap-3 shadow-sm">
+            <div class="flex items-center gap-2.5">
+              <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-black text-sm shadow">
+                <i class="fa-solid fa-hand-pointer"></i>
+              </div>
+              <div>
+                <div class="text-xs font-black text-amber-300 uppercase tracking-wide">
+                  Step 1: Select Your Bale Group Below to Score
+                </div>
+                <div class="text-[11px] text-slate-300 mt-0.5">
+                  Tap the scoring group for your assigned bale(s) to view and enter arrows for those archers.
+                </div>
+              </div>
             </div>
+            <span id="group-bales-hint" class="hidden sm:inline-block text-[11px] font-extrabold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full shrink-0"></span>
           </div>
-          <div id="scoring-group-pills" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
-            <!-- Group buttons populated by JS -->
+
+          <div id="scoring-group-pills" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <!-- All Group buttons populated by JS -->
           </div>
 
           <!-- Nominated Scorer Bar -->
@@ -2316,6 +2322,7 @@
       const num = Math.min(24, Math.max(1, parseInt(val, 10) || 6));
       const currentSelected = getSelectedCreateBalesList();
       renderBaleCheckboxes(num, currentSelected);
+      renderCreateEventParticipantsList();
     }
 
     function onBaleCheckboxChange(cb) {
@@ -2335,6 +2342,7 @@
           statusSpan.className = 'text-[9px] text-slate-500 font-semibold mt-0.5';
         }
       }
+      renderCreateEventParticipantsList();
     }
 
     function toggleAllBaleCheckboxes(selectAll = true) {
@@ -2342,6 +2350,7 @@
         cb.checked = selectAll;
         onBaleCheckboxChange(cb);
       });
+      renderCreateEventParticipantsList();
     }
 
     function getSelectedCreateBalesList() {
@@ -3394,44 +3403,37 @@
         p.group_id === activeGroup.id || (activeGroup.bales || []).includes(Number(p.bale_number))
       );
 
-      // Focused Group Header: Hide other groups unless "Switch Group" is toggled!
-      document.getElementById('group-bales-hint').textContent =
-        activeGroup ? `Bale${activeGroup.bales.length > 1 ? 's' : ''} ${activeGroup.bales.join(' & ')} (${groupArchers.length} Archers)` : '';
-
-      const switchGroupBtn = document.getElementById('btn-switch-group-toggle');
-      if (switchGroupBtn) {
-        if (groups.length > 1) {
-          switchGroupBtn.classList.remove('hidden');
-          switchGroupBtn.innerHTML = showAllGroupsPicker
-            ? `<i class="fa-solid fa-eye-slash mr-1 text-amber-400"></i>Hide Other Groups`
-            : `<i class="fa-solid fa-repeat mr-1 text-amber-400"></i>Switch Group (${groups.length})`;
-        } else {
-          switchGroupBtn.classList.add('hidden');
-        }
+      // Always show all scoring groups so the scorer can tap any group directly!
+      const groupHintEl = document.getElementById('group-bales-hint');
+      if (groupHintEl) {
+        groupHintEl.textContent = activeGroup
+          ? `Active: ${activeGroup.name} (${groupArchers.length} Archers)`
+          : '';
       }
 
-      const visibleGroups = (showAllGroupsPicker || groups.length <= 1)
-        ? groups
-        : groups.filter(g => g.id === selectedGroupId);
-
       const pillsContainer = document.getElementById('scoring-group-pills');
-      pillsContainer.className = visibleGroups.length === 1 ? 'grid grid-cols-1 gap-2' : 'grid grid-cols-1 sm:grid-cols-2 gap-2';
-      pillsContainer.innerHTML = visibleGroups.map(g => {
+      pillsContainer.className = groups.length === 1 ? 'grid grid-cols-1 gap-2.5' : 'grid grid-cols-1 sm:grid-cols-2 gap-2.5';
+      pillsContainer.innerHTML = groups.map(g => {
         const isSelected = g.id === selectedGroupId;
-        const gArchers = participants.filter(p => p.group_id === g.id || (g.bales || []).includes(Number(p.bale_number)));
+        const gArchers = participants.filter(p => (g.bales || []).includes(Number(p.bale_number)) || p.group_id === g.id);
         const namesPreview = gArchers.map(a => `${a.bale_number}${a.position} ${a.name}`).join(', ');
+        const grpTargetEnd = computeGroupFirstUnfinishedEnd(g, ev, participants);
         return `
           <button type="button" onclick="selectScoringGroup('${g.id}')"
-            class="p-3 rounded-xl border text-left transition ${isSelected ? 'bg-amber-500/15 border-amber-400 ring-1 ring-amber-400/40' : 'bg-slate-950/80 border-slate-800 hover:border-slate-700'}">
+            class="p-3.5 rounded-xl border-2 text-left transition ${isSelected ? 'bg-amber-500/15 border-amber-400 ring-2 ring-amber-400/30 shadow-md' : 'bg-slate-950/90 border-slate-800 hover:border-amber-400/50'}">
             <div class="flex items-center justify-between gap-2">
-              <span class="text-xs font-extrabold ${isSelected ? 'text-amber-300' : 'text-white'}">
-                <i class="fa-solid fa-bullseye mr-1"></i>${escapeHtml(g.name)} — Assigned Archers Only
+              <span class="text-xs sm:text-sm font-black flex items-center gap-1.5 ${isSelected ? 'text-amber-300' : 'text-white'}">
+                <i class="fa-solid ${isSelected ? 'fa-circle-check text-amber-400' : 'fa-bullseye text-slate-400'}"></i>
+                <span>${escapeHtml(g.name)}</span>
               </span>
-              <span class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-900 text-slate-300 border border-slate-800">
-                End ${g.current_end || 1}/${ev.ends_per_round}
-              </span>
+              <div class="flex items-center gap-1.5 shrink-0">
+                ${isSelected ? `<span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-amber-500 text-slate-950 uppercase">Selected</span>` : `<span class="text-[10px] font-bold px-2 py-0.5 rounded-full bg-slate-800 text-slate-400 border border-slate-700">Tap to Select</span>`}
+                <span class="text-[10px] font-mono px-2 py-0.5 rounded-md bg-slate-900 text-slate-300 border border-slate-800">
+                  End ${grpTargetEnd.end}/${ev.ends_per_round}
+                </span>
+              </div>
             </div>
-            <div class="text-[11px] text-slate-300 font-medium truncate mt-1">${escapeHtml(namesPreview || 'No archers assigned')}</div>
+            <div class="text-[11px] text-slate-300 font-semibold truncate mt-1.5">${escapeHtml(namesPreview || 'No archers assigned')}</div>
           </button>
         `;
       }).join('');
@@ -4223,7 +4225,7 @@
             <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-3 flex flex-col sm:flex-row sm:items-center justify-between gap-2.5">
               <div class="flex items-center gap-2 flex-1">
                 <i class="fa-solid fa-layer-group text-sky-400 text-xs"></i>
-                <input type="text" value="${escapeHtml(g.name)}" onchange="setupGroupsDraft[${gIdx}].name = this.value"
+                <input type="text" value="${escapeHtml(g.name)}" onchange="updateDraftGroupName(${gIdx}, this.value)"
                   class="bg-slate-900 border border-slate-700 rounded-lg px-2.5 py-1 text-xs text-white font-bold w-full sm:w-64">
               </div>
               <div class="flex items-center gap-1.5 flex-wrap">
@@ -4296,6 +4298,16 @@
         if (known) known.bow_category = val;
       }
 
+      // If bale_number changed manually, re-sort by bale and position so they visually move to that bale
+      if (field === 'bale_number') {
+        p.bale_number = Number(val) || 1;
+        const matchedGrp = setupGroupsDraft.find(g => (g.bales || []).includes(p.bale_number));
+        if (matchedGrp && matchedGrp.id) {
+          p.group_id = matchedGrp.id;
+        }
+        setupParticipantsDraft.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
+      }
+
       // If position changed manually, auto-adjust lane, shooting_line, and default initial_target
       if (field === 'position') {
         const maxBales = (activeEventData && activeEventData.event && activeEventData.event.max_bales) || 6;
@@ -4317,6 +4329,7 @@
           p.lane = 'Right';
           p.initial_target = 'Bottom';
         }
+        setupParticipantsDraft.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
       }
       renderSetupSubview();
     }
@@ -4467,6 +4480,12 @@
     function removeDraftGroup(gIdx) {
       setupGroupsDraft.splice(gIdx, 1);
       renderSetupSubview();
+    }
+
+    function updateDraftGroupName(gIdx, newName) {
+      if (setupGroupsDraft[gIdx]) {
+        setupGroupsDraft[gIdx].name = newName;
+      }
     }
 
     function toggleBaleInDraftGroup(gIdx, baleNum) {
@@ -4691,19 +4710,32 @@
       onCreateBaleDragOver,
       onCreateBaleDragLeave,
       onCreateBaleDrop,
+      updateCreateEventParticipant,
+      removeCreateEventParticipant,
       openQrModal,
       closeQrModal,
+      updateQrCodeDisplay,
       refreshActiveEvent,
       switchEventTab,
       toggleGroupSwitcher,
       stepEnd,
+      jumpToEnd,
       exportLeaderboardCSV,
       openAddArcherMenu,
       closeAddArcherMenu,
+      renderArcherAutofillPopup,
+      onAddArcherMenuNameInput,
+      handleAddArcherInputKeydown,
+      toggleAddArcherManualBale,
       importYesRsvpsIntoSetup,
+      updateDraftParticipant,
+      removeDraftParticipant,
       triggerAutoAssignBales,
       applyDefaultGroupingInSetup,
       addCustomGroupRow,
+      removeDraftGroup,
+      updateDraftGroupName,
+      toggleBaleInDraftGroup,
       saveSetupAssignments,
       deleteCurrentEvent,
       saveEventFormatSettings,
