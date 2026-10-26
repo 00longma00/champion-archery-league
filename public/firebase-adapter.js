@@ -134,8 +134,10 @@ export async function getScoringEventsHub() {
   const participantsByEvent = {};
   pSnap.forEach(d => {
     const p = d.data();
-    if (!participantsByEvent[p.event_id]) participantsByEvent[p.event_id] = [];
-    participantsByEvent[p.event_id].push(p);
+    if (p.event_id) {
+      if (!participantsByEvent[p.event_id]) participantsByEvent[p.event_id] = [];
+      participantsByEvent[p.event_id].push(p);
+    }
   });
 
   const events = [];
@@ -153,7 +155,12 @@ export async function getScoringEventsHub() {
       is_locked: ev.status === 'COMPLETED'
     });
   });
-  events.sort((a, b) => (b.date || '').localeCompare(a.date || ''));
+  // Sort by date descending; if same date, sort by created_at / id descending
+  events.sort((a, b) => {
+    const dateComp = (b.date || '').localeCompare(a.date || '');
+    if (dateComp !== 0) return dateComp;
+    return (b.created_at || b.id || '').localeCompare(a.created_at || a.id || '');
+  });
 
   // Get current roster and RSVPs for event creator modal
   const rosterSnap = await getDocs(collection(db, "roster"));
@@ -360,12 +367,21 @@ export async function createScoringEvent({ event, participants }) {
   const now = new Date().toISOString();
   const eventId = event.id || ('evt_' + Date.now());
 
+  // Clean payload: Firestore rejects undefined values
   const eventData = {
-    ...event,
     id: eventId,
+    name: event.name || 'Sunday Night League',
+    date: event.date || now.slice(0, 10),
+    start_time: event.start_time || '18:00',
+    max_bales: Number(event.max_bales) || 6,
+    rounds: Number(event.rounds) || 1,
+    ends_per_round: Number(event.ends_per_round) || 10,
+    arrows_per_end: Number(event.arrows_per_end) || 3,
+    scoring_type: event.scoring_type || 'USAA_10',
+    swap_top_bottom: event.swap_top_bottom ? 1 : 0,
+    status: event.status || 'SETUP',
     created_at: now,
-    updated_at: now,
-    status: event.status || 'SETUP'
+    updated_at: now
   };
   await setDoc(doc(db, "scoring_events", eventId), eventData);
 
@@ -374,9 +390,17 @@ export async function createScoringEvent({ event, participants }) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}`);
       await setDoc(doc(db, "event_participants", pId), {
-        ...p,
         id: pId,
         event_id: eventId,
+        name: p.name || 'Archer',
+        bow_category: p.bow_category || 'BAREBOW',
+        avatar_id: p.avatar_id || null,
+        custom_title: p.custom_title || null,
+        bale_number: Number(p.bale_number) || 1,
+        position: p.position || 'A',
+        shooting_line: p.shooting_line || 'AB',
+        lane: p.lane || 'Left',
+        initial_target: p.initial_target || 'Top',
         sort_order: idx
       });
     }

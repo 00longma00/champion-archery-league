@@ -759,8 +759,8 @@
           <p class="text-[10px] text-slate-400">Archers will be automatically assigned to Bales (A/B or AB/CD) and default Scoring Groups upon creation.</p>
         </div>
 
-        <button type="submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition">
-          Create Event &amp; Auto-Assign Bales
+        <button type="submit" id="btn-create-event-submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+          <span>Create Event &amp; Auto-Assign Bales</span>
         </button>
       </form>
     </div>
@@ -2866,17 +2866,30 @@
         participants: assignedParticipants
       };
 
+      const submitBtn = document.getElementById('btn-create-event-submit');
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Creating Event...</span>`;
+      }
+
       try {
         const json = await createScoringEvent({
           event: payload,
           participants: payload.participants
         });
         closeCreateEventModal();
-        await loadEventsHub();
+        try {
+          await loadEventsHub();
+        } catch (e) {}
         await openEventWorkspace(json.eventId, 'setup', true);
       } catch (err) {
         console.error(err);
         alert('Failed to create event: ' + (err.message || err));
+      } finally {
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<span>Create Event &amp; Auto-Assign Bales</span>`;
+        }
       }
     }
 
@@ -2891,6 +2904,10 @@
           return;
         }
         activeEventData = json.data;
+        closeCreateEventModal();
+        closeKeypad();
+        closeArcherScorecard();
+        closeQrModal();
         if (!selectedGroupId || !activeEventData.groups.some(g => g.id === selectedGroupId)) {
           const savedLocalName = (localStorage.getItem('archery_league_name') || '').trim();
           let matchedGroup = null;
@@ -4468,6 +4485,7 @@
       openKeypadForArcher,
       openArcherScorecard,
       pickArcherFromAutofillPopup,
+      handleCreateEventSubmit,
       handleScorerSelectChange
     });
 
