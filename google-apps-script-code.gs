@@ -204,6 +204,79 @@ function doGet(e) {
           };
         });
 
+      // Map scores by participant and calculate running totals / leaderboard
+      const scoresByParticipant = {};
+      participants.forEach(p => { scoresByParticipant[p.id] = []; });
+      eventScores.forEach(s => {
+        if (!scoresByParticipant[s.participant_id]) {
+          scoresByParticipant[s.participant_id] = [];
+        }
+        scoresByParticipant[s.participant_id].push(s);
+      });
+
+      const enrichedParticipants = participants.map(p => {
+        const pScores = scoresByParticipant[p.id] || [];
+        let runningTotal = 0;
+        let totalXs = 0;
+        let totalTens = 0;
+        let arrowsShot = 0;
+        let endsCompleted = 0;
+
+        pScores.forEach(s => {
+          if (s.arrows && s.arrows.length > 0) {
+            runningTotal += Number(s.end_total) || 0;
+            totalXs += Number(s.x_count) || 0;
+            totalTens += Number(s.ten_count) || 0;
+            arrowsShot += s.arrows.length;
+            if (s.arrows.length >= (ev.arrows_per_end || 3)) {
+              endsCompleted += 1;
+            }
+          }
+        });
+
+        const bowCat = p.bow_category || 'BAREBOW';
+        return {
+          ...p,
+          bow_category: bowCat,
+          designation: `${p.bale_number}${p.position}`,
+          running_total: runningTotal,
+          x_count: totalXs,
+          ten_count: totalTens,
+          arrows_shot: arrowsShot,
+          ends_completed: endsCompleted,
+          avg_per_arrow: arrowsShot > 0 ? (runningTotal / arrowsShot).toFixed(2) : '0.00',
+          scores: pScores
+        };
+      });
+
+      const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
+      const allScoresFilled = enrichedParticipants.length > 0 && enrichedParticipants.every(p => p.ends_completed >= totalEndsPerArcher);
+      ev.all_scores_filled = allScoresFilled;
+      ev.is_finished = Boolean(ev.is_locked || ev.status === 'COMPLETED' || allScoresFilled);
+
+      const categoryRankCounters = { BAREBOW: 0, OLYMPIC_RECURVE: 0, TRADITIONAL: 0, COMPOUND: 0 };
+      const leaderboard = [...enrichedParticipants].sort((a, b) => {
+        if (b.running_total !== a.running_total) return b.running_total - a.running_total;
+        if (b.x_count !== a.x_count) return b.x_count - a.x_count;
+        if (b.ten_count !== a.ten_count) return b.ten_count - a.ten_count;
+        return String(a.designation || '').localeCompare(String(b.designation || ''));
+      }).map((p, idx) => {
+        const cat = p.bow_category || 'BAREBOW';
+        categoryRankCounters[cat] = (categoryRankCounters[cat] || 0) + 1;
+        return {
+          ...p,
+          rank: idx + 1,
+          category_rank: categoryRankCounters[cat]
+        };
+      });
+
+      const leaderboardByCategory = {
+        BAREBOW: leaderboard.filter(p => (p.bow_category || 'BAREBOW') === 'BAREBOW'),
+        OLYMPIC_RECURVE: leaderboard.filter(p => p.bow_category === 'OLYMPIC_RECURVE'),
+        TRADITIONAL: leaderboard.filter(p => p.bow_category === 'TRADITIONAL'),
+        COMPOUND: leaderboard.filter(p => p.bow_category === 'COMPOUND')
+      };
+
       // Construct groups by bales
       const baleSet = new Set();
       participants.forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
@@ -238,8 +311,10 @@ function doGet(e) {
         success: true,
         data: {
           event: ev,
-          participants: participants,
+          participants: enrichedParticipants,
           groups: groups,
+          leaderboard: leaderboard,
+          leaderboard_by_category: leaderboardByCategory,
           scores: eventScores
         }
       });

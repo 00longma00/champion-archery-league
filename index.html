@@ -433,8 +433,8 @@
     </div>
   </div>
 
-  <script>
-    let appState = null;
+  <script type="module">
+    import { getAppState, submitRsvp, updateAdminStatus } from './firebase-adapter.js';
     let currentTab = 'yes';
     let manualAvatarOverride = false;
     let manualTitleOverride = false;
@@ -1271,15 +1271,13 @@
       document.getElementById('archer-name').focus();
     }
 
-    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwtiHbliJoqZX3PkLdQI0ez1kH6XZ0UJVVJ-TJB3pQ5IuNKcxwgMA8PN2R6CqWsaF7C/exec';
-
+    // Firebase direct state loading
     async function loadState() {
       try {
-        const res = await fetch(API_BASE_URL + '?action=getState');
-        appState = await res.json();
+        appState = await getAppState();
         render();
       } catch (err) {
-        console.error('Failed to load state:', err);
+        console.error('Failed to load state from Firebase:', err);
       }
     }
 
@@ -1476,33 +1474,24 @@
       submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
 
       try {
-        const res = await fetch(API_BASE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'setRsvp',
-            name,
-            status,
-            avatarId: avatarId || undefined,
-            bowCategory: bowCategory || undefined,
-            customTitle: customTitle,
-            email: email ? email : undefined,
-            remindMe: optin
-          })
+        await submitRsvp({
+          name,
+          status,
+          avatarId: avatarId || undefined,
+          bowCategory: bowCategory || undefined,
+          customTitle: customTitle,
+          email: email ? email : undefined,
+          remindMe: optin
         });
-        const data = await res.json();
-        if (data.success) {
-          manualAvatarOverride = false;
-          manualTitleOverride = false;
-          manualBowCategoryOverride = false;
-          await loadState();
-          alert(`Thanks ${name}! Your RSVP & archer badge have been saved.`);
-          onArcherNameChange();
-        } else {
-          alert('Error: ' + (data.error || 'Failed to submit'));
-        }
+        manualAvatarOverride = false;
+        manualTitleOverride = false;
+        manualBowCategoryOverride = false;
+        await loadState();
+        alert(`Thanks ${name}! Your RSVP & archer badge have been saved.`);
+        onArcherNameChange();
       } catch (err) {
-        alert('Network error submitting RSVP.');
+        console.error(err);
+        alert('Network error submitting RSVP: ' + (err.message || err));
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<span>🏹</span> <span>Save RSVP</span>`;
@@ -1625,21 +1614,13 @@
       const leagueTime = document.getElementById('admin-time').value;
 
       try {
-        const res = await fetch(API_BASE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({ action: 'updateAdminStatus', status, leagueTime })
-        });
-        const data = await res.json();
-        if (data.success) {
-          alert('League status updated successfully!');
-          closeAdminModal();
-          loadState();
-        } else {
-          alert('Error: ' + (data.error || 'Failed to update'));
-        }
+        await updateAdminStatus({ status, leagueTime });
+        alert('League status updated successfully!');
+        closeAdminModal();
+        loadState();
       } catch (err) {
-        alert('Failed to connect to server.');
+        console.error(err);
+        alert('Failed to update league status: ' + (err.message || err));
       }
     }
 
@@ -1687,6 +1668,18 @@
       loadState();
       setInterval(loadState, 20000);
     }
+
+    window.toggleAvatarPicker = toggleAvatarPicker;
+    window.equipFromGallery = equipFromGallery;
+    window.selectStatus = selectStatus;
+    window.onArcherNameChange = onArcherNameChange;
+    window.switchTab = switchTab;
+    window.openAdminModal = openAdminModal;
+    window.closeAdminModal = closeAdminModal;
+    window.saveAdminStatus = saveAdminStatus;
+    window.triggerTestReminder = triggerTestReminder;
+    window.handleRsvpSubmit = handleRsvpSubmit;
+    window.toggleEmailInput = toggleEmailInput;
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);

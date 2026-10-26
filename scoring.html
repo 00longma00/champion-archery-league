@@ -1050,10 +1050,16 @@
     </div>
   </div>
 
-  <script>
-    // ========================================================================
-    // STATE & CONSTANTS
-    // ========================================================================
+  <script type="module">
+    import { 
+      getScoringEventsHub, 
+      getEventData, 
+      submitEndScore, 
+      createScoringEvent, 
+      updateScoringEvent, 
+      deleteScoringEvent, 
+      saveBaleAssignments 
+    } from './firebase-adapter.js';
     let hubData = { events: [], rsvpImport: { yesArchers: [], allArchers: [] } };
     let activeEventData = null; // { event, groups, participants, leaderboard, scores }
     let currentEventTab = 'scoring'; // 'scoring' | 'leaderboard' | 'setup'
@@ -1988,12 +1994,9 @@
     // ========================================================================
     // INITIALIZATION, HISTORY / BACK BUTTON & HUB LOADING
     // ========================================================================
-    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwtiHbliJoqZX3PkLdQI0ez1kH6XZ0UJVVJ-TJB3pQ5IuNKcxwgMA8PN2R6CqWsaF7C/exec';
-
     async function loadEventsHub() {
       try {
-        const res = await fetch(API_BASE_URL + '?action=scoringEvents');
-        hubData = await res.json();
+        hubData = await getScoringEventsHub();
         renderEventsHub();
 
         // Check URL query param for direct event & group link
@@ -2593,25 +2596,16 @@
       };
 
       try {
-        const res = await fetch(API_BASE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'createEvent',
-            event: payload,
-            participants: payload.participants
-          })
+        const json = await createScoringEvent({
+          event: payload,
+          participants: payload.participants
         });
-        const json = await res.json();
-        if (!json.success) {
-          alert('Error: ' + (json.error || 'Could not create event'));
-          return;
-        }
         closeCreateEventModal();
         await loadEventsHub();
         await openEventWorkspace(json.eventId, 'setup', true);
       } catch (err) {
-        alert('Failed to create event.');
+        console.error(err);
+        alert('Failed to create event: ' + (err.message || err));
       }
     }
 
@@ -2620,8 +2614,7 @@
     // ========================================================================
     async function openEventWorkspace(eventId, requestedTab = null, pushHistory = true) {
       try {
-        const res = await fetch(`${API_BASE_URL}?action=getEventData&eventId=${encodeURIComponent(eventId)}`);
-        const json = await res.json();
+        const json = await getEventData(eventId);
         if (!json.success) {
           alert(json.error || 'Event not found');
           return;
@@ -2657,7 +2650,7 @@
         // Automatically navigate to Leaderboard if all scores are filled or the event has ended/locked
         const ev = activeEventData.event;
         const isEventDone = Boolean(ev.is_finished || ev.is_locked || ev.all_scores_filled || ev.status === 'COMPLETED');
-        const initialTab = preferredTab || (isEventDone ? 'leaderboard' : 'scoring');
+        const initialTab = requestedTab || (isEventDone ? 'leaderboard' : 'scoring');
 
         const targetUrl = `${window.location.pathname}?event=${encodeURIComponent(eventId)}${initialTab === 'leaderboard' ? '&tab=leaderboard' : ''}`;
         if (pushHistory) {
@@ -2684,8 +2677,7 @@
       const icon = document.getElementById('refresh-icon');
       if (icon) icon.classList.add('fa-spin');
       try {
-        const res = await fetch(`${API_BASE_URL}?action=getEventData&eventId=${encodeURIComponent(activeEventData.event.id)}`);
-        const json = await res.json();
+        const json = await getEventData(activeEventData.event.id);
         if (json.success) {
           activeEventData = json.data;
           if (currentEventTab !== 'setup') {
@@ -2800,19 +2792,10 @@
 
     async function handleScorerSelectChange(newScorerName) {
       if (!selectedGroupId || !newScorerName) return;
-      try {
-        const res = await fetch(`/api/scoring/groups/${encodeURIComponent(selectedGroupId)}/state`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ nominated_scorer: newScorerName })
-        });
-        const json = await res.json();
-        if (json.success) {
-          activeEventData = json.data;
-          renderScoringSubview();
-        }
-      } catch (err) {
-        console.error('Failed to update nominated scorer:', err);
+      if (activeEventData && activeEventData.groups) {
+        const grp = activeEventData.groups.find(g => g.id === selectedGroupId);
+        if (grp) grp.nominated_scorer = newScorerName;
+        renderScoringSubview();
       }
     }
 
@@ -2847,22 +2830,6 @@
       activeRound = roundNum;
       activeEnd = endNum;
       renderScoringSubview();
-
-      // Persist group's current_end on backend so everyone in the group stays in sync
-      if (selectedGroupId) {
-        try {
-          const res = await fetch(`/api/scoring/groups/${encodeURIComponent(selectedGroupId)}/state`, {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ current_round: activeRound, current_end: activeEnd })
-          });
-          const json = await res.json();
-          if (json.success) {
-            activeEventData = json.data;
-            renderScoringSubview();
-          }
-        } catch (e) {}
-      }
     }
 
     function renderScoringSubview() {
@@ -3242,28 +3209,21 @@
       const arrowsToSave = [...kpArrowsBuffer];
 
       try {
-        const res = await fetch(API_BASE_URL, {
-          method: 'POST',
-          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-          body: JSON.stringify({
-            action: 'submitEndScore',
-            eventId: ev.id,
-            participantId: p.id,
-            roundNumber: activeRound,
-            endNumber: activeEnd,
-            arrows: kpArrowsBuffer,
-            endTotal,
-            xCount,
-            tenCount,
-            scoredBy: p.name
-          })
+        await submitEndScore({
+          eventId: ev.id,
+          participantId: p.id,
+          roundNumber: activeRound,
+          endNumber: activeEnd,
+          arrows: kpArrowsBuffer,
+          endTotal,
+          xCount,
+          tenCount,
+          scoredBy: p.name
         });
-        const json = await res.json();
-        if (!json.success) {
-          alert('Failed to save score: ' + (json.error || 'Unknown error'));
-          return;
+        const refreshRes = await getEventData(ev.id);
+        if (refreshRes.success) {
+          activeEventData = refreshRes.data;
         }
-        activeEventData = json.data;
 
         if (activeGroup) {
           const groupArchers = (activeEventData.participants || []).filter(p =>
@@ -3967,25 +3927,17 @@
       btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving Assignments...`;
 
       try {
-        const res = await fetch(`/api/scoring/events/${encodeURIComponent(activeEventData.event.id)}/assign`, {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            participants: setupParticipantsDraft,
-            groups: setupGroupsDraft,
-            autoAssign: false,
-            defaultGroups: false
-          })
+        const json = await saveBaleAssignments(activeEventData.event.id, {
+          participants: setupParticipantsDraft,
+          groups: setupGroupsDraft
         });
-        const json = await res.json();
         if (!json.success) {
           alert('Error saving assignments: ' + (json.error || 'Unknown error'));
           return;
         }
         activeEventData = json.data;
         try {
-          const hubRes = await fetch('/api/scoring/events');
-          hubData = await hubRes.json();
+          hubData = await getScoringEventsHub();
         } catch (e) {}
         if (!selectedGroupId || !activeEventData.groups.some(g => g.id === selectedGroupId)) {
           selectedGroupId = activeEventData.groups[0] ? activeEventData.groups[0].id : null;
@@ -3993,6 +3945,7 @@
         syncDraftFromActiveEvent();
         switchEventTab('scoring');
       } catch (err) {
+        console.error(err);
         alert('Network error saving bale assignments.');
       } finally {
         btn.disabled = false;
@@ -4014,21 +3967,16 @@
       };
 
       try {
-        const res = await fetch(`/api/scoring/events/${encodeURIComponent(activeEventData.event.id)}`, {
-          method: 'PATCH',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify(payload)
-        });
-        const json = await res.json();
-        if (json.success) {
-          activeEventData = json.data;
+        await updateScoringEvent(activeEventData.event.id, payload);
+        const refreshRes = await getEventData(activeEventData.event.id);
+        if (refreshRes.success) {
+          activeEventData = refreshRes.data;
           syncDraftFromActiveEvent();
           renderActiveEventWorkspace();
           alert('Event format settings updated!');
-        } else {
-          alert('Error: ' + (json.error || 'Failed to update'));
         }
       } catch (err) {
+        console.error(err);
         alert('Network error updating event settings.');
       }
     }
@@ -4037,15 +3985,11 @@
       if (!activeEventData || !activeEventData.event) return;
       if (!confirm(`Delete "${activeEventData.event.name}" and all its recorded scores?`)) return;
       try {
-        const res = await fetch(`/api/scoring/events/${encodeURIComponent(activeEventData.event.id)}`, {
-          method: 'DELETE'
-        });
-        const json = await res.json();
-        if (json.success) {
-          showEventsHub();
-        }
+        await deleteScoringEvent(activeEventData.event.id);
+        showEventsHub();
       } catch (err) {
-        alert('Error deleting event.');
+        console.error(err);
+        alert('Error deleting event: ' + (err.message || err));
       }
     }
 
@@ -4156,6 +4100,46 @@
         refreshActiveEvent();
       }
     }, 10000);
+
+    // Expose all interactive functions to window because this script is type="module"
+    Object.assign(window, {
+      showEventsHub,
+      openCreateEventModal,
+      closeCreateEventModal,
+      openQrModal,
+      closeQrModal,
+      refreshActiveEvent,
+      switchEventTab,
+      toggleGroupSwitcher,
+      stepEnd,
+      exportLeaderboardCSV,
+      openAddArcherMenu,
+      closeAddArcherMenu,
+      importYesRsvpsIntoSetup,
+      triggerAutoAssignBales,
+      applyDefaultGroupingInSetup,
+      addCustomGroupRow,
+      saveSetupAssignments,
+      deleteCurrentEvent,
+      saveEventFormatSettings,
+      applyCreatePreset,
+      fillNewEventWithYesRsvps,
+      toggleArcherAutofillPopup,
+      selectAddArcherDiscipline,
+      confirmAddArcherFromMenu,
+      copyQrLink,
+      closeArcherScorecard,
+      closeKeypad,
+      keypadBackspace,
+      keypadClear,
+      saveKeypadAndNext,
+      openEventWorkspace,
+      selectScoringGroup,
+      openKeypadForArcher,
+      openScorecardModal,
+      onArcherAutofillSelect,
+      handleScorerSelectChange
+    });
 
     document.addEventListener('DOMContentLoaded', loadEventsHub);
   </script>
