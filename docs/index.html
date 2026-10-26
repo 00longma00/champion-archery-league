@@ -1,0 +1,1698 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Sunday Archery League RSVP</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
+    body {
+      font-family: 'Plus Jakarta Sans', -apple-system, BlinkMacSystemFont, sans-serif;
+      background-color: #f8fafc;
+      color: #0f172a;
+    }
+    .wa-target-bg {
+      background-image:
+        radial-gradient(circle at 92% 20%, rgba(250, 204, 21, 0.22) 0%, rgba(250, 204, 21, 0.22) 30px,
+        rgba(239, 68, 68, 0.14) 31px, rgba(239, 68, 68, 0.14) 60px,
+        rgba(59, 130, 246, 0.12) 61px, rgba(59, 130, 246, 0.12) 90px,
+        rgba(15, 23, 42, 0.06) 91px, rgba(15, 23, 42, 0.06) 120px,
+        rgba(241, 245, 249, 0.6) 121px, rgba(241, 245, 249, 0.6) 150px,
+        transparent 151px);
+    }
+
+    /* ======================================================================
+       CRISP DAYLIGHT / LIGHT THEME OVERRIDES
+       ====================================================================== */
+    .bg-slate-900\/95, .bg-slate-900\/90, .bg-slate-900\/85, .bg-slate-900\/80, .bg-slate-900\/60, .bg-slate-900 {
+      background-color: #ffffff !important;
+    }
+    .from-slate-900\/95.to-slate-950\/95 {
+      --tw-gradient-from: #ffffff !important;
+      --tw-gradient-to: #f8fafc !important;
+      --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to) !important;
+    }
+    .bg-slate-950\/90, .bg-slate-950\/80, .bg-slate-950\/70, .bg-slate-950\/60, .bg-slate-950 {
+      background-color: #f8fafc !important;
+    }
+    .bg-slate-800\/90, .bg-slate-800 {
+      background-color: #f1f5f9 !important;
+    }
+    .hover\:bg-slate-800:hover, .hover\:bg-slate-700:hover {
+      background-color: #e2e8f0 !important;
+    }
+    .border-slate-800\/90, .border-slate-800\/80, .border-slate-800\/70, .border-slate-800 {
+      border-color: #e2e8f0 !important;
+    }
+    .border-slate-700\/80, .border-slate-700 {
+      border-color: #cbd5e1 !important;
+    }
+    .divide-slate-800\/80 > :not([hidden]) ~ :not([hidden]),
+    .divide-slate-800\/70 > :not([hidden]) ~ :not([hidden]) {
+      border-color: #e2e8f0 !important;
+    }
+
+    /* Typography */
+    .text-white {
+      color: #0f172a !important;
+    }
+    .text-slate-200 {
+      color: #1e293b !important;
+    }
+    .text-slate-300 {
+      color: #334155 !important;
+    }
+    .text-slate-400 {
+      color: #475569 !important;
+    }
+    .text-slate-500 {
+      color: #64748b !important;
+    }
+    .placeholder-slate-500::placeholder {
+      color: #94a3b8 !important;
+    }
+
+    /* Accent Text Readability on White Surfaces */
+    .text-amber-400, .text-amber-300 {
+      color: #b45309 !important;
+    }
+    .text-yellow-300, .text-yellow-200 {
+      color: #a16207 !important;
+    }
+    .text-emerald-400, .text-emerald-300 {
+      color: #047857 !important;
+    }
+    .text-rose-400, .text-rose-300 {
+      color: #be123c !important;
+    }
+    .text-sky-400, .text-sky-300 {
+      color: #0369a1 !important;
+    }
+    .text-purple-400, .text-purple-300 {
+      color: #6d28d9 !important;
+    }
+    .text-pink-400, .text-pink-300 {
+      color: #be185d !important;
+    }
+    .text-indigo-400, .text-indigo-300 {
+      color: #4338ca !important;
+    }
+    .text-orange-400, .text-orange-300 {
+      color: #c2410c !important;
+    }
+    .text-cyan-400, .text-cyan-300 {
+      color: #0e7490 !important;
+    }
+    .text-teal-400, .text-teal-300 {
+      color: #0f766e !important;
+    }
+    .text-blue-400, .text-blue-300 {
+      color: #1d4ed8 !important;
+    }
+    .text-violet-400, .text-violet-300 {
+      color: #6d28d9 !important;
+    }
+    .text-fuchsia-400, .text-fuchsia-300 {
+      color: #a21caf !important;
+    }
+    .text-lime-400, .text-lime-300 {
+      color: #4d7c0f !important;
+    }
+    .text-red-400, .text-red-300 {
+      color: #b91c1c !important;
+    }
+
+    /* Soft Tinted Counters & Cards */
+    .bg-emerald-950\/60, .bg-emerald-950\/40, .bg-emerald-950\/30, .bg-emerald-950 {
+      background-color: #ecfdf5 !important;
+      border-color: #a7f3d0 !important;
+    }
+    .bg-rose-950\/60, .bg-rose-950\/40, .bg-rose-950\/30, .bg-rose-950 {
+      background-color: #fff1f2 !important;
+      border-color: #fecdd3 !important;
+    }
+    .shadow-2xl, .shadow-xl {
+      box-shadow: 0 4px 20px -2px rgba(15, 23, 42, 0.06), 0 2px 6px -1px rgba(15, 23, 42, 0.04) !important;
+    }
+  </style>
+</head>
+<body class="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
+  <div class="w-full max-w-xl mx-auto space-y-6">
+    
+    <!-- Top Header & Custom Bow Crest Logo -->
+    <header class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-3">
+      <div class="flex items-center space-x-3">
+        <!-- Custom Recurve Bow + Target Crest SVG -->
+        <div class="w-11 h-11 rounded-xl bg-gradient-to-tr from-amber-500 via-red-500 to-sky-500 p-0.5 shadow-lg shadow-amber-500/20 shrink-0">
+          <div class="w-full h-full bg-slate-950 rounded-[10px] flex items-center justify-center">
+            <svg viewBox="0 0 64 64" class="w-9 h-9">
+              <circle cx="32" cy="32" r="22" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-opacity="0.3"/>
+              <circle cx="32" cy="32" r="14" fill="none" stroke="#ef4444" stroke-width="1.5" stroke-opacity="0.4"/>
+              <circle cx="32" cy="32" r="6" fill="#facc15" fill-opacity="0.25"/>
+              <path d="M22 10 C15 14, 18 22, 23 26 C25 28, 25 36, 23 38 C18 42, 15 50, 22 54" fill="none" stroke="#fbbf24" stroke-width="3.6" stroke-linecap="round"/>
+              <path d="M22 10 L13 32 L22 54" fill="none" stroke="#e2e8f0" stroke-width="1.6" stroke-linejoin="round"/>
+              <line x1="12" y1="32" x2="52" y2="32" stroke="#f8fafc" stroke-width="2.6" stroke-linecap="round"/>
+              <polygon points="55,32 47,28 49,32 47,36" fill="#ef4444"/>
+              <path d="M13 32 L9 28 M13 32 L9 36 M17 32 L13 28 M17 32 L13 36" stroke="#38bdf8" stroke-width="2" stroke-linecap="round"/>
+            </svg>
+          </div>
+        </div>
+        <div>
+          <h1 class="text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
+            Archery League
+            <span class="text-[11px] bg-amber-500/15 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30">🏹 Weekly</span>
+          </h1>
+          <p class="text-xs text-slate-400">Sunday Night Practice &amp; Rounds</p>
+        </div>
+      </div>
+      <div class="flex items-center gap-2">
+        <a href="scoring.html" 
+           class="text-xs text-amber-300 hover:text-amber-200 transition bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold">
+          <i class="fa-solid fa-bullseye text-amber-400"></i>
+          <span>Live Scoring</span>
+        </a>
+        <button onclick="openAdminModal()" class="text-xs text-slate-300 hover:text-white transition bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+          <i class="fa-solid fa-pen-to-square text-amber-400"></i>
+          <span>Update Status</span>
+        </button>
+      </div>
+    </header>
+
+    <!-- League Status & Event Banner -->
+    <section id="banner-card" class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-slate-800/80 p-5 shadow-2xl backdrop-blur-sm wa-target-bg">
+      <!-- WA 5-Color Target Top Strip -->
+      <div class="absolute top-0 left-0 right-0 h-1 flex">
+        <div class="flex-1 bg-yellow-400"></div>
+        <div class="flex-1 bg-red-500"></div>
+        <div class="flex-1 bg-sky-500"></div>
+        <div class="flex-1 bg-slate-700"></div>
+        <div class="flex-1 bg-slate-200"></div>
+      </div>
+
+      <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 mt-0.5">
+        <div>
+          <div class="flex items-center gap-2">
+            <span class="text-xs font-bold uppercase tracking-wider text-amber-400">Next Shooting Line</span>
+            <span id="countdown-badge" class="text-[11px] bg-slate-800 text-slate-300 font-mono px-2 py-0.5 rounded-md border border-slate-700">Loading...</span>
+          </div>
+          <h2 id="event-date" class="text-2xl font-black text-white mt-1 tracking-tight">Sunday, ...</h2>
+          <p id="event-time" class="text-sm text-slate-400 mt-0.5 flex items-center gap-1.5">
+            <i class="fa-regular fa-clock text-amber-400"></i> Starts 6:00 PM
+          </p>
+        </div>
+
+        <!-- Indicator Status Badge -->
+        <div id="status-container" class="flex flex-col items-start sm:items-end">
+          <div id="status-badge" class="px-3.5 py-1.5 rounded-full font-bold text-xs flex items-center gap-2 shadow-inner">
+            <span class="w-2 h-2 rounded-full animate-ping"></span>
+            <span>Checking...</span>
+          </div>
+        </div>
+      </div>
+
+      <!-- Quick Tally Counter -->
+      <div class="grid grid-cols-2 gap-3 mt-5 pt-4 border-t border-slate-800/80 text-center">
+        <div class="bg-emerald-950/30 border border-emerald-900/40 rounded-xl p-2.5">
+          <div id="count-yes" class="text-xl font-black text-emerald-400">0</div>
+          <div class="text-[11px] font-semibold text-emerald-500/90 uppercase tracking-wide">Yes (On Line)</div>
+        </div>
+        <div class="bg-rose-950/30 border border-rose-900/40 rounded-xl p-2.5">
+          <div id="count-no" class="text-xl font-black text-rose-400">0</div>
+          <div class="text-[11px] font-semibold text-rose-500/90 uppercase tracking-wide">Can't Make It</div>
+        </div>
+      </div>
+    </section>
+
+    <!-- RSVP Form Card -->
+    <section class="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 shadow-xl">
+      <div class="flex items-center justify-between mb-4">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <span>🏹</span>
+          <span>Your RSVP &amp; Archer Badge</span>
+        </h3>
+        <span class="text-xs text-slate-400">Cat &amp; Dog Bow Avatars</span>
+      </div>
+
+      <form id="rsvp-form" onsubmit="handleRsvpSubmit(event)" class="space-y-4">
+        <!-- Archer Name Selection / Input -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Your Name</label>
+          <div class="relative">
+            <input type="text" id="archer-name" list="archers-datalist" required placeholder="Type or select your name..."
+              oninput="onArcherNameChange()" onchange="onArcherNameChange()"
+              class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition">
+            <datalist id="archers-datalist"></datalist>
+          </div>
+        </div>
+
+        <!-- Live Cat / Dog Archer Avatar Preview & Interactive Picker -->
+        <div id="avatar-preview-card" class="rounded-xl bg-slate-950/90 border border-slate-800 p-3 space-y-2.5">
+          <div class="flex items-center justify-between gap-3">
+            <div class="flex items-center gap-3">
+              <div id="live-avatar-circle" class="w-14 h-14 rounded-full bg-amber-500/15 border-2 border-amber-400 flex items-center justify-center shrink-0 shadow-inner">
+                <!-- SVG populated by JS -->
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <span id="live-avatar-name" class="text-xs font-extrabold text-white">Your Archer Mascot</span>
+                  <span id="live-avatar-species" class="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">Cat Archer</span>
+                </div>
+                <p id="live-avatar-title" class="text-xs font-semibold text-amber-400 mt-0.5">Orange Tabby Recurve</p>
+                <p id="live-avatar-traits" class="text-[10px] text-slate-400">Red headband • Aiming wink</p>
+              </div>
+            </div>
+            <button type="button" onclick="toggleAvatarPicker()" class="text-[11px] font-bold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1">
+              <span>🐾 Swap Pet / Title</span>
+            </button>
+          </div>
+
+          <!-- Custom Archer Title & Archery Style Inputs -->
+          <div class="pt-2 border-t border-slate-800/70 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
+            <div class="sm:col-span-5 flex items-center gap-2">
+              <label for="archer-bow-category" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Style:</label>
+              <select id="archer-bow-category" onchange="onBowCategoryChange()"
+                class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500">
+                <option value="BAREBOW">🏹 Barebow</option>
+                <option value="OLYMPIC_RECURVE">🎯 Olympic Recurve</option>
+                <option value="TRADITIONAL">🪶 Traditional</option>
+              </select>
+            </div>
+            <div class="sm:col-span-7 flex items-center gap-2">
+              <label for="custom-archer-title" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Title:</label>
+              <input type="text" id="custom-archer-title" maxlength="45"
+                placeholder="Default breed title (or custom)..."
+                oninput="onCustomTitleInput()"
+                class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500">
+            </div>
+          </div>
+
+          <!-- Collapsible 18-Breed Cat/Dog Picker Grid -->
+          <div id="avatar-picker-grid" class="hidden pt-2.5 border-t border-slate-800/80">
+            <div class="flex items-center justify-between mb-2">
+              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Choose Your Cat or Dog Archer Badge (18 Breeds):</span>
+              <span class="text-[10px] text-slate-500">Saved with your RSVP</span>
+            </div>
+            <div id="avatar-picker-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+              <!-- Populated by JS -->
+            </div>
+          </div>
+          <input type="hidden" id="selected-avatar-id" value="">
+        </div>
+
+        <!-- Attendance Button Choice -->
+        <div>
+          <label class="block text-xs font-semibold text-slate-300 mb-1.5 uppercase tracking-wider">Can you make it?</label>
+          <div class="grid grid-cols-2 gap-3">
+            <button type="button" onclick="selectStatus('YES')" id="btn-status-yes"
+              class="rsvp-btn flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700/80 bg-slate-950/60 hover:bg-emerald-950/40 hover:border-emerald-500/50 transition">
+              <i class="fa-solid fa-check text-emerald-400 text-lg mb-1"></i>
+              <span class="text-xs font-bold text-slate-200">Yes</span>
+            </button>
+            <button type="button" onclick="selectStatus('NO')" id="btn-status-no"
+              class="rsvp-btn flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700/80 bg-slate-950/60 hover:bg-rose-950/40 hover:border-rose-500/50 transition">
+              <i class="fa-solid fa-xmark text-rose-400 text-lg mb-1"></i>
+              <span class="text-xs font-bold text-slate-200">No</span>
+            </button>
+          </div>
+          <input type="hidden" id="selected-status" required>
+        </div>
+
+        <!-- Saturday Email Reminder Opt-in Toggle (Hidden for now) -->
+        <div id="email-optin-container" class="hidden rounded-xl bg-slate-950/70 border border-slate-800/90 p-3 space-y-2">
+          <div class="flex items-center justify-between">
+            <div class="flex items-center space-x-2">
+              <i class="fa-regular fa-bell text-amber-400 text-sm"></i>
+              <span class="text-xs font-semibold text-slate-200">Saturday Email Reminder</span>
+            </div>
+            <label class="relative inline-flex items-center cursor-pointer">
+              <input type="checkbox" id="email-optin" class="sr-only peer" onchange="toggleEmailField(this.checked)">
+              <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
+            </label>
+          </div>
+          <div id="email-input-wrapper" class="hidden pt-1">
+            <input type="email" id="archer-email" placeholder="Enter your email to get reminded every Saturday..."
+              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500">
+            <p id="email-status-hint" class="text-[10px] text-slate-400 mt-1">We'll only email you a reminder if you haven't responded yet by Saturday 10:00 AM.</p>
+          </div>
+        </div>
+
+        <!-- Submit Button -->
+        <button type="submit" id="btn-submit"
+          class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+          <span>🏹</span>
+          <span>Save RSVP</span>
+        </button>
+      </form>
+    </section>
+
+    <!-- Attendees List / Tabbed Board -->
+    <section class="rounded-2xl bg-slate-900/80 border border-slate-800 p-5 shadow-xl space-y-4">
+      <div class="flex items-center justify-between">
+        <h3 class="text-base font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-bullseye text-amber-400 text-sm"></i>
+          <span>Shooting Line Roster</span>
+        </h3>
+        <span id="total-responses" class="text-xs bg-slate-800 text-slate-400 px-2 py-0.5 rounded-full font-mono">0 Responses</span>
+      </div>
+
+      <!-- Tab Buttons -->
+      <div class="flex border-b border-slate-800 text-xs font-semibold">
+        <button onclick="switchTab('yes')" id="tab-btn-yes" class="tab-btn pb-2 px-3 text-emerald-400 border-b-2 border-emerald-400 flex items-center gap-1.5">
+          <span>Going</span>
+          <span id="tab-count-yes" class="bg-emerald-950/60 text-emerald-300 text-[10px] px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+        <button onclick="switchTab('no')" id="tab-btn-no" class="tab-btn pb-2 px-3 text-slate-400 hover:text-slate-300 border-b-2 border-transparent flex items-center gap-1.5">
+          <span>Can't Go</span>
+          <span id="tab-count-no" class="bg-rose-950/60 text-rose-300 text-[10px] px-1.5 py-0.2 rounded-full">0</span>
+        </button>
+      </div>
+
+      <!-- List Items Container -->
+      <div id="roster-list" class="divide-y divide-slate-800/70 min-h-[100px] space-y-1">
+        <!-- Rendered via JS -->
+      </div>
+    </section>
+
+    <!-- Footer -->
+    <footer class="text-center text-xs text-slate-500 pb-8 space-y-2">
+      <div class="flex items-center justify-center gap-4">
+        <a href="scoring.html" 
+           class="text-amber-400 hover:text-amber-300 transition inline-flex items-center gap-1.5 font-bold underline underline-offset-4 decoration-amber-500/40 hover:decoration-amber-400">
+          <i class="fa-solid fa-bullseye text-xs"></i>
+          <span>Open League Night Scoring &amp; Leaderboard</span>
+        </a>
+      </div>
+      <p class="text-slate-600">🎯 Sunday Night Archery League Tracker</p>
+      <p class="text-[11px] text-slate-700">Self-hosted • End-to-End Encrypted Tunnel</p>
+    </footer>
+
+  </div>
+
+  <!-- Admin Organizer Modal -->
+  <div id="admin-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-bold text-white flex items-center gap-2">
+          <i class="fa-solid fa-pen-to-square text-amber-400"></i>
+          Update League Status
+        </h3>
+        <button onclick="closeAdminModal()" class="text-slate-500 hover:text-slate-300">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3">
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">League Status For This Sunday</label>
+          <select id="admin-status" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+            <option value="ON">✅ League is ON</option>
+            <option value="PENDING">⏳ Status PENDING (TBD)</option>
+            <option value="OFF">❌ League is OFF / Canceled</option>
+          </select>
+        </div>
+
+        <div>
+          <label class="block text-xs font-semibold text-slate-400 mb-1">League Start Time</label>
+          <input type="text" id="admin-time" placeholder="e.g. 6:00 PM, 6:30 PM"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
+        </div>
+
+        <button onclick="saveAdminStatus()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
+          Update League Status
+        </button>
+
+        <div class="hidden pt-3 border-t border-slate-800/80">
+          <button onclick="triggerTestReminder()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+            <i class="fa-regular fa-paper-plane text-amber-400"></i>
+            <span>Test Saturday Reminder Dispatch</span>
+          </button>
+        </div>
+      </div>
+    </div>
+  </div>
+
+  <script>
+    let appState = null;
+    let currentTab = 'yes';
+    let manualAvatarOverride = false;
+    let manualTitleOverride = false;
+    let manualBowCategoryOverride = false;
+    let lastSelectedArcherName = '';
+
+    // Option 2 Custom Illustrated Cat & Dog Archer Badges
+    const PET_AVATARS = {
+      tabby_cat: {
+        id: 'tabby_cat',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Orange Tabby Recurve',
+        traits: 'Red headband • Aiming wink',
+        borderClass: 'border-amber-400',
+        bgClass: 'bg-amber-500/15',
+        badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+        textClass: 'text-amber-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#facc15" fill-opacity="0.08"/>
+          <path d="M25 78 Q12 68 18 55" fill="none" stroke="#f59e0b" stroke-width="6" stroke-linecap="round"/>
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#f59e0b"/>
+          <ellipse cx="48" cy="76" rx="9" ry="10" fill="#fef3c7"/>
+          <polygon points="28,42 26,18 44,30" fill="#f59e0b"/>
+          <polygon points="30,38 29,23 41,31" fill="#fda4af"/>
+          <polygon points="48,30 66,18 64,42" fill="#f59e0b"/>
+          <polygon points="51,31 63,23 62,38" fill="#fda4af"/>
+          <circle cx="46" cy="46" r="20" fill="#fbbf24"/>
+          <path d="M42 29 L46 35 L50 29 M46 28 L46 36" stroke="#b45309" stroke-width="2.2" stroke-linecap="round" fill="none"/>
+          <path d="M27 39 Q46 34 65 39" stroke="#ef4444" stroke-width="4" stroke-linecap="round" fill="none"/>
+          <path d="M34 45 L42 45 M38 42 L42 45 L38 48" stroke="#0f172a" stroke-width="2.5" stroke-linecap="round" fill="none"/>
+          <circle cx="55" cy="45" r="3.5" fill="#0f172a"/>
+          <circle cx="56" cy="43.8" r="1.2" fill="#fff"/>
+          <polygon points="47,50 44,47.5 50,47.5" fill="#f43f5e"/>
+          <path d="M43 53 Q47 56 51 53" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <line x1="20" y1="48" x2="30" y2="49" stroke="#fef3c7" stroke-width="1.5"/>
+          <line x1="20" y1="53" x2="30" y2="52" stroke="#fef3c7" stroke-width="1.5"/>
+          <path d="M72 16 C82 28, 82 72, 72 84" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="72,16 38,54 72,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <circle cx="74" cy="54" r="5" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+          <circle cx="38" cy="54" r="5" fill="#fef3c7" stroke="#d97706" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#ef4444"/>
+          <path d="M38 54 L32 50 M38 54 L32 58" stroke="#facc15" stroke-width="2.2"/>
+        </svg>`
+      },
+      calico_cat: {
+        id: 'calico_cat',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Calico Cat Sharp-Shooter',
+        traits: 'Pink recurve • Gold arrow',
+        borderClass: 'border-pink-400',
+        bgClass: 'bg-pink-500/15',
+        badgeClass: 'bg-pink-500/20 text-pink-300 border-pink-500/30',
+        textClass: 'text-pink-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#f472b6" fill-opacity="0.08"/>
+          <ellipse cx="46" cy="76" rx="17" ry="13" fill="#f8fafc"/>
+          <line x1="34" y1="65" x2="56" y2="85" stroke="#ec4899" stroke-width="4"/>
+          <polygon points="28,42 26,18 44,30" fill="#fb923c"/>
+          <polygon points="30,38 29,23 41,31" fill="#fda4af"/>
+          <polygon points="48,30 66,18 64,42" fill="#334155"/>
+          <polygon points="51,31 63,23 62,38" fill="#fda4af"/>
+          <circle cx="46" cy="46" r="20" fill="#f8fafc"/>
+          <circle cx="37" cy="38" r="8" fill="#fb923c" fill-opacity="0.85"/>
+          <circle cx="38" cy="44" r="3.8" fill="#0f172a"/>
+          <circle cx="39" cy="42.5" r="1.4" fill="#fff"/>
+          <circle cx="55" cy="44" r="3.8" fill="#0f172a"/>
+          <circle cx="56" cy="42.5" r="1.4" fill="#fff"/>
+          <ellipse cx="32" cy="49" rx="3.5" ry="2" fill="#fda4af"/>
+          <ellipse cx="60" cy="49" rx="3.5" ry="2" fill="#fda4af"/>
+          <polygon points="46.5,48.5 44,46.5 49,46.5" fill="#f43f5e"/>
+          <path d="M42 51 Q44.5 54 46.5 51 Q48.5 54 51 51" stroke="#334155" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <path d="M72 16 C82 28, 82 72, 72 84" fill="none" stroke="#f472b6" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="72,16 38,54 72,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <circle cx="74" cy="54" r="5" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+          <circle cx="38" cy="54" r="5" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#facc15" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#ec4899"/>
+          <path d="M38 54 L32 50 M38 54 L32 58" stroke="#38bdf8" stroke-width="2.2"/>
+        </svg>`
+      },
+      shiba_dog: {
+        id: 'shiba_dog',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'Shiba Inu Bowhunter',
+        traits: 'Shiba eyebrows • Gold bow',
+        borderClass: 'border-sky-400',
+        bgClass: 'bg-sky-500/15',
+        badgeClass: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+        textClass: 'text-sky-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#d97706"/>
+          <ellipse cx="46" cy="77" rx="10" ry="11" fill="#fef3c7"/>
+          <polygon points="26,38 22,15 41,28" fill="#d97706"/>
+          <polygon points="28,35 25,20 38,29" fill="#fef3c7"/>
+          <polygon points="51,28 70,15 66,38" fill="#d97706"/>
+          <polygon points="54,29 67,20 64,35" fill="#fef3c7"/>
+          <circle cx="46" cy="45" r="21" fill="#f59e0b"/>
+          <path d="M26 48 Q36 38 46 48 Q56 38 66 48 Q64 64 46 65 Q28 64 26 48 Z" fill="#fef3c7"/>
+          <ellipse cx="38" cy="36" rx="3.2" ry="2" fill="#fef3c7"/>
+          <ellipse cx="54" cy="36" rx="3.2" ry="2" fill="#fef3c7"/>
+          <circle cx="38" cy="43" r="3.5" fill="#0f172a"/>
+          <circle cx="39" cy="41.8" r="1.2" fill="#fff"/>
+          <circle cx="54" cy="43" r="3.5" fill="#0f172a"/>
+          <circle cx="55" cy="41.8" r="1.2" fill="#fff"/>
+          <ellipse cx="46" cy="49" rx="4" ry="3" fill="#0f172a"/>
+          <path d="M41 54 Q46 58 51 54" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M44 56 Q46 62 48 56" fill="#fb7185"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#facc15" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <circle cx="74" cy="54" r="5" fill="#f59e0b" stroke="#fef3c7" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#38bdf8" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#facc15"/>
+        </svg>`
+      },
+      husky_dog: {
+        id: 'husky_dog',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'Husky Compound Pro',
+        traits: 'Ice-blue eyes • Cam pulleys',
+        borderClass: 'border-indigo-400',
+        bgClass: 'bg-indigo-500/15',
+        badgeClass: 'bg-indigo-500/20 text-indigo-300 border-indigo-500/30',
+        textClass: 'text-indigo-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#475569"/>
+          <ellipse cx="46" cy="77" rx="10" ry="11" fill="#f8fafc"/>
+          <polygon points="27,38 24,14 42,28" fill="#334155"/>
+          <polygon points="29,35 27,20 39,29" fill="#cbd5e1"/>
+          <polygon points="50,28 68,14 65,38" fill="#334155"/>
+          <polygon points="53,29 65,20 63,35" fill="#cbd5e1"/>
+          <circle cx="46" cy="45" r="21" fill="#334155"/>
+          <path d="M30 38 C30 30, 42 32, 46 42 C50 32, 62 30, 62 38 C66 50, 60 64, 46 64 C32 64, 26 50, 30 38 Z" fill="#f8fafc"/>
+          <circle cx="38" cy="43" r="3.6" fill="#0284c7"/>
+          <circle cx="38" cy="43" r="1.6" fill="#0f172a"/>
+          <circle cx="54" cy="43" r="3.6" fill="#0284c7"/>
+          <circle cx="54" cy="43" r="1.6" fill="#0f172a"/>
+          <ellipse cx="46" cy="49" rx="4" ry="3" fill="#0f172a"/>
+          <path d="M40 54 L52 54" stroke="#0f172a" stroke-width="2.2" stroke-linecap="round"/>
+          <line x1="73" y1="20" x2="73" y2="80" stroke="#94a3b8" stroke-width="1.5"/>
+          <path d="M70 18 L76 42 M76 58 L70 82" stroke="#818cf8" stroke-width="4" stroke-linecap="round"/>
+          <circle cx="71" cy="18" r="4" fill="none" stroke="#facc15" stroke-width="2.2"/>
+          <circle cx="71" cy="82" r="4" fill="none" stroke="#facc15" stroke-width="2.2"/>
+          <polyline points="71,18 38,54 71,82" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#38bdf8"/>
+        </svg>`
+      },
+      golden_dog: {
+        id: 'golden_dog',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'Golden Retriever Ranger',
+        traits: 'Range visor cap • Emerald bow',
+        borderClass: 'border-emerald-400',
+        bgClass: 'bg-emerald-500/15',
+        badgeClass: 'bg-emerald-500/20 text-emerald-300 border-emerald-500/30',
+        textClass: 'text-emerald-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#eab308"/>
+          <ellipse cx="24" cy="46" rx="7" ry="15" transform="rotate(15 24 46)" fill="#ca8a04"/>
+          <ellipse cx="68" cy="46" rx="7" ry="15" transform="rotate(-15 68 46)" fill="#ca8a04"/>
+          <circle cx="46" cy="45" r="20" fill="#facc15"/>
+          <ellipse cx="46" cy="52" rx="11" ry="8" fill="#fef08a"/>
+          <path d="M28 32 Q46 22 64 32 Z" fill="#10b981"/>
+          <path d="M26 32 Q46 28 68 34" stroke="#059669" stroke-width="3.5" fill="none" stroke-linecap="round"/>
+          <circle cx="38" cy="42" r="3.4" fill="#0f172a"/>
+          <circle cx="54" cy="42" r="3.4" fill="#0f172a"/>
+          <ellipse cx="46" cy="49" rx="4.5" ry="3.2" fill="#451a03"/>
+          <path d="M40 55 Q46 60 52 55" stroke="#451a03" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M43 57 Q46 65 49 57" fill="#fb7185"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#10b981" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#10b981"/>
+        </svg>`
+      },
+      shadow_cat: {
+        id: 'shadow_cat',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Shadow Cat Night-Archer',
+        traits: 'Golden cat eyes • Bell collar',
+        borderClass: 'border-purple-400',
+        bgClass: 'bg-purple-500/15',
+        badgeClass: 'bg-purple-500/20 text-purple-300 border-purple-500/30',
+        textClass: 'text-purple-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#1e293b"/>
+          <polygon points="28,42 25,16 44,30" fill="#0f172a" stroke="#475569" stroke-width="1.5"/>
+          <polygon points="48,30 67,16 64,42" fill="#0f172a" stroke="#475569" stroke-width="1.5"/>
+          <circle cx="46" cy="46" r="20" fill="#0f172a" stroke="#475569" stroke-width="1.5"/>
+          <ellipse cx="38" cy="44" rx="4.2" ry="3.2" fill="#facc15"/>
+          <ellipse cx="38" cy="44" rx="1.2" ry="2.8" fill="#0f172a"/>
+          <ellipse cx="54" cy="44" rx="4.2" ry="3.2" fill="#facc15"/>
+          <ellipse cx="54" cy="44" rx="1.2" ry="2.8" fill="#0f172a"/>
+          <path d="M32 63 Q46 68 60 63" stroke="#a855f7" stroke-width="4" fill="none" stroke-linecap="round"/>
+          <circle cx="46" cy="66" r="3.5" fill="#facc15"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#c084fc" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#facc15" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#c084fc"/>
+        </svg>`
+      },
+      corgi_dog: {
+        id: 'corgi_dog',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'Welsh Corgi Marksman',
+        traits: 'Big corgi ears • Bullseye arrow',
+        borderClass: 'border-rose-400',
+        bgClass: 'bg-rose-500/15',
+        badgeClass: 'bg-rose-500/20 text-rose-300 border-rose-500/30',
+        textClass: 'text-rose-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#fb923c"/>
+          <ellipse cx="46" cy="77" rx="11" ry="11" fill="#fff"/>
+          <ellipse cx="29" cy="26" rx="7" ry="16" transform="rotate(-18 29 26)" fill="#fb923c"/>
+          <ellipse cx="29" cy="27" rx="4" ry="11" transform="rotate(-18 29 27)" fill="#fda4af"/>
+          <ellipse cx="63" cy="26" rx="7" ry="16" transform="rotate(18 63 26)" fill="#fb923c"/>
+          <ellipse cx="63" cy="27" rx="4" ry="11" transform="rotate(18 63 27)" fill="#fda4af"/>
+          <circle cx="46" cy="47" r="20" fill="#fb923c"/>
+          <path d="M43 28 L49 28 L53 56 Q46 64 39 56 Z" fill="#ffffff"/>
+          <circle cx="37" cy="44" r="3.4" fill="#0f172a"/>
+          <circle cx="55" cy="44" r="3.4" fill="#0f172a"/>
+          <ellipse cx="46" cy="50" rx="4" ry="2.8" fill="#0f172a"/>
+          <path d="M41 55 Q46 59 51 55" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#fb7185" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#facc15"/>
+        </svg>`
+      },
+      bengal_cat: {
+        id: 'bengal_cat',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Bengal Leopard Bowhunter',
+        traits: 'Leopard rosettes • Jade eyes',
+        borderClass: 'border-orange-400',
+        bgClass: 'bg-orange-500/15',
+        badgeClass: 'bg-orange-500/20 text-orange-300 border-orange-500/30',
+        textClass: 'text-orange-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#fb923c" fill-opacity="0.08"/>
+          <!-- Spotted Bengal Tail -->
+          <path d="M24 78 Q11 66 17 52" fill="none" stroke="#ea580c" stroke-width="6" stroke-linecap="round"/>
+          <circle cx="15" cy="60" r="2" fill="#431407"/>
+          <circle cx="18" cy="68" r="2" fill="#431407"/>
+          <!-- Body with Bengal Rosettes -->
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#ea580c"/>
+          <ellipse cx="46" cy="77" rx="9" ry="10" fill="#ffedd5"/>
+          <circle cx="34" cy="74" r="3" fill="#9a3412" stroke="#431407" stroke-width="1.2"/>
+          <circle cx="58" cy="74" r="3" fill="#9a3412" stroke="#431407" stroke-width="1.2"/>
+          <!-- Rounded Wild Bengal Ears -->
+          <polygon points="27,41 25,17 43,29" fill="#c2410c"/>
+          <polygon points="29,37 28,22 40,30" fill="#fed7aa"/>
+          <polygon points="49,29 67,17 65,41" fill="#c2410c"/>
+          <polygon points="52,30 64,22 63,37" fill="#fed7aa"/>
+          <!-- Golden-Orange Bengal Head -->
+          <circle cx="46" cy="46" r="20" fill="#f97316"/>
+          <!-- White Whisker Pads -->
+          <ellipse cx="41" cy="52" rx="6" ry="4.5" fill="#ffedd5"/>
+          <ellipse cx="51" cy="52" rx="6" ry="4.5" fill="#ffedd5"/>
+          <!-- Bengal Rosette Spots & M-Marking -->
+          <path d="M39 29 L43 35 L46 31 L49 35 L53 29" stroke="#431407" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <circle cx="31" cy="40" r="2.8" fill="#9a3412" stroke="#431407" stroke-width="1.1"/>
+          <circle cx="61" cy="40" r="2.8" fill="#9a3412" stroke="#431407" stroke-width="1.1"/>
+          <circle cx="32" cy="48" r="2.2" fill="#431407"/>
+          <circle cx="60" cy="48" r="2.2" fill="#431407"/>
+          <!-- Striking Jade-Emerald Bengal Eyes -->
+          <ellipse cx="38" cy="44" rx="4" ry="3.3" fill="#10b981"/>
+          <ellipse cx="38" cy="44" rx="1.3" ry="2.8" fill="#0f172a"/>
+          <circle cx="39" cy="42.8" r="1" fill="#fff"/>
+          <ellipse cx="54" cy="44" rx="4" ry="3.3" fill="#10b981"/>
+          <ellipse cx="54" cy="44" rx="1.3" ry="2.8" fill="#0f172a"/>
+          <circle cx="55" cy="42.8" r="1" fill="#fff"/>
+          <!-- Nose & Fierce Smile -->
+          <polygon points="46,50 43,47.5 49,47.5" fill="#e11d48"/>
+          <path d="M41 53 Q46 56 51 53" stroke="#431407" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <!-- Carbon-Gold Recurve Bow & Emerald Arrow -->
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#fb923c" stroke-width="4.2" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <circle cx="74" cy="54" r="4.8" fill="#ffedd5" stroke="#c2410c" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#10b981" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#facc15"/>
+        </svg>`
+      },
+      devon_rex_cat: {
+        id: 'devon_rex_cat',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Devon Rex Pixie Marksman',
+        traits: 'Yellow-white wavy coat • Giant elf ears',
+        borderClass: 'border-yellow-300',
+        bgClass: 'bg-yellow-400/15',
+        badgeClass: 'bg-yellow-400/20 text-yellow-200 border-yellow-400/30',
+        textClass: 'text-yellow-300',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#fde047" fill-opacity="0.08"/>
+          <!-- Slender Wavy-Fur Body (Yellow & White) -->
+          <ellipse cx="46" cy="76" rx="16" ry="13" fill="#fef9c3"/>
+          <!-- Yellow patch on shoulder + Wavy Rex Coat ripples -->
+          <ellipse cx="36" cy="74" rx="7" ry="8" fill="#facc15"/>
+          <path d="M39 73 Q43 71 46 73 T53 73" stroke="#eab308" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <path d="M39 78 Q43 76 46 78 T53 78" stroke="#eab308" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <!-- Signature Giant Low-Set Bat/Elf Devon Rex Ears! -->
+          <path d="M29 45 C10 34, 8 14, 24 16 C32 17, 36 27, 38 34 Z" fill="#facc15" stroke="#eab308" stroke-width="1.2"/>
+          <path d="M28 42 C15 33, 14 19, 24 20 C30 21, 33 28, 35 34 Z" fill="#fda4af" fill-opacity="0.75"/>
+          <path d="M63 45 C82 34, 84 14, 68 16 C60 17, 56 27, 54 34 Z" fill="#fef08a" stroke="#eab308" stroke-width="1.2"/>
+          <path d="M64 42 C77 33, 78 19, 68 20 C62 21, 59 28, 57 34 Z" fill="#fda4af" fill-opacity="0.75"/>
+          <!-- Pixie Wedge-Shaped Head (Bi-color Yellow & White) -->
+          <path d="M27 43 C27 31, 65 31, 65 43 C65 54, 54 63, 46 63 C38 63, 27 54, 27 43 Z" fill="#ffffff"/>
+          <!-- Warm Yellow Crown & Left Cheek Patch -->
+          <path d="M27 43 C27 32, 46 31, 48 35 C44 43, 36 48, 28 46 Z" fill="#facc15"/>
+          <path d="M48 33 C56 32, 65 36, 65 43 C61 41, 55 38, 48 33 Z" fill="#fde047"/>
+          <!-- Wavy Rex Forehead Curls -->
+          <path d="M38 35 Q42 33 46 35 T54 35" stroke="#ca8a04" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <!-- Huge Expressive Oval Pixie Eyes -->
+          <ellipse cx="37.5" cy="45" rx="4.6" ry="4.2" fill="#fbbf24" stroke="#0f172a" stroke-width="1.2"/>
+          <circle cx="37.5" cy="45" r="2.6" fill="#0f172a"/>
+          <circle cx="39" cy="43.5" r="1.3" fill="#fff"/>
+          <ellipse cx="54.5" cy="45" rx="4.6" ry="4.2" fill="#fbbf24" stroke="#0f172a" stroke-width="1.2"/>
+          <circle cx="54.5" cy="45" r="2.6" fill="#0f172a"/>
+          <circle cx="56" cy="43.5" r="1.3" fill="#fff"/>
+          <!-- Pink Pixie Nose & Curled Whiskers -->
+          <polygon points="46,51.5 43.2,49 48.8,49" fill="#fb7185"/>
+          <path d="M42 54.5 Q46 57 50 54.5" stroke="#334155" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <path d="M22 50 Q26 47 30 51" stroke="#eab308" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <path d="M62 51 Q66 47 70 50" stroke="#eab308" stroke-width="1.4" fill="none" stroke-linecap="round"/>
+          <!-- Sunburst Gold & White Recurve Bow -->
+          <path d="M74 16 C84 28, 84 72, 74 84" fill="none" stroke="#fde047" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="74,16 38,54 74,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <circle cx="75" cy="54" r="4.8" fill="#ffffff" stroke="#eab308" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#facc15"/>
+          <path d="M38 54 L32 50 M38 54 L32 58" stroke="#fde047" stroke-width="2.2"/>
+        </svg>`
+      },
+      siamese_cat: {
+        id: 'siamese_cat',
+        shortLabel: 'Siamese',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Siamese Sapphire Sniper',
+        traits: 'Seal-point mask • Sapphire eyes',
+        borderClass: 'border-cyan-400',
+        bgClass: 'bg-cyan-500/15',
+        badgeClass: 'bg-cyan-500/20 text-cyan-300 border-cyan-500/30',
+        textClass: 'text-cyan-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#22d3ee" fill-opacity="0.08"/>
+          <path d="M25 78 Q12 67 19 52" fill="none" stroke="#451a03" stroke-width="5.5" stroke-linecap="round"/>
+          <ellipse cx="46" cy="76" rx="17" ry="13" fill="#fef3c7"/>
+          <ellipse cx="46" cy="77" rx="10" ry="9" fill="#fffbeb"/>
+          <polygon points="27,42 23,14 43,29" fill="#451a03"/>
+          <polygon points="29,38 26,20 40,30" fill="#78350f"/>
+          <polygon points="49,29 69,14 65,42" fill="#451a03"/>
+          <polygon points="52,30 66,20 63,38" fill="#78350f"/>
+          <path d="M27 42 C27 29, 65 29, 65 42 C65 55, 54 64, 46 64 C38 64, 27 55, 27 42 Z" fill="#fef3c7"/>
+          <ellipse cx="46" cy="48" rx="14" ry="11" fill="#451a03"/>
+          <ellipse cx="38" cy="44" rx="4.2" ry="3.4" fill="#06b6d4"/>
+          <ellipse cx="38" cy="44" rx="1.3" ry="2.8" fill="#0f172a"/>
+          <circle cx="39" cy="42.8" r="1" fill="#fff"/>
+          <ellipse cx="54" cy="44" rx="4.2" ry="3.4" fill="#06b6d4"/>
+          <ellipse cx="54" cy="44" rx="1.3" ry="2.8" fill="#0f172a"/>
+          <circle cx="55" cy="42.8" r="1" fill="#fff"/>
+          <polygon points="46,50.5 43.5,48 48.5,48" fill="#292524"/>
+          <path d="M42 53.5 Q46 56.5 50 53.5" stroke="#fef3c7" stroke-width="1.6" fill="none" stroke-linecap="round"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#06b6d4" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <circle cx="74" cy="54" r="4.8" fill="#451a03" stroke="#22d3ee" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#22d3ee"/>
+        </svg>`
+      },
+      maine_coon_cat: {
+        id: 'maine_coon_cat',
+        shortLabel: 'Maine Coon',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Maine Coon Longbowman',
+        traits: 'Lynx ear tufts • Fluffy mane',
+        borderClass: 'border-teal-400',
+        bgClass: 'bg-teal-500/15',
+        badgeClass: 'bg-teal-500/20 text-teal-300 border-teal-500/30',
+        textClass: 'text-teal-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#14b8a6" fill-opacity="0.08"/>
+          <path d="M23 78 Q8 65 16 48" fill="none" stroke="#64748b" stroke-width="8" stroke-linecap="round"/>
+          <polygon points="24,62 18,74 32,84 46,88 60,84 72,74 66,62" fill="#cbd5e1"/>
+          <polygon points="27,40 24,15 43,29" fill="#475569"/>
+          <path d="M24 15 L21 9 M24 15 L26 9" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="49,29 68,15 65,40" fill="#475569"/>
+          <path d="M68 15 L66 9 M68 15 L71 9" stroke="#cbd5e1" stroke-width="2" stroke-linecap="round"/>
+          <polygon points="22,48 28,32 64,32 70,48 58,64 34,64" fill="#64748b"/>
+          <ellipse cx="46" cy="53" rx="11" ry="7.5" fill="#f8fafc"/>
+          <path d="M39 30 L43 36 L46 32 L49 36 L53 30" stroke="#1e293b" stroke-width="2.2" fill="none" stroke-linecap="round"/>
+          <ellipse cx="38" cy="43" rx="4" ry="3.2" fill="#fbbf24"/>
+          <ellipse cx="38" cy="43" rx="1.3" ry="2.6" fill="#0f172a"/>
+          <ellipse cx="54" cy="43" rx="4" ry="3.2" fill="#fbbf24"/>
+          <ellipse cx="54" cy="43" rx="1.3" ry="2.6" fill="#0f172a"/>
+          <polygon points="46,50 43,47 49,47" fill="#e11d48"/>
+          <path d="M40 54 Q46 57 52 54" stroke="#1e293b" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M74 12 C84 26, 84 74, 74 88" fill="none" stroke="#14b8a6" stroke-width="4.5" stroke-linecap="round"/>
+          <polyline points="74,12 38,54 74,88" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#facc15" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#14b8a6"/>
+        </svg>`
+      },
+      tuxedo_cat: {
+        id: 'tuxedo_cat',
+        shortLabel: 'Tuxedo Cat',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Tuxedo Cat Deadeye',
+        traits: 'Crimson bow-tie • White bib',
+        borderClass: 'border-red-400',
+        bgClass: 'bg-red-500/15',
+        badgeClass: 'bg-red-500/20 text-red-300 border-red-500/30',
+        textClass: 'text-red-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#ef4444" fill-opacity="0.08"/>
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#0f172a"/>
+          <polygon points="36,64 56,64 51,88 41,88" fill="#ffffff"/>
+          <polygon points="28,42 25,16 44,30" fill="#0f172a"/>
+          <polygon points="30,38 28,22 41,31" fill="#fda4af"/>
+          <polygon points="48,30 67,16 64,42" fill="#0f172a"/>
+          <polygon points="51,31 64,22 62,38" fill="#fda4af"/>
+          <circle cx="46" cy="46" r="20" fill="#0f172a"/>
+          <polygon points="46,43 32,59 60,59" fill="#ffffff"/>
+          <circle cx="38" cy="43" r="3.8" fill="#4ade80"/>
+          <circle cx="38" cy="43" r="1.6" fill="#0f172a"/>
+          <circle cx="54" cy="43" r="3.8" fill="#4ade80"/>
+          <circle cx="54" cy="43" r="1.6" fill="#0f172a"/>
+          <polygon points="46,50 43.5,47.5 48.5,47.5" fill="#fb7185"/>
+          <path d="M42 53 Q46 56 50 53" stroke="#0f172a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <!-- Red Bow Tie -->
+          <polygon points="38,61 46,65 38,69" fill="#ef4444"/>
+          <polygon points="54,61 46,65 54,69" fill="#ef4444"/>
+          <circle cx="46" cy="65" r="2.5" fill="#b91c1c"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#ef4444" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#facc15"/>
+        </svg>`
+      },
+      scottish_fold_cat: {
+        id: 'scottish_fold_cat',
+        shortLabel: 'Scottish Fold',
+        species: 'Cat Archer',
+        emoji: '🐱',
+        title: 'Scottish Fold Bullseye',
+        traits: 'Folded ears • Round owl eyes',
+        borderClass: 'border-violet-400',
+        bgClass: 'bg-violet-500/15',
+        badgeClass: 'bg-violet-500/20 text-violet-300 border-violet-500/30',
+        textClass: 'text-violet-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <circle cx="50" cy="50" r="42" fill="#8b5cf6" fill-opacity="0.08"/>
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#94a3b8"/>
+          <ellipse cx="46" cy="77" rx="10" ry="10" fill="#e2e8f0"/>
+          <!-- Signature Folded-Down Ears -->
+          <path d="M25 36 Q20 28 33 27 L37 36 Z" fill="#64748b" stroke="#475569" stroke-width="1.2"/>
+          <path d="M67 36 Q72 28 59 27 L55 36 Z" fill="#64748b" stroke="#475569" stroke-width="1.2"/>
+          <!-- Ultra-Round Scottish Fold Head -->
+          <circle cx="46" cy="46" r="21" fill="#94a3b8"/>
+          <ellipse cx="46" cy="52" rx="10" ry="6.5" fill="#f1f5f9"/>
+          <!-- Big Round Owl Amber Eyes -->
+          <circle cx="37.5" cy="44" r="4.6" fill="#f59e0b"/>
+          <circle cx="37.5" cy="44" r="2.6" fill="#0f172a"/>
+          <circle cx="39" cy="42.5" r="1.3" fill="#fff"/>
+          <circle cx="54.5" cy="44" r="4.6" fill="#f59e0b"/>
+          <circle cx="54.5" cy="44" r="2.6" fill="#0f172a"/>
+          <circle cx="56" cy="42.5" r="1.3" fill="#fff"/>
+          <polygon points="46,50 43.5,47.8 48.5,47.8" fill="#fb7185"/>
+          <path d="M42 53 Q46 56 50 53" stroke="#334155" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#8b5cf6" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#facc15" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#a78bfa"/>
+        </svg>`
+      },
+      german_shepherd_dog: {
+        id: 'german_shepherd_dog',
+        shortLabel: 'Shepherd',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'German Shepherd Scout',
+        traits: 'Pointed radar ears • Tactical bow',
+        borderClass: 'border-amber-400',
+        bgClass: 'bg-amber-500/15',
+        badgeClass: 'bg-amber-500/20 text-amber-300 border-amber-500/30',
+        textClass: 'text-amber-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#b45309"/>
+          <ellipse cx="46" cy="74" rx="11" ry="9" fill="#1e293b"/>
+          <!-- Tall Upright Radar Ears -->
+          <polygon points="27,37 23,10 41,28" fill="#1e293b"/>
+          <polygon points="29,34 26,16 38,29" fill="#d97706"/>
+          <polygon points="51,28 69,10 65,37" fill="#1e293b"/>
+          <polygon points="54,29 66,16 63,34" fill="#d97706"/>
+          <!-- Tan Head & Black Saddle Mask -->
+          <circle cx="46" cy="46" r="20" fill="#d97706"/>
+          <path d="M32 30 Q46 25 60 30 L55 44 Q46 40 37 44 Z" fill="#1e293b"/>
+          <ellipse cx="46" cy="52" rx="9" ry="7" fill="#1e293b"/>
+          <circle cx="38" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="39" cy="41.8" r="1.1" fill="#fff"/>
+          <circle cx="54" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="55" cy="41.8" r="1.1" fill="#fff"/>
+          <ellipse cx="46" cy="49" rx="4.2" ry="3" fill="#0f172a"/>
+          <path d="M41 55 Q46 58 51 55" stroke="#fef3c7" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#f59e0b" stroke-width="4.2" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#ef4444"/>
+        </svg>`
+      },
+      border_collie_dog: {
+        id: 'border_collie_dog',
+        shortLabel: 'Border Collie',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'Border Collie Ace',
+        traits: 'Blaze mask • Agile olympic recurve',
+        borderClass: 'border-blue-400',
+        bgClass: 'bg-blue-500/15',
+        badgeClass: 'bg-blue-500/20 text-blue-300 border-blue-500/30',
+        textClass: 'text-blue-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#1e293b"/>
+          <ellipse cx="46" cy="77" rx="11" ry="11" fill="#ffffff"/>
+          <!-- Semi-erect Tipped Collie Ears -->
+          <polygon points="26,38 20,18 39,28" fill="#0f172a"/>
+          <polygon points="20,18 16,25 25,24" fill="#1e293b"/>
+          <polygon points="53,28 72,18 66,38" fill="#0f172a"/>
+          <polygon points="72,18 76,25 67,24" fill="#1e293b"/>
+          <circle cx="46" cy="46" r="20" fill="#0f172a"/>
+          <!-- White Collie Blaze & Muzzle -->
+          <path d="M43 26 L49 26 L54 54 Q46 64 38 54 Z" fill="#ffffff"/>
+          <circle cx="37" cy="43" r="3.4" fill="#f59e0b"/>
+          <circle cx="37" cy="43" r="1.8" fill="#0f172a"/>
+          <circle cx="55" cy="43" r="3.4" fill="#f59e0b"/>
+          <circle cx="55" cy="43" r="1.8" fill="#0f172a"/>
+          <ellipse cx="46" cy="50" rx="4" ry="2.8" fill="#0f172a"/>
+          <path d="M41 55 Q46 59 51 55" stroke="#0f172a" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <path d="M44 57 Q46 63 48 57" fill="#fb7185"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#3b82f6" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#facc15" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#3b82f6"/>
+        </svg>`
+      },
+      samoyed_dog: {
+        id: 'samoyed_dog',
+        shortLabel: 'Samoyed',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'Samoyed Cloud Archer',
+        traits: 'Fluffy Sammy smile • Ice-blue bow',
+        borderClass: 'border-sky-400',
+        bgClass: 'bg-sky-500/15',
+        badgeClass: 'bg-sky-500/20 text-sky-300 border-sky-500/30',
+        textClass: 'text-sky-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="19" ry="14" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+          <polygon points="28,38 25,16 42,28" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+          <polygon points="30,35 28,21 39,29" fill="#fda4af"/>
+          <polygon points="50,28 67,16 64,38" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+          <polygon points="53,29 64,21 62,35" fill="#fda4af"/>
+          <!-- Fluffy Cloud Cheeks & Head -->
+          <circle cx="31" cy="48" r="10" fill="#ffffff"/>
+          <circle cx="61" cy="48" r="10" fill="#ffffff"/>
+          <circle cx="46" cy="46" r="21" fill="#ffffff" stroke="#e2e8f0" stroke-width="1.2"/>
+          <circle cx="38" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="39" cy="41.8" r="1.2" fill="#fff"/>
+          <circle cx="54" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="55" cy="41.8" r="1.2" fill="#fff"/>
+          <ellipse cx="46" cy="49" rx="4" ry="2.8" fill="#0f172a"/>
+          <!-- Famous Sammy Smile -->
+          <path d="M39 54 Q46 60 53 54" stroke="#0f172a" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M44 56 Q46 63 48 56" fill="#fb7185"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#38bdf8" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#cbd5e1" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#0284c7" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#38bdf8"/>
+        </svg>`
+      },
+      dachshund_dog: {
+        id: 'dachshund_dog',
+        shortLabel: 'Dachshund',
+        species: 'Dog Archer',
+        emoji: '🐶',
+        title: 'Dachshund Longbow',
+        traits: 'Floppy velvet ears • Longbow pro',
+        borderClass: 'border-lime-400',
+        bgClass: 'bg-lime-500/15',
+        badgeClass: 'bg-lime-500/20 text-lime-300 border-lime-500/30',
+        textClass: 'text-lime-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="18" ry="14" fill="#78350f"/>
+          <ellipse cx="46" cy="77" rx="10" ry="10" fill="#d97706"/>
+          <!-- Long Floppy Dachshund Ears -->
+          <ellipse cx="23" cy="50" rx="7.5" ry="17" transform="rotate(12 23 50)" fill="#451a03"/>
+          <ellipse cx="69" cy="50" rx="7.5" ry="17" transform="rotate(-12 69 50)" fill="#451a03"/>
+          <circle cx="46" cy="46" r="19" fill="#78350f"/>
+          <ellipse cx="38" cy="37" rx="3" ry="2" fill="#f59e0b"/>
+          <ellipse cx="54" cy="37" rx="3" ry="2" fill="#f59e0b"/>
+          <ellipse cx="46" cy="52" rx="11" ry="7.5" fill="#d97706"/>
+          <circle cx="38" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="39" cy="41.8" r="1.2" fill="#fff"/>
+          <circle cx="54" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="55" cy="41.8" r="1.2" fill="#fff"/>
+          <ellipse cx="46" cy="49" rx="4.2" ry="3" fill="#0f172a"/>
+          <path d="M41 55 Q46 58 51 55" stroke="#451a03" stroke-width="2" fill="none" stroke-linecap="round"/>
+          <path d="M74 12 C84 26, 84 74, 74 88" fill="none" stroke="#84cc16" stroke-width="4.2" stroke-linecap="round"/>
+          <polyline points="74,12 38,54 74,88" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#facc15" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#84cc16"/>
+        </svg>`
+      },
+      poodle_dog: {
+        id: 'poodle_dog',
+        shortLabel: 'Poodle',
+        species: 'Dog Archer',
+        emoji: '🐩',
+        title: 'Apricot Poodle Olympian',
+        traits: 'Curly crown • Precision sight',
+        borderClass: 'border-fuchsia-400',
+        bgClass: 'bg-fuchsia-500/15',
+        badgeClass: 'bg-fuchsia-500/20 text-fuchsia-300 border-fuchsia-500/30',
+        textClass: 'text-fuchsia-400',
+        svg: `<svg viewBox="0 0 100 100" class="w-full h-full">
+          <ellipse cx="46" cy="76" rx="17" ry="14" fill="#fb923c"/>
+          <!-- Fluffy Curly Ears -->
+          <circle cx="24" cy="45" r="7" fill="#ea580c"/>
+          <circle cx="23" cy="54" r="6.5" fill="#ea580c"/>
+          <circle cx="68" cy="45" r="7" fill="#ea580c"/>
+          <circle cx="69" cy="54" r="6.5" fill="#ea580c"/>
+          <circle cx="46" cy="47" r="19" fill="#fb923c"/>
+          <!-- Curly Topknot Crown Puff -->
+          <circle cx="38" cy="27" r="7" fill="#fed7aa"/>
+          <circle cx="46" cy="24" r="8" fill="#fed7aa"/>
+          <circle cx="54" cy="27" r="7" fill="#fed7aa"/>
+          <circle cx="38" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="39" cy="41.8" r="1.2" fill="#fff"/>
+          <circle cx="54" cy="43" r="3.4" fill="#0f172a"/>
+          <circle cx="55" cy="41.8" r="1.2" fill="#fff"/>
+          <ellipse cx="46" cy="49" rx="3.8" ry="2.8" fill="#431407"/>
+          <path d="M41 54 Q46 58 51 54" stroke="#431407" stroke-width="1.8" fill="none" stroke-linecap="round"/>
+          <path d="M73 16 C83 28, 83 72, 73 84" fill="none" stroke="#e879f9" stroke-width="4" stroke-linecap="round"/>
+          <polyline points="73,16 38,54 73,84" fill="none" stroke="#e2e8f0" stroke-width="1.5"/>
+          <line x1="36" y1="54" x2="90" y2="54" stroke="#f8fafc" stroke-width="3"/>
+          <polygon points="95,54 86,49 88,54 86,59" fill="#e879f9"/>
+        </svg>`
+      }
+    };
+
+    const NAME_TO_DEFAULT_AVATAR = {
+      'long': 'bengal_cat',
+      'long ma': 'bengal_cat',
+      'weijia': 'devon_rex_cat',
+      'weijia li': 'devon_rex_cat',
+      'wei': 'devon_rex_cat',
+      'ling': 'maine_coon_cat',
+      'ling fang': 'maine_coon_cat',
+      'ling fangng': 'maine_coon_cat',
+      'xianchu': 'shadow_cat',
+      'xianchu chen': 'shadow_cat',
+      'xianchuu': 'shadow_cat',
+      'alex': 'golden_dog',
+      'alex grossman': 'golden_dog',
+      'alex grossmanx': 'golden_dog',
+      'tz': 'corgi_dog',
+      'val': 'corgi_dog',
+      'max': 'husky_dog',
+      'maxwell shepherd': 'husky_dog',
+      'joyce': 'shadow_cat'
+    };
+
+    const NAME_TO_DEFAULT_CATEGORY = {
+      'long': 'BAREBOW',
+      'weijia': 'BAREBOW',
+      'ling': 'BAREBOW',
+      'xianchu': 'TRADITIONAL',
+      'alex': 'OLYMPIC_RECURVE',
+      'tz': 'BAREBOW',
+      'val': 'BAREBOW',
+      'wei': 'BAREBOW',
+      'max': 'TRADITIONAL'
+    };
+
+    const BOW_STYLE_LABELS = {
+      BAREBOW: '🏹 Barebow',
+      OLYMPIC_RECURVE: '🎯 Olympic Recurve',
+      TRADITIONAL: '🪶 Traditional'
+    };
+
+    function getBowCategoryForArcher(name, explicitBowCategory) {
+      if (explicitBowCategory && BOW_STYLE_LABELS[explicitBowCategory]) {
+        return explicitBowCategory;
+      }
+      const clean = (name || '').trim().toLowerCase();
+      if (clean && appState && appState.archers) {
+        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+        if (found && found.bowCategory && BOW_STYLE_LABELS[found.bowCategory]) {
+          return found.bowCategory;
+        }
+      }
+      if (clean && NAME_TO_DEFAULT_CATEGORY[clean]) {
+        return NAME_TO_DEFAULT_CATEGORY[clean];
+      }
+      return 'BAREBOW';
+    }
+
+    function onBowCategoryChange() {
+      manualBowCategoryOverride = true;
+    }
+
+    const AVATAR_KEYS = Object.keys(PET_AVATARS);
+
+    function getAvatarForArcher(name, explicitAvatarId) {
+      const clean = (name || '').trim().toLowerCase();
+      if (clean && appState && appState.archers) {
+        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+        if (found && found.avatarId && PET_AVATARS[found.avatarId]) {
+          return PET_AVATARS[found.avatarId];
+        }
+      }
+      if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
+        return PET_AVATARS[explicitAvatarId];
+      }
+      if (NAME_TO_DEFAULT_AVATAR[clean]) {
+        return PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]];
+      }
+      if (!clean) return PET_AVATARS.tabby_cat;
+      let hash = 0;
+      for (let i = 0; i < clean.length; i++) {
+        hash = (hash * 31 + clean.charCodeAt(i)) % AVATAR_KEYS.length;
+      }
+      return PET_AVATARS[AVATAR_KEYS[hash]];
+    }
+
+    function getCustomTitleForArcher(name, explicitCustomTitle) {
+      if (explicitCustomTitle && String(explicitCustomTitle).trim()) {
+        return String(explicitCustomTitle).trim();
+      }
+      const clean = (name || '').trim().toLowerCase();
+      if (clean && appState && appState.archers) {
+        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+        if (found && found.customTitle && String(found.customTitle).trim()) {
+          return String(found.customTitle).trim();
+        }
+      }
+      return '';
+    }
+
+    function onCustomTitleInput() {
+      manualTitleOverride = true;
+      const currentId = document.getElementById('selected-avatar-id').value || 'tabby_cat';
+      const av = PET_AVATARS[currentId] || PET_AVATARS.tabby_cat;
+      const customVal = document.getElementById('custom-archer-title').value.trim();
+      const titleEl = document.getElementById('live-avatar-title');
+      titleEl.className = `text-xs font-semibold mt-0.5 ${av.textClass}`;
+      titleEl.textContent = customVal || av.title;
+    }
+
+    function renderAvatarPickerButtons() {
+      const currentId = document.getElementById('selected-avatar-id').value || 'tabby_cat';
+      const pickerContainer = document.getElementById('avatar-picker-buttons');
+      if (pickerContainer) {
+        pickerContainer.innerHTML = AVATAR_KEYS.map(key => {
+          const av = PET_AVATARS[key];
+          const isSelected = key === currentId;
+          const shortLabel = av.shortLabel || (av.id === 'devon_rex_cat' ? 'Devon Rex' : av.title.split(' ')[0]);
+          return `
+            <button type="button" onclick="selectAvatar('${av.id}', true)"
+              class="flex items-center gap-2 p-2 rounded-xl border text-left transition ${isSelected ? 'bg-slate-900 border-amber-400 ring-1 ring-amber-400/40' : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'}">
+              <div class="w-8 h-8 rounded-full ${av.bgClass} border ${av.borderClass} flex items-center justify-center shrink-0 p-0.5">
+                ${av.svg}
+              </div>
+              <div class="min-w-0">
+                <div class="text-[11px] font-bold text-white truncate">${av.emoji} ${shortLabel}</div>
+                <div class="text-[9px] text-slate-400 truncate">${av.species}</div>
+              </div>
+            </button>
+          `;
+        }).join('');
+      }
+    }
+
+    function selectAvatar(avatarId, isManual = false) {
+      const av = PET_AVATARS[avatarId] || PET_AVATARS.tabby_cat;
+      if (isManual) manualAvatarOverride = true;
+      document.getElementById('selected-avatar-id').value = av.id;
+
+      const circle = document.getElementById('live-avatar-circle');
+      circle.className = `w-14 h-14 rounded-full ${av.bgClass} border-2 ${av.borderClass} flex items-center justify-center shrink-0 shadow-inner p-0.5`;
+      circle.innerHTML = av.svg;
+
+      const nameInput = document.getElementById('archer-name').value.trim();
+      document.getElementById('live-avatar-name').textContent = nameInput ? `${nameInput}'s Archer Badge` : 'Your Archer Mascot';
+
+      const speciesEl = document.getElementById('live-avatar-species');
+      speciesEl.className = `text-[10px] font-bold border px-2 py-0.5 rounded-full ${av.badgeClass}`;
+      speciesEl.textContent = `${av.emoji} ${av.species}`;
+
+      const customTitleInput = document.getElementById('custom-archer-title');
+      if (customTitleInput) {
+        customTitleInput.placeholder = `${av.title} (or type custom title...)`;
+      }
+      const customVal = customTitleInput ? customTitleInput.value.trim() : '';
+
+      const titleEl = document.getElementById('live-avatar-title');
+      titleEl.className = `text-xs font-semibold mt-0.5 ${av.textClass}`;
+      titleEl.textContent = customVal || av.title;
+
+      document.getElementById('live-avatar-traits').textContent = av.traits;
+      renderAvatarPickerButtons();
+    }
+
+    function toggleAvatarPicker() {
+      const grid = document.getElementById('avatar-picker-grid');
+      grid.classList.toggle('hidden');
+      renderAvatarPickerButtons();
+    }
+
+    function equipFromGallery(avatarId) {
+      selectAvatar(avatarId, true);
+      document.getElementById('archer-name').focus();
+    }
+
+    const API_BASE_URL = 'https://script.google.com/macros/s/AKfycbwtiHbliJoqZX3PkLdQI0ez1kH6XZ0UJVVJ-TJB3pQ5IuNKcxwgMA8PN2R6CqWsaF7C/exec';
+
+    async function loadState() {
+      try {
+        const res = await fetch(API_BASE_URL + '?action=getState');
+        appState = await res.json();
+        render();
+      } catch (err) {
+        console.error('Failed to load state:', err);
+      }
+    }
+
+    function render() {
+      if (!appState) return;
+
+      // Render Event & Date
+      const parts = appState.upcomingSunday.split('-');
+      const d = new Date(parseInt(parts[0], 10), parseInt(parts[1], 10) - 1, parseInt(parts[2], 10));
+      const formattedDate = d.toLocaleDateString('en-US', { weekday: 'long', month: 'short', day: 'numeric' });
+      document.getElementById('event-date').textContent = formattedDate;
+      document.getElementById('event-time').innerHTML = `<i class="fa-regular fa-clock text-amber-400"></i> Starts ${appState.config.leagueTime || '6:00 PM'}`;
+
+      // Status Badge
+      const statusBadge = document.getElementById('status-badge');
+      const status = appState.event.status;
+
+      if (status === 'ON') {
+        statusBadge.className = 'px-3.5 py-1.5 rounded-full font-bold text-xs flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-emerald-500/10 shadow-lg';
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span><span>LEAGUE IS ON</span>`;
+      } else if (status === 'OFF') {
+        statusBadge.className = 'px-3.5 py-1.5 rounded-full font-bold text-xs flex items-center gap-2 bg-rose-500/20 text-rose-400 border border-rose-500/40 shadow-rose-500/10 shadow-lg';
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-rose-400"></span><span>LEAGUE IS OFF</span>`;
+      } else {
+        statusBadge.className = 'px-3.5 py-1.5 rounded-full font-bold text-xs flex items-center gap-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-amber-500/10 shadow-lg';
+        statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span><span>STATUS PENDING</span>`;
+      }
+
+      // Tally Counts
+      const rsvps = appState.rsvps || [];
+      const yesCount = rsvps.filter(r => r.status === 'YES').length;
+      const noCount = rsvps.filter(r => r.status === 'NO').length;
+
+      document.getElementById('count-yes').textContent = yesCount;
+      document.getElementById('count-no').textContent = noCount;
+
+      document.getElementById('tab-count-yes').textContent = yesCount;
+      document.getElementById('tab-count-no').textContent = noCount;
+      document.getElementById('total-responses').textContent = `${rsvps.length} Response${rsvps.length === 1 ? '' : 's'}`;
+
+      // Populate Name Datalist
+      const datalist = document.getElementById('archers-datalist');
+      datalist.innerHTML = '';
+      (appState.archers || []).forEach(a => {
+        const opt = document.createElement('option');
+        opt.value = a.name;
+        datalist.appendChild(opt);
+      });
+
+      // Sync avatar preview if archer name is already typed
+      const currentNameInput = document.getElementById('archer-name').value.trim();
+      if (currentNameInput && !manualAvatarOverride) {
+        onArcherNameChange();
+      }
+
+      // Countdown
+      updateCountdown(d);
+
+      // Render tab list
+      renderList();
+      renderAvatarPickerButtons();
+    }
+
+    function selectStatus(status) {
+      document.getElementById('selected-status').value = status;
+      ['YES', 'NO'].forEach(s => {
+        const btn = document.getElementById(`btn-status-${s.toLowerCase()}`);
+        if (!btn) return;
+        if (s === status) {
+          if (s === 'YES') btn.className = 'rsvp-btn flex flex-col items-center justify-center p-3 rounded-xl border-2 border-emerald-500 bg-emerald-950/60 ring-2 ring-emerald-500/30 transition';
+          if (s === 'NO') btn.className = 'rsvp-btn flex flex-col items-center justify-center p-3 rounded-xl border-2 border-rose-500 bg-rose-950/60 ring-2 ring-rose-500/30 transition';
+        } else {
+          btn.className = 'rsvp-btn flex flex-col items-center justify-center p-3 rounded-xl border border-slate-700/80 bg-slate-950/60 opacity-60 hover:opacity-100 transition';
+        }
+      });
+    }
+
+    function onArcherNameChange() {
+      const rawName = document.getElementById('archer-name').value.trim();
+      const name = rawName.toLowerCase();
+
+      // Whenever the user switches to a different name, reset manual overrides so the person's saved/consistent avatar & style load
+      if (name !== lastSelectedArcherName) {
+        manualAvatarOverride = false;
+        manualTitleOverride = false;
+        manualBowCategoryOverride = false;
+        lastSelectedArcherName = name;
+        try {
+          if (rawName) localStorage.setItem('archery_league_name', rawName);
+        } catch (e) {}
+      }
+
+      if (appState && rawName && !manualTitleOverride) {
+        const savedTitle = getCustomTitleForArcher(rawName);
+        const titleInput = document.getElementById('custom-archer-title');
+        if (titleInput) titleInput.value = savedTitle;
+      }
+
+      if (!manualBowCategoryOverride || !rawName) {
+        const savedCat = getBowCategoryForArcher(rawName);
+        const catSelect = document.getElementById('archer-bow-category');
+        if (catSelect) catSelect.value = savedCat;
+      }
+
+      if (!manualAvatarOverride || !rawName) {
+        const av = getAvatarForArcher(rawName);
+        selectAvatar(av.id, false);
+      } else {
+        document.getElementById('live-avatar-name').textContent = rawName ? `${rawName}'s Archer Badge` : 'Your Archer Mascot';
+      }
+
+      if (!name || !appState) return;
+
+      const matchedArcher = (appState.archers || []).find(a => a.name.toLowerCase() === name);
+      if (matchedArcher && matchedArcher.avatarId && !manualAvatarOverride) {
+        selectAvatar(matchedArcher.avatarId, false);
+      }
+      if (matchedArcher && matchedArcher.bowCategory && !manualBowCategoryOverride) {
+        const catSelect = document.getElementById('archer-bow-category');
+        if (catSelect) catSelect.value = matchedArcher.bowCategory;
+      }
+
+      const emailContainer = document.getElementById('email-optin-container');
+      const isEmailVisible = emailContainer && !emailContainer.classList.contains('hidden');
+
+      if (isEmailVisible && matchedArcher) {
+        const optinCheckbox = document.getElementById('email-optin');
+        const emailWrap = document.getElementById('email-input-wrapper');
+        const emailInput = document.getElementById('archer-email');
+        const emailHint = document.getElementById('email-status-hint');
+
+        if (matchedArcher.hasEmail && matchedArcher.remindMe) {
+          optinCheckbox.checked = true;
+          emailWrap.classList.remove('hidden');
+          emailInput.placeholder = "Email saved (leave blank to keep current)";
+          if (emailHint) emailHint.innerHTML = "✅ Saturday reminder is <strong>ENABLED</strong> for you. Leave blank to keep current email, or enter a new one to update.";
+        } else if (matchedArcher.hasEmail && !matchedArcher.remindMe) {
+          optinCheckbox.checked = false;
+          emailWrap.classList.add('hidden');
+          emailInput.placeholder = "Enter email to turn reminders back on...";
+          if (emailHint) emailHint.innerHTML = "⏸️ Saturday reminder is <strong>DISABLED</strong> for you. Flip the toggle ON if you want weekly reminders.";
+        } else {
+          optinCheckbox.checked = false;
+          emailWrap.classList.add('hidden');
+          emailInput.placeholder = "Enter your email to get reminded every Saturday...";
+          if (emailHint) emailHint.textContent = "We'll only email you a reminder if you haven't responded yet by Saturday 10:00 AM.";
+        }
+      }
+
+      // Auto pre-fill RSVP status if already responded for this week
+      if (matchedArcher) {
+        const existingRsvp = (appState.rsvps || []).find(r => r.archerName.toLowerCase() === name);
+        if (existingRsvp) {
+          selectStatus(existingRsvp.status);
+        }
+      }
+    }
+
+    function toggleEmailField(checked) {
+      const wrap = document.getElementById('email-input-wrapper');
+      const emailHint = document.getElementById('email-status-hint');
+      if (checked) {
+        wrap.classList.remove('hidden');
+        document.getElementById('archer-email').focus();
+        if (emailHint) emailHint.textContent = "We'll only email you a reminder if you haven't responded yet by Saturday 10:00 AM.";
+      } else {
+        wrap.classList.add('hidden');
+        if (emailHint) emailHint.textContent = "Email reminders will be disabled for you upon saving.";
+      }
+    }
+
+    async function handleRsvpSubmit(e) {
+      e.preventDefault();
+      const name = document.getElementById('archer-name').value.trim();
+      const status = document.getElementById('selected-status').value;
+      const avatarId = document.getElementById('selected-avatar-id').value;
+      const bowCategoryEl = document.getElementById('archer-bow-category');
+      const bowCategory = bowCategoryEl ? bowCategoryEl.value : 'BAREBOW';
+      const customTitleEl = document.getElementById('custom-archer-title');
+      const customTitle = customTitleEl ? customTitleEl.value.trim() : '';
+
+      const emailContainer = document.getElementById('email-optin-container');
+      const isEmailVisible = emailContainer && !emailContainer.classList.contains('hidden');
+      const optin = isEmailVisible ? document.getElementById('email-optin').checked : undefined;
+      const email = isEmailVisible ? document.getElementById('archer-email').value.trim() : undefined;
+
+      if (!status) {
+        alert('Please choose whether you can make it (Yes or No).');
+        return;
+      }
+
+      const submitBtn = document.getElementById('btn-submit');
+      submitBtn.disabled = true;
+      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+
+      try {
+        const res = await fetch(API_BASE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({
+            action: 'setRsvp',
+            name,
+            status,
+            avatarId: avatarId || undefined,
+            bowCategory: bowCategory || undefined,
+            customTitle: customTitle,
+            email: email ? email : undefined,
+            remindMe: optin
+          })
+        });
+        const data = await res.json();
+        if (data.success) {
+          manualAvatarOverride = false;
+          manualTitleOverride = false;
+          manualBowCategoryOverride = false;
+          await loadState();
+          alert(`Thanks ${name}! Your RSVP & archer badge have been saved.`);
+          onArcherNameChange();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to submit'));
+        }
+      } catch (err) {
+        alert('Network error submitting RSVP.');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.innerHTML = `<span>🏹</span> <span>Save RSVP</span>`;
+      }
+    }
+
+    function switchTab(tab) {
+      currentTab = tab;
+      ['yes', 'no'].forEach(t => {
+        const btn = document.getElementById(`tab-btn-${t}`);
+        if (!btn) return;
+        if (t === tab) {
+          const color = t === 'yes' ? 'text-emerald-400 border-emerald-400' : 'text-rose-400 border-rose-400';
+          btn.className = `tab-btn pb-2 px-3 ${color} border-b-2 flex items-center gap-1.5`;
+        } else {
+          btn.className = `tab-btn pb-2 px-3 text-slate-400 hover:text-slate-300 border-b-2 border-transparent flex items-center gap-1.5`;
+        }
+      });
+      renderList();
+    }
+
+    function renderList() {
+      const container = document.getElementById('roster-list');
+      if (!appState) return;
+
+      const targetStatus = currentTab.toUpperCase();
+      const filtered = (appState.rsvps || []).filter(r => r.status === targetStatus);
+
+      if (filtered.length === 0) {
+        container.innerHTML = `
+          <div class="py-8 text-center text-xs text-slate-500">
+            No archers in this category yet.
+          </div>
+        `;
+        return;
+      }
+
+      container.innerHTML = filtered.map(r => {
+        const av = getAvatarForArcher(r.archerName, r.avatarId);
+        const bowCat = getBowCategoryForArcher(r.archerName, r.bowCategory);
+        const bowLabel = BOW_STYLE_LABELS[bowCat] || BOW_STYLE_LABELS.BAREBOW;
+        const displayTitle = getCustomTitleForArcher(r.archerName, r.customTitle) || av.title;
+        return `
+          <div class="py-2.5 flex items-center justify-between">
+            <div class="flex items-center space-x-3">
+              <div class="w-11 h-11 rounded-full ${av.bgClass} border-2 ${av.borderClass} flex items-center justify-center shrink-0 p-0.5 shadow-sm">
+                ${av.svg}
+              </div>
+              <div>
+                <div class="flex items-center gap-1.5 flex-wrap">
+                  <p class="text-xs font-extrabold text-white">${escapeHtml(r.archerName)}</p>
+                  <span class="text-[10px] font-bold bg-slate-800 text-amber-300 border border-slate-700 px-2 py-0.2 rounded-full">
+                    ${bowLabel}
+                  </span>
+                  <span class="text-[10px] font-semibold border px-2 py-0.2 rounded-full ${av.badgeClass}">
+                    ${av.emoji} ${escapeHtml(displayTitle)}
+                  </span>
+                </div>
+                <p class="text-[10px] text-slate-400 mt-0.5">${av.traits}</p>
+              </div>
+            </div>
+            <span class="text-[10px] text-slate-500 font-mono shrink-0 ml-2">
+              ${timeAgo(r.updatedAt)}
+            </span>
+          </div>
+        `;
+      }).join('');
+    }
+
+    function updateCountdown(targetDate) {
+      const now = new Date();
+      const targetTime = new Date(targetDate);
+      let targetHours = 18;
+      let targetMinutes = 0;
+      if (appState && appState.config && appState.config.leagueTime) {
+        const match = appState.config.leagueTime.match(/(\d+):?(\d+)?\s*(AM|PM)?/i);
+        if (match) {
+          let h = parseInt(match[1], 10);
+          const m = match[2] ? parseInt(match[2], 10) : 0;
+          const ampm = match[3] ? match[3].toUpperCase() : '';
+          if (ampm === 'PM' && h < 12) h += 12;
+          if (ampm === 'AM' && h === 12) h = 0;
+          targetHours = h;
+          targetMinutes = m;
+        }
+      }
+      targetTime.setHours(targetHours, targetMinutes, 0, 0);
+
+      const diffMs = targetTime - now;
+      const badge = document.getElementById('countdown-badge');
+
+      if (diffMs < 0 && diffMs > -4 * 3600 * 1000) {
+        badge.textContent = 'Happening tonight!';
+        return;
+      }
+      if (diffMs < 0) {
+        badge.textContent = 'Event ended';
+        return;
+      }
+
+      const days = Math.floor(diffMs / (1000 * 60 * 60 * 24));
+      const hours = Math.floor((diffMs % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60));
+      badge.textContent = `In ${days}d ${hours}h`;
+    }
+
+    function openAdminModal() {
+      document.getElementById('admin-modal').classList.remove('hidden');
+      if (appState && appState.event) {
+        document.getElementById('admin-status').value = appState.event.status || 'PENDING';
+        document.getElementById('admin-time').value = appState.config.leagueTime || '6:00 PM';
+      }
+    }
+
+    function closeAdminModal() {
+      document.getElementById('admin-modal').classList.add('hidden');
+    }
+
+    async function saveAdminStatus() {
+      const status = document.getElementById('admin-status').value;
+      const leagueTime = document.getElementById('admin-time').value;
+
+      try {
+        const res = await fetch(API_BASE_URL, {
+          method: 'POST',
+          headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+          body: JSON.stringify({ action: 'updateAdminStatus', status, leagueTime })
+        });
+        const data = await res.json();
+        if (data.success) {
+          alert('League status updated successfully!');
+          closeAdminModal();
+          loadState();
+        } else {
+          alert('Error: ' + (data.error || 'Failed to update'));
+        }
+      } catch (err) {
+        alert('Failed to connect to server.');
+      }
+    }
+
+    function triggerTestReminder() {
+      fetch('/api/admin/test-remind', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({})
+      })
+      .then(res => res.json())
+      .then(data => alert(data.success ? data.message : ('Failed: ' + (data.error || 'Unknown error'))))
+      .catch(() => alert('Network error testing reminders.'));
+    }
+
+    function timeAgo(dateString) {
+      if (!dateString) return '';
+      const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
+      if (seconds < 60) return 'just now';
+      const minutes = Math.floor(seconds / 60);
+      if (minutes < 60) return `${minutes}m ago`;
+      const hours = Math.floor(minutes / 60);
+      if (hours < 24) return `${hours}h ago`;
+      const days = Math.floor(hours / 24);
+      return `${days}d ago`;
+    }
+
+    function escapeHtml(text) {
+      const map = { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#039;' };
+      return String(text).replace(/[&<>"']/g, m => map[m]);
+    }
+
+    function init() {
+      try {
+        const savedName = localStorage.getItem('archery_league_name');
+        if (savedName) {
+          document.getElementById('archer-name').value = savedName;
+          lastSelectedArcherName = savedName.trim().toLowerCase();
+        }
+      } catch (e) {}
+      const initialName = document.getElementById('archer-name').value;
+      const initialAv = getAvatarForArcher(initialName);
+      selectAvatar(initialAv.id, false);
+      const catSelect = document.getElementById('archer-bow-category');
+      if (catSelect) catSelect.value = getBowCategoryForArcher(initialName);
+      loadState();
+      setInterval(loadState, 20000);
+    }
+
+    if (document.readyState === 'loading') {
+      document.addEventListener('DOMContentLoaded', init);
+    } else {
+      init();
+    }
+  </script>
+</body>
+</html>

@@ -1,0 +1,10 @@
+node_modules/
+.vercel/
+*.log
+*.crt
+*.key
+*.db
+*.db-shm
+*.db-wal
+.env
+champion_kirkland_raw.json

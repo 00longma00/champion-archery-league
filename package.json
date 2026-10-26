@@ -1,0 +1,16 @@
+{
+  "name": "archery-league-tracker",
+  "version": "1.0.0",
+  "description": "Weekly Archery League Attendance and RSVP Tracker",
+  "main": "server.js",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "better-sqlite3": "^11.1.2",
+    "express": "^4.22.3",
+    "localtunnel": "^2.0.2",
+    "node-cron": "^3.0.3",
+    "nodemailer": "^6.10.1"
+  }
+}
