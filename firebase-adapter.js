@@ -178,6 +178,7 @@ export async function getScoringEventsHub() {
   const rosterSnap = await getDocs(collection(db, "roster"));
   const roster = [];
   rosterSnap.forEach(d => roster.push(d.data()));
+  roster.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
   const sunday = getUpcomingSundayStr();
   const yesArchers = [];
@@ -196,6 +197,41 @@ export async function getScoringEventsHub() {
     });
   } catch (e) {}
 
+  // Merge roster + any historical event_participants so archers who participated without RSVPing are always included
+  const allArchersMap = new Map();
+  roster.forEach(r => {
+    const clean = String(r.name || '').trim();
+    const key = clean.toLowerCase();
+    if (key) {
+      allArchersMap.set(key, {
+        name: clean,
+        bow_category: r.bowCategory || 'BAREBOW',
+        avatar_id: r.avatarId || null,
+        custom_title: r.customTitle || null
+      });
+    }
+  });
+  const aliasSkip = new Set([
+    'long ma', 'weijia li', 'ling fang', 'ling fangng',
+    'xianchu chen', 'xianchuu', 'alex grossman', 'alex grossmanx',
+    'maxwell shepherd', 'wei', 'qihuanan', 'qihuan aixinjueluo', 'magnur gilmutdin', 'joy'
+  ]);
+  pSnap.forEach(d => {
+    const p = d.data();
+    const clean = String(p.name || '').trim();
+    const key = clean.toLowerCase();
+    if (key && !allArchersMap.has(key) && !aliasSkip.has(key)) {
+      allArchersMap.set(key, {
+        name: clean,
+        bow_category: p.bow_category || 'BAREBOW',
+        avatar_id: p.avatar_id || null,
+        custom_title: p.custom_title || null
+      });
+    }
+  });
+
+  const allArchers = Array.from(allArchersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+
   return {
     success: true,
     events,
@@ -203,12 +239,7 @@ export async function getScoringEventsHub() {
     rsvpImport: {
       date: sunday,
       yesArchers,
-      allArchers: roster.map(r => ({
-        name: r.name,
-        bow_category: r.bowCategory || 'BAREBOW',
-        avatar_id: r.avatarId,
-        custom_title: r.customTitle
-      }))
+      allArchers
     }
   };
 }
@@ -462,11 +493,13 @@ export async function createScoringEvent({ event, participants, groups }) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}`);
       const bNum = Number(p.bale_number) || 1;
+      const cleanName = String(p.name || 'Archer').trim();
+      const bowCat = p.bow_category || 'BAREBOW';
       await setDoc(doc(db, "event_participants", pId), {
         id: pId,
         event_id: eventId,
-        name: p.name || 'Archer',
-        bow_category: p.bow_category || 'BAREBOW',
+        name: cleanName,
+        bow_category: bowCat,
         avatar_id: p.avatar_id || null,
         custom_title: p.custom_title || null,
         bale_number: bNum,
@@ -477,6 +510,16 @@ export async function createScoringEvent({ event, participants, groups }) {
         group_id: p.group_id || baleToGroupId[bNum] || ('grp_' + eventId + '_1'),
         sort_order: idx
       });
+      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions
+      if (cleanName) {
+        const rosterUpdate = {
+          name: cleanName,
+          bowCategory: bowCat
+        };
+        if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
+        if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
+        await setDoc(doc(db, "roster", cleanName.toLowerCase()), rosterUpdate, { merge: true });
+      }
     }
   }
 
@@ -552,14 +595,29 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
       keepIds.add(pId);
       const bNum = Number(p.bale_number) || 1;
       const resolvedGroupId = baleToGroupId[bNum] || p.group_id || (`grp_${eventId}_1`);
+      const cleanName = String(p.name || 'Archer').trim();
+      const bowCat = p.bow_category || 'BAREBOW';
       await setDoc(doc(db, "event_participants", pId), {
         ...p,
         id: pId,
         event_id: eventId,
+        name: cleanName,
+        bow_category: bowCat,
         bale_number: bNum,
         group_id: resolvedGroupId,
         sort_order: idx
       }, { merge: true });
+
+      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions
+      if (cleanName) {
+        const rosterUpdate = {
+          name: cleanName,
+          bowCategory: bowCat
+        };
+        if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
+        if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
+        await setDoc(doc(db, "roster", cleanName.toLowerCase()), rosterUpdate, { merge: true });
+      }
     }
 
     // Delete removed participants
