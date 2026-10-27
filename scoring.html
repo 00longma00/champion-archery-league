@@ -332,7 +332,7 @@
             <label class="block text-slate-300 font-bold mb-1">Select Private Hub</label>
             <select id="login-hub-name" required
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
-              <option value="long_weijia">My Private Hub (Long &amp; Weijia)</option>
+              <option value="long_weijia">My Private Hub</option>
             </select>
           </div>
           <div>
@@ -359,12 +359,12 @@
             <label class="block text-slate-300 font-bold mb-1">Hub Space Name</label>
             <input type="text" id="signup-hub-name" required value="My Private Hub" placeholder="e.g. My Private Hub"
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
-            <p class="text-[10px] text-slate-400 mt-1">For you and Weijia, use <strong>My Private Hub</strong> (or <strong>Long &amp; Weijia</strong>) to connect all 160 migrated sessions.</p>
+            <p class="text-[10px] text-slate-400 mt-1">Choose a name for your personal or shared practice workspace.</p>
           </div>
 
           <div>
             <label class="block text-slate-300 font-bold mb-1">Linked League Archers (for Auto-Import)</label>
-            <input type="text" id="signup-hub-archers" required value="Long, Weijia" placeholder="e.g. Long, Weijia"
+            <input type="text" id="signup-hub-archers" placeholder="Enter archer name(s), comma-separated..."
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
             <p class="text-[10px] text-emerald-400 mt-1">
               <i class="fa-solid fa-circle-check mr-1"></i>Sunday League scores for these archers will automatically sync into this hub.
@@ -1505,7 +1505,7 @@
       <div class="space-y-3 text-xs">
         <div>
           <label class="block text-slate-300 font-bold mb-1">Device Label</label>
-          <input type="text" id="passkey-device-label" value="Long's Phone" placeholder="e.g. Long's iPhone or Weijia's Phone"
+          <input type="text" id="passkey-device-label" value="My Phone" placeholder="e.g. My iPhone or Tablet"
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-semibold focus:outline-none focus:border-amber-500">
         </div>
 
@@ -2684,17 +2684,11 @@
       if (!list.some(s => s.id === 'long_weijia')) {
         list.unshift({
           id: 'long_weijia',
-          name: 'My Private Hub',
-          linked_archers: ['Long', 'Weijia']
+          name: 'My Private Hub'
         });
       }
       sel.innerHTML = list.map(s => {
-        const archersLabel = Array.isArray(s.linked_archers) && s.linked_archers.length > 0
-          ? ` (${s.linked_archers.join(' & ')})`
-          : '';
-        const disp = s.name && !s.name.includes(s.linked_archers?.[0] || '__')
-          ? `${s.name}${archersLabel}`
-          : (s.name || s.id);
+        const disp = s.name || s.id;
         return `<option value="${escapeHtml(s.id)}">${escapeHtml(disp)}</option>`;
       }).join('');
     }
