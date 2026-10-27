@@ -235,10 +235,6 @@
           <i class="fa-solid fa-chart-line text-emerald-400"></i>
           <span>Progress &amp; Graphs</span>
         </button>
-        <button onclick="openPrivateSecurityModal()" title="Quick Unlock &amp; Passkey Settings" class="text-xs font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 text-sky-300 hover:text-white bg-slate-900 border border-slate-800">
-          <i class="fa-solid fa-fingerprint text-sky-400"></i>
-          <span class="hidden sm:inline">Device Login</span>
-        </button>
         <button onclick="switchToPublicLeagueMode()" class="text-xs font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-300 hover:text-white bg-slate-900 border border-slate-800">
           <i class="fa-solid fa-trophy text-amber-400"></i>
           <span>League</span>
@@ -341,14 +337,10 @@
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500">
           </div>
 
-          <div class="flex flex-col sm:flex-row gap-2 pt-1">
-            <button type="submit" id="btn-private-login-submit" class="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+          <div class="pt-1">
+            <button type="submit" id="btn-private-login-submit" class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
               <i class="fa-solid fa-unlock-keyhole"></i>
               <span>Unlock My Private Hub</span>
-            </button>
-            <button type="button" id="btn-private-biometric-login" onclick="handlePrivateBiometricUnlock()" class="bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/40 font-extrabold py-3 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2">
-              <i class="fa-solid fa-fingerprint text-sm"></i>
-              <span>Phone Quick Unlock</span>
             </button>
           </div>
         </form>
@@ -1479,50 +1471,6 @@
           Save Personal Note
         </button>
       </div>
-    </div>
-  </div>
-
-  <!-- ==================================================================== -->
-  <!-- MODAL: DEVICE BIOMETRIC / PASSKEY SETUP FOR PRIVATE HUB              -->
-  <!-- ==================================================================== -->
-  <div id="private-security-modal" onclick="if(event.target.id==='private-security-modal') closePrivateSecurityModal()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[65] hidden flex items-center justify-center p-4">
-    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
-      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
-        <div class="flex items-center gap-2.5">
-          <div class="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center">
-            <i class="fa-solid fa-fingerprint text-lg"></i>
-          </div>
-          <div>
-            <h3 class="text-sm font-extrabold text-white">Phone Quick Unlock Setup</h3>
-            <p class="text-[11px] text-slate-400">Link this phone or device for 1-tap login</p>
-          </div>
-        </div>
-        <button type="button" onclick="closePrivateSecurityModal()" class="text-slate-400 hover:text-white p-1">
-          <i class="fa-solid fa-xmark"></i>
-        </button>
-      </div>
-
-      <div class="space-y-3 text-xs">
-        <div>
-          <label class="block text-slate-300 font-bold mb-1">Device Label</label>
-          <input type="text" id="passkey-device-label" value="My Phone" placeholder="e.g. My iPhone or Tablet"
-            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-semibold focus:outline-none focus:border-amber-500">
-        </div>
-
-        <button type="button" onclick="handleRegisterPasskeyDevice()" class="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2">
-          <i class="fa-solid fa-fingerprint"></i>
-          <span>Add Quick Unlock on This Device</span>
-        </button>
-
-        <div class="pt-2 border-t border-slate-800">
-          <div class="text-[11px] font-bold text-slate-400 mb-1.5">Registered Devices on This Hub:</div>
-          <div id="registered-passkeys-list" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
-        </div>
-      </div>
-
-      <button type="button" onclick="closePrivateSecurityModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-xs border border-slate-700 transition">
-        Done
-      </button>
     </div>
   </div>
 
