@@ -4287,7 +4287,7 @@
         if (known) {
           p.name = known.name;
           if (known.avatar_id) p.avatar_id = known.avatar_id;
-          if (known.bow_category) p.bow_category = known.bow_category;
+          p.bow_category = getBowCategoryForArcher(known.name, known.bow_category);
           if (known.custom_title) p.custom_title = known.custom_title;
         } else {
           if (NAME_TO_DEFAULT_AVATAR[clean]) p.avatar_id = NAME_TO_DEFAULT_AVATAR[clean];
