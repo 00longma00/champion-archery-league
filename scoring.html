@@ -3,7 +3,8 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-  <title>Archery League Night — Live Scoring</title>
+  <title>Archery League &amp; Private Hub — Live Scoring</title>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
@@ -181,7 +182,7 @@
   </style>
 </head>
 <body class="min-h-screen flex flex-col items-center justify-start p-3 sm:p-6 pb-36">
-  <div class="w-full max-w-2xl mx-auto space-y-5">
+  <div id="main-app-container" class="w-full max-w-2xl mx-auto space-y-5">
 
     <!-- Top Navigation Header -->
     <header class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-3.5 gap-2">
@@ -201,24 +202,193 @@
         </div>
         <div>
           <h1 class="text-lg sm:text-xl font-extrabold tracking-tight text-white flex items-center gap-2">
-            <span>League Scoring</span>
-            <span class="text-[10px] bg-amber-500/15 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30 uppercase">Live</span>
+            <span id="header-app-title">League Scoring</span>
+            <span id="header-app-badge" class="text-[10px] bg-amber-500/15 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30 uppercase">Live</span>
           </h1>
-          <p class="text-[11px] text-slate-400">Bale Assignment • Keypad Scoring • Leaderboard</p>
+          <p id="header-app-subtitle" class="text-[11px] text-slate-400">Bale Assignment • Keypad Scoring • Leaderboard</p>
         </div>
       </div>
 
-      <div class="flex items-center gap-2">
+      <!-- League Navigation Bar -->
+      <div id="nav-group-league" class="flex flex-wrap items-center gap-2">
         <button id="btn-all-events" onclick="showEventsHub()" class="hidden text-xs text-slate-300 hover:text-white transition bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
           <i class="fa-solid fa-layer-group text-amber-400"></i>
           <span>All Events</span>
+        </button>
+        <button onclick="enterPrivateHubMode()" class="text-xs text-sky-300 hover:text-sky-200 transition bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-bold shadow-sm">
+          <i class="fa-solid fa-user-shield text-sky-400"></i>
+          <span>My Private Hub</span>
         </button>
         <a href="index.html" class="text-xs text-slate-300 hover:text-white transition bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
           <i class="fa-solid fa-calendar-check text-emerald-400"></i>
           <span>RSVP Tracker</span>
         </a>
       </div>
+
+      <!-- Private Hub Navigation Bar -->
+      <div id="nav-group-private" class="hidden flex flex-wrap items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+        <button id="nav-btn-sessions" onclick="showEventsHub()" class="text-xs font-extrabold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
+          <i class="fa-solid fa-bullseye"></i>
+          <span>Sessions &amp; Scoring</span>
+        </button>
+        <button id="nav-btn-analytics" onclick="showAnalyticsPage()" class="text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-chart-line text-emerald-400"></i>
+          <span>Progress &amp; Graphs</span>
+        </button>
+        <button onclick="openPrivateSecurityModal()" title="Quick Unlock &amp; Passkey Settings" class="text-xs font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 text-sky-300 hover:text-white bg-slate-900 border border-slate-800">
+          <i class="fa-solid fa-fingerprint text-sky-400"></i>
+          <span class="hidden sm:inline">Device Login</span>
+        </button>
+        <button onclick="switchToPublicLeagueMode()" class="text-xs font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-300 hover:text-white bg-slate-900 border border-slate-800">
+          <i class="fa-solid fa-trophy text-amber-400"></i>
+          <span>League</span>
+        </button>
+        <button onclick="logoutPrivateHub()" title="Lock Private Hub" class="text-xs font-bold px-2 py-1.5 rounded-lg transition text-rose-400 hover:bg-rose-500/10">
+          <i class="fa-solid fa-lock"></i>
+        </button>
+      </div>
     </header>
+
+    <!-- ================================================================== -->
+    <!-- VIEW 0: MY PRIVATE HUB — WELCOME, SIGN UP & LOGIN GATE             -->
+    <!-- ================================================================== -->
+    <div id="view-private-auth" class="hidden space-y-5">
+      <!-- Welcome Feature Overview Banner -->
+      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-slate-800/80 p-5 sm:p-6 shadow-2xl wa-target-bg space-y-4">
+        <div class="absolute top-0 left-0 right-0 h-1 flex">
+          <div class="flex-1 bg-yellow-400"></div>
+          <div class="flex-1 bg-red-500"></div>
+          <div class="flex-1 bg-sky-500"></div>
+          <div class="flex-1 bg-slate-700"></div>
+          <div class="flex-1 bg-slate-200"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
+          <div>
+            <span class="text-[11px] font-extrabold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-user-shield"></i>
+              <span>Personal &amp; Couple Archery Workspace</span>
+            </span>
+            <h2 class="text-xl sm:text-2xl font-black text-white mt-0.5">Welcome to My Private Hub 🎯</h2>
+            <p class="text-xs text-slate-400 mt-1">
+              Your dedicated space to score personal practice sessions, track long-term arrow averages, and keep private process notes.
+            </p>
+          </div>
+          <button onclick="switchToPublicLeagueMode()" class="self-start sm:self-center text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shrink-0 transition">
+            <i class="fa-solid fa-arrow-left text-amber-400"></i>
+            <span>Back to League</span>
+          </button>
+        </div>
+
+        <!-- Feature Highlights Grid -->
+        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
+          <div class="rounded-xl bg-slate-950/90 border border-amber-500/40 p-3.5 space-y-1.5">
+            <div class="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
+              <i class="fa-solid fa-bolt text-amber-400"></i>
+              <span>Auto League Score Import</span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              Every official score you shoot during <strong>Sunday Night League</strong> is <strong>automatically imported</strong> into your private history and progression charts—zero duplicate entry!
+            </p>
+          </div>
+          <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-3.5 space-y-1.5">
+            <div class="text-xs font-extrabold text-emerald-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-bullseye"></i>
+              <span>Practice Rounds &amp; Notes</span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              Log 3-arrow, 5-arrow, or 6-arrow practice ends with the live keypad and save private shot-process notes that stay strictly in your hub.
+            </p>
+          </div>
+          <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-3.5 space-y-1.5">
+            <div class="text-xs font-extrabold text-sky-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>Progression &amp; CSV Export</span>
+            </div>
+            <p class="text-[11px] text-slate-300 leading-relaxed">
+              Compare your 6-month baseline against your last 14 days, track grouping spread (StdDev) &amp; gold %, and export all scores to CSV anytime.
+            </p>
+          </div>
+        </div>
+      </section>
+
+      <!-- Sign In / First-Time Sign Up Card -->
+      <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-5 sm:p-6 shadow-xl max-w-lg mx-auto space-y-4">
+        <!-- Auth Mode Tabs -->
+        <div class="grid grid-cols-2 gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800">
+          <button type="button" id="auth-tab-login" onclick="switchPrivateAuthTab('login')" class="py-2 px-3 rounded-lg text-xs font-extrabold transition bg-amber-500 text-slate-950 shadow">
+            <i class="fa-solid fa-right-to-bracket mr-1"></i>Sign In to Hub
+          </button>
+          <button type="button" id="auth-tab-signup" onclick="switchPrivateAuthTab('signup')" class="py-2 px-3 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white">
+            <i class="fa-solid fa-user-plus mr-1"></i>First-Time Sign Up
+          </button>
+        </div>
+
+        <div id="private-auth-error" class="hidden rounded-xl bg-rose-950/60 border border-rose-500/40 p-3 text-xs text-rose-300 font-semibold"></div>
+
+        <!-- TAB 1: SIGN IN FORM -->
+        <form id="form-private-login" onsubmit="handlePrivateLoginSubmit(event)" class="space-y-3.5 text-xs">
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">Hub / Archer Name</label>
+            <input type="text" id="login-hub-name" required value="My Private Hub" placeholder="e.g. My Private Hub or Long & Weijia"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
+          </div>
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">Password</label>
+            <input type="password" id="login-hub-password" required placeholder="Enter your hub password..."
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500">
+          </div>
+
+          <div class="flex flex-col sm:flex-row gap-2 pt-1">
+            <button type="submit" id="btn-private-login-submit" class="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-unlock-keyhole"></i>
+              <span>Unlock My Private Hub</span>
+            </button>
+            <button type="button" id="btn-private-biometric-login" onclick="handlePrivateBiometricUnlock()" class="bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/40 font-extrabold py-3 px-4 rounded-xl text-xs transition flex items-center justify-center gap-2">
+              <i class="fa-solid fa-fingerprint text-sm"></i>
+              <span>Phone Quick Unlock</span>
+            </button>
+          </div>
+        </form>
+
+        <!-- TAB 2: FIRST-TIME SIGN UP FORM -->
+        <form id="form-private-signup" onsubmit="handlePrivateSignupSubmit(event)" class="hidden space-y-3.5 text-xs">
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">Hub Space Name</label>
+            <input type="text" id="signup-hub-name" required value="My Private Hub" placeholder="e.g. My Private Hub"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
+            <p class="text-[10px] text-slate-400 mt-1">For you and Weijia, use <strong>My Private Hub</strong> (or <strong>Long &amp; Weijia</strong>) to connect all 160 migrated sessions.</p>
+          </div>
+
+          <div>
+            <label class="block text-slate-300 font-bold mb-1">Linked League Archers (for Auto-Import)</label>
+            <input type="text" id="signup-hub-archers" required value="Long, Weijia" placeholder="e.g. Long, Weijia"
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
+            <p class="text-[10px] text-emerald-400 mt-1">
+              <i class="fa-solid fa-circle-check mr-1"></i>Sunday League scores for these archers will automatically sync into this hub.
+            </p>
+          </div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">Create Password</label>
+              <input type="password" id="signup-hub-password" required minlength="4" placeholder="Choose a password..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500">
+            </div>
+            <div>
+              <label class="block text-slate-300 font-bold mb-1">Confirm Password</label>
+              <input type="password" id="signup-hub-password-confirm" required minlength="4" placeholder="Confirm password..."
+                class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white focus:outline-none focus:border-amber-500">
+            </div>
+          </div>
+
+          <button type="submit" id="btn-private-signup-submit" class="w-full bg-gradient-to-r from-emerald-500 to-emerald-600 hover:from-emerald-400 hover:to-emerald-500 text-white font-black py-3 rounded-xl text-xs shadow-lg shadow-emerald-500/20 transition flex items-center justify-center gap-2">
+            <i class="fa-solid fa-check-circle"></i>
+            <span>Create &amp; Enter My Private Hub</span>
+          </button>
+        </form>
+      </section>
+    </div>
 
     <!-- ================================================================== -->
     <!-- VIEW 1: EVENTS HUB & CREATE EVENT MODAL                            -->
@@ -235,14 +405,24 @@
         </div>
         <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
           <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Indoor Range Scoring</span>
-            <h2 class="text-xl sm:text-2xl font-black text-white mt-0.5">Archery League Night</h2>
-            <p class="text-xs text-slate-400 mt-1">Select an active league night below to score your group or view live standings, or create a new event.</p>
+            <span id="hub-hero-eyebrow" class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Indoor Range Scoring</span>
+            <h2 id="hub-hero-title" class="text-xl sm:text-2xl font-black text-white mt-0.5">Archery League Night</h2>
+            <p id="hub-hero-desc" class="text-xs text-slate-400 mt-1">Select an active league night below to score your group or view live standings, or create a new event.</p>
           </div>
-          <button onclick="openCreateEventModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs px-4 py-3 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 shrink-0 transition">
-            <i class="fa-solid fa-plus"></i>
-            <span>New League Event</span>
-          </button>
+          <div class="flex flex-wrap items-center gap-2 shrink-0">
+            <button id="btn-hero-progress" onclick="showAnalyticsPage()" class="hidden bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 font-extrabold text-xs px-3.5 py-3 rounded-xl flex items-center justify-center gap-2 transition">
+              <i class="fa-solid fa-chart-line"></i>
+              <span>Progress Graphs</span>
+            </button>
+            <button id="btn-hero-export-all" onclick="exportAllPrivateSessionsCSV()" class="hidden bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/40 font-extrabold text-xs px-3.5 py-3 rounded-xl flex items-center justify-center gap-2 transition" title="Export All Sessions CSV">
+              <i class="fa-solid fa-file-csv"></i>
+              <span>Export CSV</span>
+            </button>
+            <button onclick="openCreateEventModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs px-4 py-3 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 shrink-0 transition">
+              <i class="fa-solid fa-plus"></i>
+              <span id="btn-hero-create-label">New League Event</span>
+            </button>
+          </div>
         </div>
       </section>
 
@@ -251,7 +431,7 @@
         <div class="flex items-center justify-between px-1">
           <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
             <i class="fa-solid fa-bullseye text-amber-400"></i>
-            <span>League Events</span>
+            <span id="hub-events-list-heading">League Events</span>
           </h3>
           <span id="hub-event-count" class="text-[11px] text-slate-500 font-mono">0 Events</span>
         </div>
@@ -610,6 +790,7 @@
                 <select id="edit-ev-arrows" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2 py-2 text-white">
                   <option value="3">3</option>
                   <option value="5">5</option>
+                  <option value="6">6</option>
                 </select>
               </div>
             </div>
@@ -630,21 +811,185 @@
       </div>
 
     </div>
+
+    <!-- ================================================================== -->
+    <!-- VIEW 3: ARCHERY PROCESS & PROGRESSION ANALYTICS (PRIVATE HUB)      -->
+    <!-- ================================================================== -->
+    <div id="view-analytics" class="hidden space-y-5">
+      <!-- Archer Filter & Top Banner -->
+      <section class="relative overflow-hidden rounded-2xl bg-slate-900/95 border border-slate-800 p-5 shadow-xl wa-target-bg">
+        <div class="absolute top-0 left-0 right-0 h-1 flex">
+          <div class="flex-1 bg-yellow-400"></div>
+          <div class="flex-1 bg-red-500"></div>
+          <div class="flex-1 bg-sky-500"></div>
+          <div class="flex-1 bg-slate-700"></div>
+          <div class="flex-1 bg-slate-200"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
+          <div>
+            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">📊 Shot Process &amp; Performance Lab</span>
+            <h2 class="text-xl sm:text-2xl font-black text-white mt-0.5">Archery Progression &amp; Trends</h2>
+            <p class="text-xs text-slate-400 mt-1">Compare your lookback baseline against your Last 2 Weeks form, and track per-shot averages &amp; grouping consistency.</p>
+          </div>
+
+          <!-- Archer Selector Pills -->
+          <div id="analytics-archer-pills-container" class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 shrink-0">
+            <button type="button" id="analytics-archer-long" onclick="selectAnalyticsArcher('long')"
+              class="px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
+              <span>🐱 Long</span>
+            </button>
+            <button type="button" id="analytics-archer-weijia" onclick="selectAnalyticsArcher('weijia')"
+              class="px-3 py-1.5 rounded-lg text-xs font-bold transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+              <span>🐱 Weijia</span>
+            </button>
+          </div>
+        </div>
+
+        <!-- Time Range (with Custom Months Input) & Category Filter Pills -->
+        <div class="flex flex-col lg:flex-row lg:items-center justify-between gap-3 mt-4 pt-3.5 border-t border-slate-800/80">
+          <div class="flex flex-wrap items-center gap-1.5">
+            <span class="text-[11px] font-bold text-slate-400 mr-0.5">Lookback:</span>
+            <button type="button" id="filter-time-6M" onclick="setAnalyticsTimeFilter('6M')" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-slate-800 text-amber-300 border border-amber-500/40 transition">6M</button>
+            <button type="button" id="filter-time-3M" onclick="setAnalyticsTimeFilter('3M')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition">3M</button>
+            <button type="button" id="filter-time-12M" onclick="setAnalyticsTimeFilter('12M')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition">12M</button>
+            <button type="button" id="filter-time-14D" onclick="setAnalyticsTimeFilter('14D')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition">14 Days</button>
+            <button type="button" id="filter-time-ALL" onclick="setAnalyticsTimeFilter('ALL')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition">All Time</button>
+
+            <!-- Custom Months Stepper Pill -->
+            <div id="custom-months-pill" class="inline-flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 ml-0.5">
+              <span class="text-[10px] font-bold text-slate-400">Custom:</span>
+              <input type="number" id="custom-lookback-months" min="1" max="36" value="6"
+                oninput="onCustomMonthsInput(this.value)"
+                class="w-11 bg-slate-900 border border-slate-700 rounded px-1.5 py-0.5 text-[11px] font-extrabold text-amber-300 text-center focus:outline-none focus:border-amber-500">
+              <span class="text-[10px] font-semibold text-slate-400">mo</span>
+            </div>
+
+            <span class="text-slate-700 mx-1 hidden sm:inline">|</span>
+            <span class="text-[11px] font-bold text-slate-400 mr-0.5">Type:</span>
+            <button type="button" id="filter-cat-ALL" onclick="setAnalyticsCategoryFilter('ALL')" class="px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-slate-800 text-amber-300 border border-amber-500/40 transition">All</button>
+            <button type="button" id="filter-cat-Practice" onclick="setAnalyticsCategoryFilter('Practice')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition">🎯 Practice</button>
+            <button type="button" id="filter-cat-League" onclick="setAnalyticsCategoryFilter('League')" class="px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition">🏆 League</button>
+          </div>
+          <div id="analytics-active-archer-badge" class="text-xs font-bold text-slate-300 flex items-center gap-2 shrink-0"></div>
+        </div>
+      </section>
+
+      <!-- Unified Side-by-Side Comparison: Selected Lookback Baseline vs. Last 2 Weeks (14 Days) -->
+      <section id="analytics-6m-vs-14d-comparison" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Populated by JS -->
+      </section>
+
+      <!-- Graph 1: Per-Shot Average Per Session Trend (Clean Line Graph) -->
+      <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
+        <div class="flex items-start justify-between gap-2">
+          <div>
+            <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Core Progression Metric</span>
+            <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+              <i class="fa-solid fa-chart-line text-amber-400"></i>
+              <span>Per-Shot Average Trend by Session</span>
+            </h3>
+            <p class="text-[11px] text-slate-400">Clean line progression of your arrow average (out of 10.0) with 3-session moving average &amp; 8.0 target line.</p>
+          </div>
+          <span id="chart1-badge" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">Avg / Arrow</span>
+        </div>
+        <div class="h-64 w-full relative">
+          <canvas id="chart-avg-trend"></canvas>
+        </div>
+      </section>
+
+      <!-- CHART ROW 2: Grouping Spread & Gold Rate + Ring Color Distribution -->
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <!-- Graph 2: Shot Consistency (Arrow Standard Deviation & Gold %) -->
+        <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-rose-400">Grouping Tightness</span>
+              <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <i class="fa-solid fa-compress text-rose-400"></i>
+                <span>Grouping Spread (Std Dev) &amp; Gold Rate (%)</span>
+              </h3>
+              <p class="text-[11px] text-slate-400">Lower arrow standard deviation = tighter groups &amp; fewer stray flyers; Gold % = 9s, 10s &amp; Xs.</p>
+            </div>
+          </div>
+          <div class="h-60 w-full relative">
+            <canvas id="chart-consistency"></canvas>
+          </div>
+        </section>
+
+        <!-- Graph 3: WA Target Ring & Color Zone Breakdown -->
+        <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
+          <div class="flex items-start justify-between gap-2">
+            <div>
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-400">Accuracy Distribution</span>
+              <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+                <i class="fa-solid fa-bullseye text-purple-400"></i>
+                <span>Arrow Value &amp; Color Zone Distribution</span>
+              </h3>
+              <p class="text-[11px] text-slate-400">Breakdown of every arrow shot across X, 10, 9 (Gold), 8–7 (Red), 6–5 (Blue), and 4–1.</p>
+            </div>
+          </div>
+          <div class="h-60 w-full relative">
+            <canvas id="chart-ring-dist"></canvas>
+          </div>
+        </section>
+      </div>
+
+      <!-- Detailed Session-by-Session Progression Log & Notes Table -->
+      <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div>
+            <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+              <i class="fa-solid fa-book-open text-amber-400"></i>
+              <span>Session History &amp; Process Journal</span>
+            </h3>
+            <p class="text-xs text-slate-400">Click any session row to open the full scorecard or jump to live scoring.</p>
+          </div>
+          <button onclick="exportAllPrivateSessionsCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition">
+            <i class="fa-solid fa-file-csv"></i>
+            <span>Export All Sessions CSV</span>
+          </button>
+        </div>
+        <div id="analytics-session-journal" class="space-y-2.5">
+          <!-- Populated by JS -->
+        </div>
+      </section>
+    </div>
+
   </div>
 
   <!-- ==================================================================== -->
-  <!-- MODAL: CREATE NEW LEAGUE EVENT                                       -->
+  <!-- MODAL: CREATE NEW LEAGUE OR PRIVATE EVENT                            -->
   <!-- ==================================================================== -->
   <div id="create-event-modal" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-start sm:items-center justify-center p-3 sm:p-4 overflow-y-auto">
     <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-lg p-4 sm:p-5 space-y-3.5 shadow-2xl my-auto">
       <div class="flex items-center justify-between border-b border-slate-800 pb-3">
         <h3 class="text-base font-extrabold text-white flex items-center gap-2">
           <i class="fa-solid fa-bullseye text-amber-400"></i>
-          <span>Create League Scoring Event</span>
+          <span id="create-modal-heading">Create League Scoring Event</span>
         </h3>
         <button onclick="closeCreateEventModal()" class="text-slate-400 hover:text-white p-1">
           <i class="fa-solid fa-xmark text-lg"></i>
         </button>
+      </div>
+
+      <!-- Format Quick Presets (Shown in Private Hub Mode) -->
+      <div id="create-private-presets" class="hidden">
+        <label class="block text-[11px] font-bold uppercase tracking-wider text-slate-400 mb-1.5">Quick Practice Presets</label>
+        <div class="grid grid-cols-3 gap-2">
+          <button type="button" onclick="applyCreatePreset('USAA_300')" class="bg-slate-950 hover:bg-slate-800 border border-amber-500/40 rounded-xl p-2 text-left transition">
+            <div class="text-xs font-extrabold text-amber-300">WA 18m (10×3)</div>
+            <div class="text-[10px] text-slate-400">10 Ends × 3 Arr (300)</div>
+          </button>
+          <button type="button" onclick="applyCreatePreset('WA_5X6')" class="bg-slate-950 hover:bg-slate-800 border border-purple-500/40 rounded-xl p-2 text-left transition">
+            <div class="text-xs font-extrabold text-purple-300">Practice (5×6)</div>
+            <div class="text-[10px] text-slate-400">5 Ends × 6 Arr (300)</div>
+          </button>
+          <button type="button" onclick="applyCreatePreset('WA_600')" class="bg-slate-950 hover:bg-slate-800 border border-emerald-500/40 rounded-xl p-2 text-left transition">
+            <div class="text-xs font-extrabold text-emerald-300">WA 18m (60 Arr)</div>
+            <div class="text-[10px] text-slate-400">20 Ends × 3 Arr (600)</div>
+          </button>
+        </div>
       </div>
 
       <div class="space-y-3.5 text-xs">
@@ -692,6 +1037,7 @@
               <select id="new-ev-arrows" class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-white font-semibold">
                 <option value="3" selected>3 Arr</option>
                 <option value="5">5 Arr</option>
+                <option value="6">6 Arr</option>
               </select>
             </div>
           </div>
@@ -1076,8 +1422,104 @@
         </table>
       </div>
 
+      <!-- Archer Personal Note Box Inside Scorecard Modal (Shown in Private Hub Mode) -->
+      <div id="sc-modal-note-box" class="hidden rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2 shrink-0">
+        <div class="flex items-center justify-between">
+          <label class="text-[11px] font-bold text-amber-300 flex items-center gap-1.5">
+            <i class="fa-regular fa-note-sticky"></i>
+            <span id="sc-modal-note-label">Personal Process Note</span>
+          </label>
+          <span id="sc-modal-note-status" class="text-[10px] text-emerald-400 font-bold hidden">✓ Saved</span>
+        </div>
+        <div class="flex items-center gap-2">
+          <input type="text" id="sc-modal-note-input" placeholder="Add personal shot process or bow tuning note for this session..."
+            class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
+          <button type="button" onclick="saveScorecardModalNote()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs transition shrink-0">
+            Save Note
+          </button>
+        </div>
+      </div>
+
       <button type="button" onclick="closeArcherScorecard()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl text-xs border border-slate-700 transition shrink-0">
         Close Scorecard
+      </button>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: QUICK PERSONAL NOTE EDITOR FOR AN ARCHER                      -->
+  <!-- ==================================================================== -->
+  <div id="archer-note-modal" onclick="if(event.target.id==='archer-note-modal') closeArcherNoteModal()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[65] hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div id="note-modal-avatar" class="w-9 h-9"></div>
+          <div>
+            <h3 id="note-modal-title" class="text-sm font-extrabold text-white">Archer Personal Note</h3>
+            <p class="text-[11px] text-slate-400">Saved privately in your hub next to this session</p>
+          </div>
+        </div>
+        <button type="button" onclick="closeArcherNoteModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div>
+        <textarea id="note-modal-textarea" rows="3" placeholder="Write your personal focus note, form reminder, or sight/crawl mark..."
+          class="w-full bg-slate-950 border border-slate-700 rounded-xl p-3 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500"></textarea>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2">
+        <button type="button" onclick="closeArcherNoteModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs border border-slate-700 transition">
+          Cancel
+        </button>
+        <button type="button" onclick="submitArcherNoteModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition">
+          Save Personal Note
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ==================================================================== -->
+  <!-- MODAL: DEVICE BIOMETRIC / PASSKEY SETUP FOR PRIVATE HUB              -->
+  <!-- ==================================================================== -->
+  <div id="private-security-modal" onclick="if(event.target.id==='private-security-modal') closePrivateSecurityModal()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-[65] hidden flex items-center justify-center p-4">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-md p-5 space-y-4 shadow-2xl">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <div class="flex items-center gap-2.5">
+          <div class="w-9 h-9 rounded-xl bg-sky-500/15 border border-sky-500/30 text-sky-400 flex items-center justify-center">
+            <i class="fa-solid fa-fingerprint text-lg"></i>
+          </div>
+          <div>
+            <h3 class="text-sm font-extrabold text-white">Phone Quick Unlock Setup</h3>
+            <p class="text-[11px] text-slate-400">Link this phone or device for 1-tap login</p>
+          </div>
+        </div>
+        <button type="button" onclick="closePrivateSecurityModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <div class="space-y-3 text-xs">
+        <div>
+          <label class="block text-slate-300 font-bold mb-1">Device Label</label>
+          <input type="text" id="passkey-device-label" value="Long's Phone" placeholder="e.g. Long's iPhone or Weijia's Phone"
+            class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2 text-white font-semibold focus:outline-none focus:border-amber-500">
+        </div>
+
+        <button type="button" onclick="handleRegisterPasskeyDevice()" class="w-full bg-gradient-to-r from-sky-500 to-sky-600 hover:from-sky-400 hover:to-sky-500 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg shadow-sky-500/20 transition flex items-center justify-center gap-2">
+          <i class="fa-solid fa-fingerprint"></i>
+          <span>Add Quick Unlock on This Device</span>
+        </button>
+
+        <div class="pt-2 border-t border-slate-800">
+          <div class="text-[11px] font-bold text-slate-400 mb-1.5">Registered Devices on This Hub:</div>
+          <div id="registered-passkeys-list" class="space-y-1.5 max-h-36 overflow-y-auto"></div>
+        </div>
+      </div>
+
+      <button type="button" onclick="closePrivateSecurityModal()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2 rounded-xl text-xs border border-slate-700 transition">
+        Done
       </button>
     </div>
   </div>
@@ -1158,8 +1600,24 @@
       updateScoringEvent, 
       deleteScoringEvent, 
       saveBaleAssignments,
-      updateScoringGroupState
+      updateScoringGroupState,
+      listPrivateHubSpaces,
+      registerPrivateHubSpace,
+      loginPrivateHubSpace,
+      registerPrivateHubPasskey,
+      loginPrivateHubWithPasskey,
+      getPrivateScoringEventsHub,
+      getPrivateEventData,
+      createPrivateScoringEvent,
+      submitPrivateEndScore,
+      updatePrivateScoringEvent,
+      deletePrivateScoringEvent,
+      savePrivateBaleAssignments,
+      updatePrivateParticipantNote,
+      getPrivateAnalyticsData
     } from './firebase-adapter.js';
+    let appMode = 'league'; // 'league' | 'private'
+    let activePrivateHub = null; // { id, name, linked_archers, passkeys }
     let hubData = { events: [], rsvpImport: { yesArchers: [], allArchers: [] } };
     let activeEventData = null; // { event, groups, participants, leaderboard, scores }
     let currentEventTab = 'scoring'; // 'scoring' | 'leaderboard' | 'setup'
@@ -2001,6 +2459,7 @@
     }
 
     function renderBowCategoryBadge(catId, size = 'sm') {
+      if (appMode === 'private') return '';
       const meta = getBowCategoryMeta(catId);
       const iconSize = size === 'lg' ? 'w-6 h-6' : 'w-4 h-4';
       const textSize = size === 'lg' ? 'text-xs px-2.5 py-1' : 'text-[10px] px-2 py-0.5';
@@ -2010,6 +2469,87 @@
           <span>${escapeHtml(meta.label)}</span>
         </span>
       `;
+    }
+
+    function applyModeUIChrome() {
+      const container = document.getElementById('main-app-container');
+      const titleEl = document.getElementById('header-app-title');
+      const badgeEl = document.getElementById('header-app-badge');
+      const subEl = document.getElementById('header-app-subtitle');
+      const navLeague = document.getElementById('nav-group-league');
+      const navPrivate = document.getElementById('nav-group-private');
+      const heroEyebrow = document.getElementById('hub-hero-eyebrow');
+      const heroTitle = document.getElementById('hub-hero-title');
+      const heroDesc = document.getElementById('hub-hero-desc');
+      const btnHeroProgress = document.getElementById('btn-hero-progress');
+      const btnHeroExport = document.getElementById('btn-hero-export-all');
+      const btnHeroCreateLabel = document.getElementById('btn-hero-create-label');
+      const listHeading = document.getElementById('hub-events-list-heading');
+      const createHeading = document.getElementById('create-modal-heading');
+      const createPresets = document.getElementById('create-private-presets');
+
+      if (appMode === 'private') {
+        if (container) container.className = 'w-full max-w-4xl mx-auto space-y-5';
+        const hubName = (activePrivateHub && activePrivateHub.name) || 'My Private Hub';
+        if (titleEl) titleEl.textContent = hubName;
+        if (badgeEl) {
+          badgeEl.textContent = 'Private Hub';
+          badgeEl.className = 'text-[10px] bg-sky-500/15 text-sky-300 font-bold px-2 py-0.5 rounded-full border border-sky-500/30 uppercase';
+        }
+        if (subEl) subEl.textContent = 'Personal Session Scoring • Auto-Synced League Rounds • Process Analytics';
+        if (navLeague) navLeague.classList.add('hidden');
+        if (navPrivate && activePrivateHub) navPrivate.classList.remove('hidden');
+        if (heroEyebrow) heroEyebrow.textContent = '🐱 Personal & Couple Range Log • Auto-Synced League Scores';
+        if (heroTitle) heroTitle.textContent = hubName;
+        if (heroDesc) heroDesc.textContent = 'Score practice sessions with the live keypad, add private process notes, or view your progression graphs.';
+        if (btnHeroProgress) btnHeroProgress.classList.remove('hidden');
+        if (btnHeroExport) btnHeroExport.classList.remove('hidden');
+        if (btnHeroCreateLabel) btnHeroCreateLabel.textContent = 'New Session';
+        if (listHeading) listHeading.textContent = 'Sessions & Synced League Rounds';
+        if (createHeading) createHeading.textContent = 'Create Private Practice Session';
+        if (createPresets) createPresets.classList.remove('hidden');
+      } else {
+        if (container) container.className = 'w-full max-w-2xl mx-auto space-y-5';
+        if (titleEl) titleEl.textContent = 'League Scoring';
+        if (badgeEl) {
+          badgeEl.textContent = 'Live';
+          badgeEl.className = 'text-[10px] bg-amber-500/15 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30 uppercase';
+        }
+        if (subEl) subEl.textContent = 'Bale Assignment • Keypad Scoring • Leaderboard';
+        if (navLeague) navLeague.classList.remove('hidden');
+        if (navPrivate) navPrivate.classList.add('hidden');
+        if (heroEyebrow) heroEyebrow.textContent = 'Indoor Range Scoring';
+        if (heroTitle) heroTitle.textContent = 'Archery League Night';
+        if (heroDesc) heroDesc.textContent = 'Select an active league night below to score your group or view live standings, or create a new event.';
+        if (btnHeroProgress) btnHeroProgress.classList.add('hidden');
+        if (btnHeroExport) btnHeroExport.classList.add('hidden');
+        if (btnHeroCreateLabel) btnHeroCreateLabel.textContent = 'New League Event';
+        if (listHeading) listHeading.textContent = 'League Events';
+        if (createHeading) createHeading.textContent = 'Create League Scoring Event';
+        if (createPresets) createPresets.classList.add('hidden');
+      }
+    }
+
+    function applyCreatePreset(preset) {
+      if (preset === 'USAA_300') {
+        document.getElementById('new-ev-rounds').value = 1;
+        document.getElementById('new-ev-ends').value = 10;
+        document.getElementById('new-ev-arrows').value = '3';
+        document.getElementById('new-ev-scoring-type').value = 'USAA_10';
+        document.getElementById('new-ev-swap').checked = true;
+      } else if (preset === 'WA_5X6') {
+        document.getElementById('new-ev-rounds').value = 1;
+        document.getElementById('new-ev-ends').value = 5;
+        document.getElementById('new-ev-arrows').value = '6';
+        document.getElementById('new-ev-scoring-type').value = 'USAA_10';
+        document.getElementById('new-ev-swap').checked = false;
+      } else if (preset === 'WA_600') {
+        document.getElementById('new-ev-rounds').value = 2;
+        document.getElementById('new-ev-ends').value = 10;
+        document.getElementById('new-ev-arrows').value = '3';
+        document.getElementById('new-ev-scoring-type').value = 'USAA_10';
+        document.getElementById('new-ev-swap').checked = true;
+      }
     }
 
     const FORMAT_META = {
@@ -2073,21 +2613,280 @@
     // ========================================================================
     // INITIALIZATION, HISTORY / BACK BUTTON & HUB LOADING
     // ========================================================================
+    function getSavedPrivateHubSession() {
+      try {
+        const raw = localStorage.getItem('archery_private_hub_session');
+        if (!raw) return null;
+        return JSON.parse(raw);
+      } catch (e) {
+        return null;
+      }
+    }
+
+    function savePrivateHubSession(hubObj) {
+      activePrivateHub = hubObj;
+      try {
+        if (hubObj) {
+          localStorage.setItem('archery_private_hub_session', JSON.stringify(hubObj));
+        } else {
+          localStorage.removeItem('archery_private_hub_session');
+        }
+      } catch (e) {}
+    }
+
+    async function enterPrivateHubMode(pushHistory = true) {
+      appMode = 'private';
+      closeKeypad();
+      closeArcherScorecard();
+      closeQrModal();
+
+      const saved = getSavedPrivateHubSession();
+      if (saved && saved.id) {
+        activePrivateHub = saved;
+        applyModeUIChrome();
+        document.getElementById('view-private-auth').classList.add('hidden');
+        document.getElementById('view-event').classList.add('hidden');
+        document.getElementById('view-analytics').classList.add('hidden');
+        document.getElementById('view-hub').classList.remove('hidden');
+        setTopNavActive('sessions');
+        if (pushHistory) {
+          window.history.pushState({ mode: 'private', view: 'hub' }, '', `${window.location.pathname}?mode=private`);
+        }
+        await loadEventsHub();
+      } else {
+        applyModeUIChrome();
+        document.getElementById('view-hub').classList.add('hidden');
+        document.getElementById('view-event').classList.add('hidden');
+        document.getElementById('view-analytics').classList.add('hidden');
+        document.getElementById('view-private-auth').classList.remove('hidden');
+        if (pushHistory) {
+          window.history.pushState({ mode: 'private', view: 'auth' }, '', `${window.location.pathname}?mode=private`);
+        }
+        // Check if long_weijia is already registered; if not, default to First-Time Sign Up tab so user sees the setup right away!
+        try {
+          const spaces = await listPrivateHubSpaces();
+          const hasDefault = spaces.some(s => s.id === 'long_weijia');
+          switchPrivateAuthTab(hasDefault ? 'login' : 'signup');
+        } catch (e) {
+          switchPrivateAuthTab('signup');
+        }
+      }
+    }
+
+    function switchToPublicLeagueMode(pushHistory = true) {
+      appMode = 'league';
+      activeEventData = null;
+      closeKeypad();
+      closeArcherScorecard();
+      closeQrModal();
+      applyModeUIChrome();
+      document.getElementById('view-private-auth').classList.add('hidden');
+      document.getElementById('view-event').classList.add('hidden');
+      document.getElementById('view-analytics').classList.add('hidden');
+      document.getElementById('btn-all-events').classList.add('hidden');
+      document.getElementById('view-hub').classList.remove('hidden');
+      if (pushHistory) {
+        window.history.pushState({ mode: 'league', view: 'hub' }, '', window.location.pathname);
+      }
+      loadEventsHub();
+    }
+
+    function logoutPrivateHub() {
+      savePrivateHubSession(null);
+      enterPrivateHubMode(true);
+    }
+
+    function switchPrivateAuthTab(tab) {
+      const loginBtn = document.getElementById('auth-tab-login');
+      const signupBtn = document.getElementById('auth-tab-signup');
+      const loginForm = document.getElementById('form-private-login');
+      const signupForm = document.getElementById('form-private-signup');
+      const errBox = document.getElementById('private-auth-error');
+      if (errBox) errBox.classList.add('hidden');
+
+      if (tab === 'signup') {
+        signupBtn.className = 'py-2 px-3 rounded-lg text-xs font-extrabold transition bg-amber-500 text-slate-950 shadow';
+        loginBtn.className = 'py-2 px-3 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+        signupForm.classList.remove('hidden');
+        loginForm.classList.add('hidden');
+      } else {
+        loginBtn.className = 'py-2 px-3 rounded-lg text-xs font-extrabold transition bg-amber-500 text-slate-950 shadow';
+        signupBtn.className = 'py-2 px-3 rounded-lg text-xs font-bold transition text-slate-400 hover:text-white';
+        loginForm.classList.remove('hidden');
+        signupForm.classList.add('hidden');
+      }
+    }
+
+    function showPrivateAuthError(msg) {
+      const errBox = document.getElementById('private-auth-error');
+      if (!errBox) return;
+      errBox.textContent = msg;
+      errBox.classList.remove('hidden');
+    }
+
+    async function handlePrivateLoginSubmit(e) {
+      if (e) e.preventDefault();
+      const nameVal = document.getElementById('login-hub-name').value.trim();
+      const passVal = document.getElementById('login-hub-password').value;
+      const btn = document.getElementById('btn-private-login-submit');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Unlocking...</span>`;
+      }
+      try {
+        const res = await loginPrivateHubSpace({ nameOrId: nameVal, password: passVal });
+        if (res.success && res.hub) {
+          savePrivateHubSession(res.hub);
+          await enterPrivateHubMode(false);
+        }
+      } catch (err) {
+        showPrivateAuthError(err.message || 'Failed to sign in.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-unlock-keyhole"></i><span>Unlock My Private Hub</span>`;
+        }
+      }
+    }
+
+    async function handlePrivateSignupSubmit(e) {
+      if (e) e.preventDefault();
+      const nameVal = document.getElementById('signup-hub-name').value.trim() || 'My Private Hub';
+      const archersRaw = document.getElementById('signup-hub-archers').value;
+      const pass1 = document.getElementById('signup-hub-password').value;
+      const pass2 = document.getElementById('signup-hub-password-confirm').value;
+
+      if (pass1 !== pass2) {
+        showPrivateAuthError('Passwords do not match. Please re-enter.');
+        return;
+      }
+
+      const linkedArchers = archersRaw
+        .split(',')
+        .map(s => s.trim())
+        .filter(Boolean);
+
+      const btn = document.getElementById('btn-private-signup-submit');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Creating Hub...</span>`;
+      }
+      try {
+        const res = await registerPrivateHubSpace({
+          name: nameVal,
+          password: pass1,
+          linkedArchers: linkedArchers.length > 0 ? linkedArchers : ['Long', 'Weijia']
+        });
+        if (res.success && res.hub) {
+          savePrivateHubSession(res.hub);
+          await enterPrivateHubMode(false);
+        }
+      } catch (err) {
+        showPrivateAuthError(err.message || 'Failed to register hub.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-check-circle"></i><span>Create &amp; Enter My Private Hub</span>`;
+        }
+      }
+    }
+
+    async function handlePrivateBiometricUnlock() {
+      const nameVal = (document.getElementById('login-hub-name') && document.getElementById('login-hub-name').value.trim()) || 'My Private Hub';
+      try {
+        const res = await loginPrivateHubWithPasskey(nameVal);
+        if (res.success && res.hub) {
+          savePrivateHubSession(res.hub);
+          await enterPrivateHubMode(false);
+        }
+      } catch (err) {
+        showPrivateAuthError(err.message || 'Quick unlock failed or not set up on this device yet.');
+      }
+    }
+
+    function openPrivateSecurityModal() {
+      if (!activePrivateHub) return;
+      renderRegisteredPasskeysList();
+      document.getElementById('private-security-modal').classList.remove('hidden');
+    }
+
+    function closePrivateSecurityModal() {
+      document.getElementById('private-security-modal').classList.add('hidden');
+    }
+
+    function renderRegisteredPasskeysList() {
+      const listEl = document.getElementById('registered-passkeys-list');
+      if (!listEl || !activePrivateHub) return;
+      const pks = Array.isArray(activePrivateHub.passkeys) ? activePrivateHub.passkeys : [];
+      if (pks.length === 0) {
+        listEl.innerHTML = `<div class="text-[11px] text-slate-500 italic">No devices registered yet. Tap above to link this phone.</div>`;
+        return;
+      }
+      listEl.innerHTML = pks.map(pk => `
+        <div class="flex items-center justify-between bg-slate-950 border border-slate-800 rounded-lg px-3 py-1.5 text-xs">
+          <span class="font-bold text-white"><i class="fa-solid fa-mobile-screen-button text-sky-400 mr-1.5"></i>${escapeHtml(pk.device_name || 'Device')}</span>
+          <span class="text-[10px] font-mono text-slate-400">${escapeHtml((pk.created_at || '').slice(0, 10))}</span>
+        </div>
+      `).join('');
+    }
+
+    async function handleRegisterPasskeyDevice() {
+      if (!activePrivateHub) return;
+      const label = (document.getElementById('passkey-device-label').value || '').trim() || 'Phone';
+      try {
+        const res = await registerPrivateHubPasskey(activePrivateHub.id, label);
+        if (res.success) {
+          activePrivateHub.passkeys = res.passkeys;
+          savePrivateHubSession(activePrivateHub);
+          renderRegisteredPasskeysList();
+          alert(`Quick Unlock enabled for "${label}"!`);
+        }
+      } catch (err) {
+        alert('Could not register device unlock: ' + (err.message || err));
+      }
+    }
+
     async function loadEventsHub() {
       try {
-        console.log("Loading events hub from Firebase...");
-        hubData = await getScoringEventsHub();
-        console.log("Loaded hub data:", hubData);
+        const params = new URLSearchParams(window.location.search);
+        const modeParam = params.get('mode');
+        const viewParam = params.get('view');
+
+        if (modeParam === 'private' || viewParam === 'analytics') {
+          appMode = 'private';
+          const saved = getSavedPrivateHubSession();
+          if (!saved || !saved.id) {
+            await enterPrivateHubMode(false);
+            return;
+          }
+          activePrivateHub = saved;
+        }
+
+        applyModeUIChrome();
+
+        if (appMode === 'private' && activePrivateHub) {
+          console.log("Loading private hub from Firebase...", activePrivateHub.id);
+          hubData = await getPrivateScoringEventsHub(
+            activePrivateHub.id,
+            activePrivateHub.linked_archers || ['Long', 'Weijia']
+          );
+        } else {
+          console.log("Loading events hub from Firebase...");
+          hubData = await getScoringEventsHub();
+        }
         renderEventsHub();
 
+        if (appMode === 'private' && viewParam === 'analytics') {
+          await showAnalyticsPage(false);
+          return;
+        }
+
         // Check URL query param for direct event & group link
-        const params = new URLSearchParams(window.location.search);
         const eventIdParam = params.get('event');
         const groupIdParam = params.get('group');
         const tabParam = params.get('tab');
         if (eventIdParam) {
           if (groupIdParam) selectedGroupId = groupIdParam;
-          // Seed hub state in history first if user landed directly via link, or replace current state
           await openEventWorkspace(eventIdParam, tabParam || null, false);
         }
       } catch (err) {
@@ -2102,24 +2901,33 @@
       closeArcherScorecard();
       closeQrModal();
       document.getElementById('view-event').classList.add('hidden');
+      const vAnalytics = document.getElementById('view-analytics');
+      if (vAnalytics) vAnalytics.classList.add('hidden');
+      const vAuth = document.getElementById('view-private-auth');
+      if (vAuth) vAuth.classList.add('hidden');
       document.getElementById('btn-all-events').classList.add('hidden');
       document.getElementById('view-hub').classList.remove('hidden');
-      if (pushHistory && window.location.search) {
-        window.history.pushState({ view: 'hub' }, '', window.location.pathname);
+      setTopNavActive('sessions');
+      if (pushHistory) {
+        const targetUrl = appMode === 'private' ? `${window.location.pathname}?mode=private` : window.location.pathname;
+        window.history.pushState({ mode: appMode, view: 'hub' }, '', targetUrl);
       }
       loadEventsHub();
     }
 
     // Intercept browser/mobile Back button so hitting Back inside an event returns to Tournament Selection Hub!
     window.addEventListener('popstate', async () => {
-      // If a modal/keypad is open, close it first
       const params = new URLSearchParams(window.location.search);
+      const modeParam = params.get('mode');
+      appMode = (modeParam === 'private' || params.get('view') === 'analytics') ? 'private' : 'league';
       const eventIdParam = params.get('event');
       const groupIdParam = params.get('group');
       const tabParam = params.get('tab');
       if (eventIdParam) {
         if (groupIdParam) selectedGroupId = groupIdParam;
         await openEventWorkspace(eventIdParam, tabParam || null, false);
+      } else if (params.get('view') === 'analytics') {
+        await showAnalyticsPage(false);
       } else {
         showEventsHub(false);
       }
@@ -2127,7 +2935,7 @@
 
     function renderEventsHub() {
       const events = hubData.events || [];
-      document.getElementById('hub-event-count').textContent = `${events.length} Event${events.length === 1 ? '' : 's'}`;
+      document.getElementById('hub-event-count').textContent = `${events.length} Session${events.length === 1 ? '' : 's'}`;
       const yesCount = (hubData.rsvpImport && hubData.rsvpImport.yesArchers) ? hubData.rsvpImport.yesArchers.length : 0;
       const modalYesEl = document.getElementById('modal-yes-count');
       if (modalYesEl) modalYesEl.textContent = yesCount;
@@ -2140,12 +2948,12 @@
               <i class="fa-solid fa-bullseye"></i>
             </div>
             <div>
-              <h4 class="text-sm font-bold text-white">No League Scoring Events Yet</h4>
-              <p class="text-xs text-slate-400 mt-1">Create tonight's event to auto-assign bales, nominate scorers, and track live ends.</p>
+              <h4 class="text-sm font-bold text-white">${appMode === 'private' ? 'No Practice Sessions Yet' : 'No League Scoring Events Yet'}</h4>
+              <p class="text-xs text-slate-400 mt-1">Create a session to assign bales and track live ends.</p>
             </div>
             <button onclick="openCreateEventModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold text-xs px-4 py-2.5 rounded-xl transition inline-flex items-center gap-1.5">
               <i class="fa-solid fa-plus"></i>
-              <span>Create First League Event</span>
+              <span>${appMode === 'private' ? 'Create First Session' : 'Create First League Event'}</span>
             </button>
           </div>
         `;
@@ -2161,13 +2969,37 @@
         } else if (ev.is_locked) {
           statusPill = `<span class="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full"><i class="fa-solid fa-lock mr-1"></i>Ended / Locked</span>`;
         }
+
+        const summariesHtml = (appMode === 'private' && ev.participant_summaries && ev.participant_summaries.length > 0) ? `
+          <div class="space-y-1.5 pt-2">
+            ${ev.participant_summaries.map(ps => `
+              <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl">
+                <div class="flex items-center gap-1.5 shrink-0">
+                  ${renderArcherAvatarCircle(ps.name, ps.avatar_id, 'w-5 h-5')}
+                  <span class="text-xs font-extrabold text-white">${escapeHtml(ps.name)}:</span>
+                  ${ps.arrows > 0 ? `
+                    <span class="text-xs text-emerald-400 font-black">${ps.score}</span>
+                    <span class="text-amber-300 font-mono text-[10px] font-bold">(Avg ${ps.avg}/shot • ${ps.tens}×10+)</span>
+                  ` : `<span class="text-[10px] text-slate-400 italic">No arrows scored</span>`}
+                </div>
+                ${ps.archer_notes ? `
+                  <div class="text-[11px] text-slate-300 sm:border-l sm:border-slate-700 sm:pl-2.5 italic">
+                    📝 "${escapeHtml(ps.archer_notes)}"
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        ` : '';
+
         return `
           <div onclick="openEventWorkspace('${ev.id}')" class="cursor-pointer rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 p-4 shadow-lg transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="space-y-1">
+            <div class="space-y-1 flex-1">
               <div class="flex items-center gap-2 flex-wrap">
                 <span class="text-sm font-extrabold text-white">${escapeHtml(ev.name)}</span>
                 <span class="text-[11px] font-mono bg-slate-800 text-amber-300 px-2 py-0.5 rounded-md border border-slate-700">${escapeHtml(ev.date)} @ ${escapeHtml(ev.start_time || '18:00')}</span>
                 ${statusPill}
+                ${ev.is_league_synced ? `<span class="text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-link mr-1"></i>Auto-Synced League Score</span>` : ''}
                 ${ev.swap_top_bottom ? `<span class="text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">↕ Midpoint Swap</span>` : ''}
               </div>
               <div class="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
@@ -2175,12 +3007,15 @@
                 <span>•</span>
                 <span>${ev.ends_per_round} Ends × ${ev.arrows_per_end} Arrows</span>
                 <span>•</span>
-                <span class="text-emerald-400 font-semibold">${ev.participant_count} Archers (${ev.group_count} Groups)</span>
+                ${appMode === 'private'
+                  ? `<span class="text-sky-400 font-semibold">${escapeHtml(ev.session_category || 'Practice')}</span>`
+                  : `<span class="text-emerald-400 font-semibold">${ev.participant_count} Archers (${ev.group_count} Groups)</span>`}
               </div>
+              ${summariesHtml}
             </div>
-            <div class="flex items-center gap-2 self-end sm:self-center">
+            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
               <span class="text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-                <span>${isDoneOrLocked ? 'View Leaderboard' : 'Open Event'}</span>
+                <span>${isDoneOrLocked ? 'View Scorecard' : 'Open Session'}</span>
                 <i class="fa-solid ${isDoneOrLocked ? 'fa-trophy' : 'fa-arrow-right'}"></i>
               </span>
             </div>
@@ -3114,10 +3949,18 @@
       }
 
       try {
-        const json = await createScoringEvent({
-          event: payload,
-          participants: payload.participants
-        });
+        let json;
+        if (appMode === 'private' && activePrivateHub) {
+          json = await createPrivateScoringEvent(activePrivateHub.id, {
+            event: payload,
+            participants: payload.participants
+          });
+        } else {
+          json = await createScoringEvent({
+            event: payload,
+            participants: payload.participants
+          });
+        }
         closeCreateEventModal();
         try {
           await loadEventsHub();
@@ -3139,7 +3982,9 @@
     // ========================================================================
     async function openEventWorkspace(eventId, requestedTab = null, pushHistory = true) {
       try {
-        const json = await getEventData(eventId);
+        const json = (appMode === 'private' && activePrivateHub)
+          ? await getPrivateEventData(eventId, activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia'])
+          : await getEventData(eventId);
         if (!json.success) {
           alert(json.error || 'Event not found');
           return;
@@ -3149,6 +3994,8 @@
         closeKeypad();
         closeArcherScorecard();
         closeQrModal();
+        const vAnalytics = document.getElementById('view-analytics');
+        if (vAnalytics) vAnalytics.classList.add('hidden');
         if (!selectedGroupId || !activeEventData.groups.some(g => g.id === selectedGroupId)) {
           const savedLocalName = (localStorage.getItem('archery_league_name') || '').trim();
           let matchedGroup = null;
@@ -3181,12 +4028,13 @@
         const isEventDone = Boolean(ev.is_finished || ev.is_locked || ev.all_scores_filled || ev.status === 'COMPLETED');
         const initialTab = requestedTab || (isEventDone ? 'leaderboard' : 'scoring');
 
-        const targetUrl = `${window.location.pathname}?event=${encodeURIComponent(eventId)}${initialTab === 'leaderboard' ? '&tab=leaderboard' : ''}`;
+        const modeQuery = appMode === 'private' ? 'mode=private&' : '';
+        const targetUrl = `${window.location.pathname}?${modeQuery}event=${encodeURIComponent(eventId)}${initialTab === 'leaderboard' ? '&tab=leaderboard' : ''}`;
         try {
           if (pushHistory) {
-            window.history.pushState({ view: 'event', eventId, tab: initialTab }, '', targetUrl);
+            window.history.pushState({ mode: appMode, view: 'event', eventId, tab: initialTab }, '', targetUrl);
           } else {
-            window.history.replaceState({ view: 'event', eventId, tab: initialTab }, '', targetUrl);
+            window.history.replaceState({ mode: appMode, view: 'event', eventId, tab: initialTab }, '', targetUrl);
           }
         } catch (e) {}
 
@@ -3201,7 +4049,9 @@
       const icon = document.getElementById('refresh-icon');
       if (icon) icon.classList.add('fa-spin');
       try {
-        const json = await getEventData(activeEventData.event.id);
+        const json = (appMode === 'private' && activePrivateHub)
+          ? await getPrivateEventData(activeEventData.event.id, activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia'])
+          : await getEventData(activeEventData.event.id);
         if (json.success) {
           activeEventData = json.data;
           if (currentEventTab !== 'setup') {
@@ -3576,7 +4426,19 @@
                       ${targetState.current === 'Top' ? '▲ TOP TARGET' : '▼ BOTTOM TARGET'}
                       ${targetState.swapped ? ' (Swapped)' : ''}
                     </span>
+                    ${appMode === 'private' ? `
+                      <button type="button" onclick="event.stopPropagation(); openArcherNoteModal('${p.id}')"
+                        class="text-[10px] font-bold px-2 py-0.5 rounded-md border transition flex items-center gap-1 ${p.archer_notes ? 'bg-amber-500/15 text-amber-300 border-amber-500/40 hover:bg-amber-500/25' : 'bg-slate-800 text-slate-400 border-slate-700 hover:text-white'}">
+                        <i class="fa-regular fa-note-sticky"></i>
+                        <span>${p.archer_notes ? 'Edit Note' : '+ Add Note'}</span>
+                      </button>
+                    ` : ''}
                   </div>
+                  ${(appMode === 'private' && p.archer_notes) ? `
+                    <div onclick="event.stopPropagation(); openArcherNoteModal('${p.id}')" class="mt-1.5 text-[11px] text-slate-300 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1 italic flex items-center gap-1.5 hover:border-amber-500/40">
+                      <span>📝 "${escapeHtml(p.archer_notes)}"</span>
+                    </div>
+                  ` : ''}
                 </div>
               </div>
 
@@ -3740,20 +4602,38 @@
       const tenCount = arrowsToSave.filter(a => (fmt.values[String(a).toUpperCase()] || 0) === maxVal).length;
 
       try {
-        await submitEndScore({
-          eventId: ev.id,
-          participantId: p.id,
-          roundNumber: activeRound,
-          endNumber: activeEnd,
-          arrows: arrowsToSave,
-          endTotal,
-          xCount,
-          tenCount,
-          scoredBy: scoredBy || p.name
-        });
-        const refreshRes = await getEventData(ev.id);
-        if (refreshRes.success) {
-          activeEventData = refreshRes.data;
+        if (appMode === 'private' && activePrivateHub) {
+          await submitPrivateEndScore(activePrivateHub.id, {
+            eventId: ev.id,
+            participantId: p.id,
+            roundNumber: activeRound,
+            endNumber: activeEnd,
+            arrows: arrowsToSave,
+            endTotal,
+            xCount,
+            tenCount,
+            scoredBy: scoredBy || p.name
+          });
+          const refreshRes = await getPrivateEventData(ev.id, activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia']);
+          if (refreshRes.success) {
+            activeEventData = refreshRes.data;
+          }
+        } else {
+          await submitEndScore({
+            eventId: ev.id,
+            participantId: p.id,
+            roundNumber: activeRound,
+            endNumber: activeEnd,
+            arrows: arrowsToSave,
+            endTotal,
+            xCount,
+            tenCount,
+            scoredBy: scoredBy || p.name
+          });
+          const refreshRes = await getEventData(ev.id);
+          if (refreshRes.success) {
+            activeEventData = refreshRes.data;
+          }
         }
 
         if (activeGroup) {
@@ -3831,6 +4711,69 @@
 
       if (board.length === 0) {
         container.innerHTML = `<div class="py-8 text-center text-xs text-slate-500">No participants registered yet.</div>`;
+      } else if (appMode === 'private') {
+        const rowsHtml = board.map((p, idx) => {
+          const rank = p.rank || (idx + 1);
+          let rankBadge = `<span class="w-7 h-7 rounded-full bg-slate-800 text-slate-300 text-xs font-extrabold flex items-center justify-center">${rank}</span>`;
+          if (rank === 1) rankBadge = `<span class="w-7 h-7 rounded-full bg-yellow-400 text-slate-950 text-xs font-black flex items-center justify-center shadow">🥇</span>`;
+          if (rank === 2) rankBadge = `<span class="w-7 h-7 rounded-full bg-slate-300 text-slate-950 text-xs font-black flex items-center justify-center">🥈</span>`;
+          if (rank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-black flex items-center justify-center">🥉</span>`;
+
+          const av = getAvatarForArcher(p.name, p.avatar_id);
+          const archerTitle = (p.custom_title && String(p.custom_title).trim()) || av.title;
+          return `
+            <div onclick="openArcherScorecard('${p.id}')" class="cursor-pointer py-3 px-3 sm:px-3.5 flex items-center justify-between gap-2 hover:bg-slate-900/70 active:bg-slate-900 transition group">
+              <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
+                ${rankBadge}
+                <div class="relative shrink-0">
+                  ${renderArcherAvatarCircle(p.name, p.avatar_id, 'w-11 h-11')}
+                  <span class="absolute -bottom-1 -right-1 px-1 py-0.1 rounded bg-slate-900 border border-amber-500/50 text-amber-300 font-mono text-[9px] font-black">
+                    ${p.designation}
+                  </span>
+                </div>
+                <div class="min-w-0 flex-1">
+                  <div class="text-sm font-extrabold text-white group-hover:text-amber-300 transition flex items-center gap-1.5 flex-wrap">
+                    <span>${escapeHtml(p.name)}</span>
+                    <i class="fa-solid fa-table-list text-[10px] text-slate-500 group-hover:text-amber-400"></i>
+                  </div>
+                  <div class="mt-0.5">
+                    <span class="inline-block text-[10px] font-semibold border px-2 py-0.2 rounded-full leading-tight ${av.badgeClass}">
+                      ${av.emoji} ${escapeHtml(archerTitle)}
+                    </span>
+                  </div>
+                  <div class="text-[10px] text-slate-400 mt-1 leading-tight flex items-center gap-2 flex-wrap">
+                    <span>${p.ends_completed}/${ev.ends_per_round * ev.rounds} Ends • Avg ${p.avg_per_arrow} • <span class="text-amber-400/80 underline">Scorecard</span></span>
+                    <button type="button" onclick="event.stopPropagation(); openArcherNoteModal('${p.id}')" class="text-[10px] font-bold text-amber-300 hover:underline">
+                      <i class="fa-regular fa-pen-to-square mr-0.5"></i>${p.archer_notes ? 'Edit Note' : '+ Add Note'}
+                    </button>
+                  </div>
+                  ${p.archer_notes ? `
+                    <div class="mt-1.5 text-[11px] text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 italic">
+                      📝 "${escapeHtml(p.archer_notes)}"
+                    </div>
+                  ` : ''}
+                </div>
+              </div>
+
+              <div class="flex items-center gap-2.5 sm:gap-4 text-right shrink-0">
+                <div>
+                  <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">X Count</div>
+                  <div class="text-xs font-extrabold text-amber-300">${p.x_count}X <span class="text-slate-500">(${p.ten_count}×10)</span></div>
+                </div>
+                <div class="min-w-[44px] sm:min-w-[52px]">
+                  <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">Score</div>
+                  <div class="text-base font-black text-emerald-400">${p.running_total}</div>
+                </div>
+              </div>
+            </div>
+          `;
+        }).join('');
+
+        container.innerHTML = `
+          <div class="rounded-2xl bg-slate-950/90 border border-slate-800 overflow-hidden shadow-lg divide-y divide-slate-800/70">
+            ${rowsHtml}
+          </div>
+        `;
       } else {
         const categoriesOrder = ['BAREBOW', 'OLYMPIC_RECURVE', 'TRADITIONAL'];
         container.innerHTML = categoriesOrder.map(catId => {
@@ -4068,7 +5011,87 @@
       }
 
       document.getElementById('sc-modal-tbody').innerHTML = rowsHtml;
+      window.currentScorecardParticipantId = p.id;
+      const noteBox = document.getElementById('sc-modal-note-box');
+      if (noteBox) {
+        if (appMode === 'private') {
+          noteBox.classList.remove('hidden');
+          const noteLabel = document.getElementById('sc-modal-note-label');
+          if (noteLabel) noteLabel.textContent = `${p.name}'s Personal Note`;
+          const noteInput = document.getElementById('sc-modal-note-input');
+          if (noteInput) noteInput.value = p.archer_notes || '';
+          const noteStatus = document.getElementById('sc-modal-note-status');
+          if (noteStatus) noteStatus.classList.add('hidden');
+        } else {
+          noteBox.classList.add('hidden');
+        }
+      }
       document.getElementById('scorecard-modal').classList.remove('hidden');
+    }
+
+    let noteModalParticipantId = null;
+
+    function openArcherNoteModal(participantId) {
+      if (!activeEventData || !activeEventData.event) return;
+      const p = (activeEventData.participants || []).find(a => a.id === participantId);
+      if (!p) return;
+      noteModalParticipantId = p.id;
+      const avHolder = document.getElementById('note-modal-avatar');
+      if (avHolder) avHolder.innerHTML = renderArcherAvatarCircle(p.name, p.avatar_id, 'w-9 h-9');
+      const titleEl = document.getElementById('note-modal-title');
+      if (titleEl) titleEl.textContent = `${p.name}'s Personal Note`;
+      const ta = document.getElementById('note-modal-textarea');
+      if (ta) ta.value = p.archer_notes || '';
+      document.getElementById('archer-note-modal').classList.remove('hidden');
+      setTimeout(() => { if (ta) ta.focus(); }, 50);
+    }
+
+    function closeArcherNoteModal() {
+      noteModalParticipantId = null;
+      const m = document.getElementById('archer-note-modal');
+      if (m) m.classList.add('hidden');
+    }
+
+    async function submitArcherNoteModal() {
+      if (!activeEventData || !activeEventData.event || !noteModalParticipantId) return;
+      const noteText = (document.getElementById('note-modal-textarea').value || '').trim();
+      await saveParticipantPersonalNote(noteModalParticipantId, noteText);
+      closeArcherNoteModal();
+    }
+
+    async function saveScorecardModalNote() {
+      if (!activeEventData || !activeEventData.event || !window.currentScorecardParticipantId) return;
+      const noteText = (document.getElementById('sc-modal-note-input').value || '').trim();
+      await saveParticipantPersonalNote(window.currentScorecardParticipantId, noteText);
+      const noteStatus = document.getElementById('sc-modal-note-status');
+      if (noteStatus) {
+        noteStatus.classList.remove('hidden');
+        setTimeout(() => noteStatus.classList.add('hidden'), 2000);
+      }
+    }
+
+    async function saveParticipantPersonalNote(participantId, noteText) {
+      if (!activeEventData || !activeEventData.event || !activePrivateHub) return;
+      const p = (activeEventData.participants || []).find(a => a.id === participantId);
+      try {
+        const json = await updatePrivateParticipantNote(
+          activePrivateHub.id,
+          activeEventData.event.id,
+          {
+            participantId,
+            archerName: p ? p.name : 'Long',
+            archerNotes: noteText
+          },
+          activePrivateHub.linked_archers || ['Long', 'Weijia']
+        );
+        if (json.success) {
+          activeEventData = json.data;
+          syncDraftFromActiveEvent();
+          renderActiveEventWorkspace();
+        }
+      } catch (e) {
+        alert('Failed to save personal note.');
+      }
     }
 
     function closeArcherScorecard() {
@@ -4530,18 +5553,33 @@
       try {
         const ratioSelect = document.getElementById('setup-bales-per-scorer');
         const balesPerGroup = ratioSelect ? Number(ratioSelect.value) : undefined;
-        const json = await saveBaleAssignments(activeEventData.event.id, {
-          participants: setupParticipantsDraft,
-          groups: setupGroupsDraft,
-          balesPerGroup
-        });
+        let json;
+        if (appMode === 'private' && activePrivateHub) {
+          if (String(activeEventData.event.id).startsWith('league:')) {
+            alert('This is an auto-synced Sunday League event. Edit bales on the public League view if needed.');
+            return;
+          }
+          json = await savePrivateBaleAssignments(activePrivateHub.id, activeEventData.event.id, {
+            participants: setupParticipantsDraft,
+            groups: setupGroupsDraft,
+            balesPerGroup
+          }, activePrivateHub.linked_archers || ['Long', 'Weijia']);
+        } else {
+          json = await saveBaleAssignments(activeEventData.event.id, {
+            participants: setupParticipantsDraft,
+            groups: setupGroupsDraft,
+            balesPerGroup
+          });
+        }
         if (!json.success) {
           alert('Error saving assignments: ' + (json.error || 'Unknown error'));
           return;
         }
         activeEventData = json.data;
         try {
-          hubData = await getScoringEventsHub();
+          hubData = (appMode === 'private' && activePrivateHub)
+            ? await getPrivateScoringEventsHub(activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia'])
+            : await getScoringEventsHub();
         } catch (e) {}
         if (!selectedGroupId || !activeEventData.groups.some(g => g.id === selectedGroupId)) {
           selectedGroupId = activeEventData.groups[0] ? activeEventData.groups[0].id : null;
@@ -4571,13 +5609,28 @@
       };
 
       try {
-        await updateScoringEvent(activeEventData.event.id, payload);
-        const refreshRes = await getEventData(activeEventData.event.id);
-        if (refreshRes.success) {
-          activeEventData = refreshRes.data;
-          syncDraftFromActiveEvent();
-          renderActiveEventWorkspace();
-          alert('Event format settings updated!');
+        if (appMode === 'private' && activePrivateHub) {
+          if (String(activeEventData.event.id).startsWith('league:')) {
+            alert('This is an auto-synced Sunday League event.');
+            return;
+          }
+          await updatePrivateScoringEvent(activeEventData.event.id, payload);
+          const refreshRes = await getPrivateEventData(activeEventData.event.id, activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia']);
+          if (refreshRes.success) {
+            activeEventData = refreshRes.data;
+            syncDraftFromActiveEvent();
+            renderActiveEventWorkspace();
+            alert('Event format settings updated!');
+          }
+        } else {
+          await updateScoringEvent(activeEventData.event.id, payload);
+          const refreshRes = await getEventData(activeEventData.event.id);
+          if (refreshRes.success) {
+            activeEventData = refreshRes.data;
+            syncDraftFromActiveEvent();
+            renderActiveEventWorkspace();
+            alert('Event format settings updated!');
+          }
         }
       } catch (err) {
         console.error(err);
@@ -4587,9 +5640,17 @@
 
     async function deleteCurrentEvent() {
       if (!activeEventData || !activeEventData.event) return;
+      if (String(activeEventData.event.id).startsWith('league:')) {
+        alert('Cannot delete a synced Sunday League event from your Private Hub.');
+        return;
+      }
       if (!confirm(`Delete "${activeEventData.event.name}" and all its recorded scores?`)) return;
       try {
-        await deleteScoringEvent(activeEventData.event.id);
+        if (appMode === 'private') {
+          await deletePrivateScoringEvent(activeEventData.event.id);
+        } else {
+          await deleteScoringEvent(activeEventData.event.id);
+        }
         showEventsHub();
       } catch (err) {
         console.error(err);
@@ -4705,8 +5766,668 @@
       }
     }, 10000);
 
+    // ========================================================================
+    // ANALYTICS & PROGRESSION GRAPHS ENGINE (PRIVATE HUB)
+    // ========================================================================
+    let analyticsRawData = null;
+    let selectedAnalyticsArcher = 'long';
+    let selectedAnalyticsCategory = 'ALL'; // 'ALL' | 'Practice' | 'League'
+    let selectedAnalyticsTime = '6M'; // '6M' | '3M' | '12M' | '14D' | 'ALL' | 'CUSTOM_M'
+    let customLookbackMonths = 6;
+    let chartInstances = {};
+
+    function setTopNavActive(mode) {
+      const mapping = {
+        sessions: 'nav-btn-sessions',
+        analytics: 'nav-btn-analytics'
+      };
+      Object.entries(mapping).forEach(([k, btnId]) => {
+        const btn = document.getElementById(btnId);
+        if (!btn) return;
+        if (k === mode) {
+          btn.className = 'text-xs font-extrabold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow';
+        } else {
+          btn.className = 'text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 text-slate-400 hover:text-white';
+        }
+      });
+    }
+
+    async function showAnalyticsPage(pushHistory = true) {
+      if (!activePrivateHub) {
+        await enterPrivateHubMode(true);
+        return;
+      }
+      appMode = 'private';
+      applyModeUIChrome();
+      closeKeypad();
+      closeArcherScorecard();
+      closeQrModal();
+
+      document.getElementById('view-hub').classList.add('hidden');
+      document.getElementById('view-event').classList.add('hidden');
+      document.getElementById('view-private-auth').classList.add('hidden');
+      document.getElementById('view-analytics').classList.remove('hidden');
+
+      setTopNavActive('analytics');
+
+      if (pushHistory) {
+        window.history.pushState({ mode: 'private', view: 'analytics' }, '', `${window.location.pathname}?mode=private&view=analytics`);
+      }
+
+      try {
+        analyticsRawData = await getPrivateAnalyticsData(
+          activePrivateHub.id,
+          activePrivateHub.linked_archers || ['Long', 'Weijia']
+        );
+        renderAnalyticsArcherTabs();
+        renderAnalyticsDashboard();
+      } catch (err) {
+        console.error('Failed to load analytics:', err);
+      }
+    }
+
+    function renderAnalyticsArcherTabs() {
+      const container = document.getElementById('analytics-archer-pills-container');
+      if (!container) return;
+      const archersList = (activePrivateHub && Array.isArray(activePrivateHub.linked_archers) && activePrivateHub.linked_archers.length > 0)
+        ? activePrivateHub.linked_archers
+        : ['Long', 'Weijia'];
+
+      const keys = archersList.map(a => String(a).trim().toLowerCase());
+      if (!keys.includes(selectedAnalyticsArcher)) {
+        selectedAnalyticsArcher = keys[0] || 'long';
+      }
+
+      container.innerHTML = archersList.map(name => {
+        const k = String(name).trim().toLowerCase();
+        const isSel = k === selectedAnalyticsArcher;
+        const av = getAvatarForArcher(name, null);
+        return `
+          <button type="button" id="analytics-archer-${escapeHtml(k)}" onclick="selectAnalyticsArcher('${escapeHtml(k)}')"
+            class="px-3 py-1.5 rounded-lg text-xs ${isSel ? 'font-extrabold bg-amber-500 text-slate-950 shadow' : 'font-bold text-slate-400 hover:text-white'} transition flex items-center gap-1.5">
+            <span>${av.emoji || '🐱'} ${escapeHtml(name)}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectAnalyticsArcher(who) {
+      selectedAnalyticsArcher = String(who || 'long').toLowerCase();
+      renderAnalyticsArcherTabs();
+      renderAnalyticsDashboard();
+    }
+
+    function syncTimeFilterUI() {
+      ['6M', '3M', '12M', '14D', 'ALL'].forEach(t => {
+        const btn = document.getElementById(`filter-time-${t}`);
+        if (!btn) return;
+        if (t === selectedAnalyticsTime) {
+          btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-slate-800 text-amber-300 border border-amber-500/40 transition';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition';
+        }
+      });
+      const customPill = document.getElementById('custom-months-pill');
+      if (customPill) {
+        if (selectedAnalyticsTime === 'CUSTOM_M') {
+          customPill.className = 'inline-flex items-center gap-1 bg-slate-800 border border-amber-500/50 rounded-lg px-2 py-0.5 ml-0.5 transition';
+        } else {
+          customPill.className = 'inline-flex items-center gap-1 bg-slate-950 border border-slate-800 rounded-lg px-2 py-0.5 ml-0.5 transition';
+        }
+      }
+    }
+
+    function setAnalyticsTimeFilter(timeRange) {
+      selectedAnalyticsTime = timeRange;
+      const customInput = document.getElementById('custom-lookback-months');
+      if (timeRange === '6M') { customLookbackMonths = 6; if (customInput) customInput.value = 6; }
+      else if (timeRange === '3M') { customLookbackMonths = 3; if (customInput) customInput.value = 3; }
+      else if (timeRange === '12M') { customLookbackMonths = 12; if (customInput) customInput.value = 12; }
+      syncTimeFilterUI();
+      renderAnalyticsDashboard();
+    }
+
+    function onCustomMonthsInput(val) {
+      const m = Math.max(1, Math.min(36, parseInt(val, 10) || 6));
+      customLookbackMonths = m;
+      if (m === 6) selectedAnalyticsTime = '6M';
+      else if (m === 3) selectedAnalyticsTime = '3M';
+      else if (m === 12) selectedAnalyticsTime = '12M';
+      else selectedAnalyticsTime = 'CUSTOM_M';
+      syncTimeFilterUI();
+      renderAnalyticsDashboard();
+    }
+
+    function setAnalyticsCategoryFilter(cat) {
+      selectedAnalyticsCategory = cat;
+      ['ALL', 'Practice', 'League'].forEach(c => {
+        const btn = document.getElementById(`filter-cat-${c}`);
+        if (!btn) return;
+        if (c === cat) {
+          btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-extrabold bg-slate-800 text-amber-300 border border-amber-500/40 transition';
+        } else {
+          btn.className = 'px-2.5 py-1 rounded-lg text-[11px] font-bold bg-slate-950 text-slate-400 border border-slate-800 hover:text-white transition';
+        }
+      });
+      renderAnalyticsDashboard();
+    }
+
+    function getTimeWindowCutoff(timeMode) {
+      const now = new Date();
+      if (timeMode === '14D') {
+        return new Date(now.getTime() - 14 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      }
+      if (timeMode === '3M') {
+        return new Date(now.getTime() - 91 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      }
+      if (timeMode === '6M') {
+        return new Date(now.getTime() - 183 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      }
+      if (timeMode === '12M') {
+        return new Date(now.getTime() - 365 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      }
+      if (timeMode === 'CUSTOM_M') {
+        const days = Math.round((customLookbackMonths || 6) * 30.44);
+        return new Date(now.getTime() - days * 24 * 3600 * 1000).toISOString().slice(0, 10);
+      }
+      return null;
+    }
+
+    function getActiveTimeWindowLabel(timeMode) {
+      if (timeMode === '6M') return 'Past 6 Months';
+      if (timeMode === '3M') return 'Past 3 Months';
+      if (timeMode === '12M') return 'Past 12 Months';
+      if (timeMode === '14D') return 'Last 14 Days';
+      if (timeMode === 'ALL') return 'All Time';
+      if (timeMode === 'CUSTOM_M') return `Past ${customLookbackMonths} Month${customLookbackMonths === 1 ? '' : 's'}`;
+      return 'Past 6 Months';
+    }
+
+    function getActiveShortPrefix(timeMode) {
+      if (timeMode === '6M') return '6M';
+      if (timeMode === '3M') return '3M';
+      if (timeMode === '12M') return '12M';
+      if (timeMode === '14D') return '14d';
+      if (timeMode === 'ALL') return 'All-Time';
+      if (timeMode === 'CUSTOM_M') return `${customLookbackMonths}M`;
+      return '6M';
+    }
+
+    function filterSessionsByCatAndTime(sessions, timeModeOverride = null) {
+      if (!Array.isArray(sessions)) return [];
+      const tMode = timeModeOverride || selectedAnalyticsTime;
+      const cutoff = getTimeWindowCutoff(tMode);
+      return sessions.filter(s => {
+        if (selectedAnalyticsCategory !== 'ALL' && (s.session_category || 'Practice').toLowerCase() !== selectedAnalyticsCategory.toLowerCase()) {
+          return false;
+        }
+        if (cutoff && s.date < cutoff) {
+          return false;
+        }
+        return true;
+      });
+    }
+
+    function computeFilteredArcherStats(archerObj, timeModeOverride = null) {
+      if (!archerObj) return null;
+      const sessions = filterSessionsByCatAndTime(archerObj.sessions || [], timeModeOverride);
+      let lifetimeScore = 0;
+      let lifetimeArrows = 0;
+      let lifetimeXs = 0;
+      let lifetimeTens = 0;
+      let lifetimeGold9Plus = 0;
+      let bestArrowAvg = 0;
+      let bestNormalized300 = 0;
+      let bestSessionName = '';
+      let bestSessionDate = '';
+      let stdDevSum = 0;
+
+      const ringCounts = { 'X': 0, '10': 0, '9': 0, '8': 0, '7': 0, '6': 0, '5': 0, '4': 0, '3': 0, '2': 0, '1': 0, 'M': 0 };
+
+      sessions.forEach((sess, idx) => {
+        lifetimeScore += sess.total_score;
+        lifetimeArrows += sess.arrows_shot;
+        lifetimeXs += sess.x_count;
+        lifetimeTens += sess.golds_10s;
+        lifetimeGold9Plus += sess.gold_9plus_count;
+        stdDevSum += (sess.arrow_std_dev || 0);
+        if (sess.avg_per_arrow > bestArrowAvg) {
+          bestArrowAvg = sess.avg_per_arrow;
+          bestNormalized300 = sess.normalized_300;
+          bestSessionName = sess.event_name;
+          bestSessionDate = sess.date;
+        }
+        for (const [rk, rv] of Object.entries(sess.ring_counts || {})) {
+          ringCounts[rk] = (ringCounts[rk] || 0) + rv;
+        }
+
+        const winSlice = sessions.slice(Math.max(0, idx - 2), idx + 1);
+        const wArr = winSlice.reduce((s, x) => s + x.arrows_shot, 0);
+        const wScr = winSlice.reduce((s, x) => s + x.total_score, 0);
+        sess.filtered_rolling_avg = wArr > 0 ? Number((wScr / wArr).toFixed(2)) : sess.avg_per_arrow;
+      });
+
+      return {
+        name: archerObj.name,
+        avatar_id: archerObj.avatar_id,
+        bow_category: archerObj.bow_category,
+        sessions,
+        lifetimeArrows,
+        lifetimeScore,
+        lifetimeAvg: lifetimeArrows > 0 ? Number((lifetimeScore / lifetimeArrows).toFixed(2)) : 0,
+        bestArrowAvg,
+        bestNormalized300,
+        bestSessionName,
+        bestSessionDate,
+        lifetimeXs,
+        lifetimeTens,
+        lifetimeGold9Plus,
+        goldPct: lifetimeArrows > 0 ? Number(((lifetimeGold9Plus / lifetimeArrows) * 100).toFixed(1)) : 0,
+        tenPct: lifetimeArrows > 0 ? Number(((lifetimeTens / lifetimeArrows) * 100).toFixed(1)) : 0,
+        avgStdDev: sessions.length > 0 ? Number((stdDevSum / sessions.length).toFixed(2)) : 0,
+        ringCounts
+      };
+    }
+
+    function destroyChart(id) {
+      if (chartInstances[id]) {
+        chartInstances[id].destroy();
+        delete chartInstances[id];
+      }
+    }
+
+    function renderAnalyticsDashboard() {
+      if (!analyticsRawData || !analyticsRawData.archers) return;
+      const archerKey = selectedAnalyticsArcher || 'long';
+      const rawTarget = analyticsRawData.archers[archerKey] || {
+        name: archerKey.charAt(0).toUpperCase() + archerKey.slice(1),
+        avatar_id: NAME_TO_DEFAULT_AVATAR[archerKey] || 'bengal_cat',
+        bow_category: 'BAREBOW',
+        sessions: []
+      };
+
+      const primary = computeFilteredArcherStats(rawTarget);
+      const baselineMode = selectedAnalyticsTime === '14D' ? '6M' : selectedAnalyticsTime;
+      const statsBaseline = computeFilteredArcherStats(rawTarget, baselineMode);
+      const stats14D = computeFilteredArcherStats(rawTarget, '14D');
+
+      const activeTimeLabel = getActiveTimeWindowLabel(selectedAnalyticsTime);
+      const baselineLabel = getActiveTimeWindowLabel(baselineMode);
+      const baselineShort = getActiveShortPrefix(baselineMode);
+
+      const badgeEl = document.getElementById('analytics-active-archer-badge');
+      if (badgeEl) {
+        badgeEl.innerHTML = `
+          ${renderArcherAvatarCircle(primary.name, primary.avatar_id, 'w-6 h-6')}
+          <span>Showing <strong>${escapeHtml(primary.name)}</strong> (${activeTimeLabel}) • ${primary.sessions.length} Session${primary.sessions.length === 1 ? '' : 's'} (${primary.lifetimeArrows} Arrows)</span>
+        `;
+      }
+
+      const compEl = document.getElementById('analytics-6m-vs-14d-comparison');
+      if (compEl) {
+        const delta14vsBase = Number(((stats14D.lifetimeAvg || 0) - (statsBaseline.lifetimeAvg || 0)).toFixed(2));
+        const deltaSign = delta14vsBase >= 0 ? '+' : '';
+        const deltaBadge = stats14D.sessions.length > 0
+          ? `<span class="text-[10px] font-bold ${delta14vsBase >= 0 ? 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30' : 'bg-amber-500/15 text-amber-300 border-amber-500/30'} border px-2 py-0.5 rounded-full">vs ${baselineShort}: ${deltaSign}${delta14vsBase}/shot</span>`
+          : `<span class="text-[10px] font-bold bg-slate-800 text-slate-400 border border-slate-700 px-2 py-0.5 rounded-full">No 14d sessions</span>`;
+
+        compEl.innerHTML = `
+          <div class="rounded-2xl bg-slate-900/95 border ${selectedAnalyticsTime !== '14D' ? 'border-amber-500/50' : 'border-slate-800'} p-4 shadow-lg space-y-2.5 cursor-pointer transition" onclick="setAnalyticsTimeFilter('${baselineMode}')">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">📆 ${escapeHtml(baselineLabel)} Baseline</span>
+              <span class="text-[11px] font-mono text-slate-400">${statsBaseline.sessions.length} Sessions • ${statsBaseline.lifetimeArrows} Arrows</span>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">${baselineShort} Shot Avg</div>
+                <div class="text-lg font-black text-amber-400">${statsBaseline.lifetimeAvg.toFixed(2)}</div>
+                <div class="text-[10px] text-slate-400">${Math.round(statsBaseline.lifetimeAvg * 30)}/300 pace</div>
+              </div>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Best Avg</div>
+                <div class="text-lg font-black text-emerald-400">${statsBaseline.bestArrowAvg.toFixed(2)}</div>
+                <div class="text-[10px] text-slate-400 truncate" title="${escapeHtml(statsBaseline.bestSessionDate)}">${statsBaseline.bestNormalized300}/300</div>
+              </div>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Gold Zone</div>
+                <div class="text-lg font-black text-yellow-300">${statsBaseline.goldPct}%</div>
+                <div class="text-[10px] text-slate-400">${statsBaseline.lifetimeTens}×10+ (${statsBaseline.lifetimeXs}X)</div>
+              </div>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Group Spread</div>
+                <div class="text-lg font-black text-rose-400">±${statsBaseline.avgStdDev}</div>
+                <div class="text-[10px] text-slate-400">Avg StdDev</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="rounded-2xl bg-slate-900/95 border ${selectedAnalyticsTime === '14D' ? 'border-sky-500/50' : 'border-slate-800'} p-4 shadow-lg space-y-2.5 cursor-pointer transition" onclick="setAnalyticsTimeFilter('14D')">
+            <div class="flex items-center justify-between gap-2 flex-wrap">
+              <span class="text-[10px] font-extrabold uppercase tracking-wider text-sky-400">⚡ Last 2 Weeks (14 Days) Compare</span>
+              <div class="flex items-center gap-1.5">
+                ${deltaBadge}
+                <span class="text-[11px] font-mono text-slate-400">${stats14D.sessions.length} Sessions</span>
+              </div>
+            </div>
+            <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 pt-0.5">
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">14d Shot Avg</div>
+                <div class="text-lg font-black text-sky-400">${stats14D.lifetimeAvg.toFixed(2)}</div>
+                <div class="text-[10px] text-slate-400">${Math.round(stats14D.lifetimeAvg * 30)}/300 pace</div>
+              </div>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">14d Best Avg</div>
+                <div class="text-lg font-black text-emerald-400">${stats14D.bestArrowAvg.toFixed(2)}</div>
+                <div class="text-[10px] text-slate-400">${stats14D.bestNormalized300}/300</div>
+              </div>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">14d Gold Zone</div>
+                <div class="text-lg font-black text-yellow-300">${stats14D.goldPct}%</div>
+                <div class="text-[10px] text-slate-400">${stats14D.lifetimeTens}×10+ (${stats14D.lifetimeXs}X)</div>
+              </div>
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+                <div class="text-[9px] uppercase font-bold text-slate-400">Group Spread</div>
+                <div class="text-lg font-black text-rose-400">±${stats14D.avgStdDev}</div>
+                <div class="text-[10px] text-slate-400">Avg StdDev</div>
+              </div>
+            </div>
+          </div>
+        `;
+      }
+
+      renderChart1AvgTrend(primary);
+      renderChart4RingDist(primary);
+      renderChart5Consistency(primary);
+
+      const journalEl = document.getElementById('analytics-session-journal');
+      const journalSessions = [...primary.sessions].reverse();
+      if (journalSessions.length === 0) {
+        journalEl.innerHTML = `<div class="text-xs text-slate-500 py-4 text-center">No sessions recorded in this window for ${escapeHtml(primary.name)}.</div>`;
+      } else {
+        journalEl.innerHTML = journalSessions.map(s => `
+          <div onclick="openEventWorkspace('${s.event_id}')" class="cursor-pointer rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 p-3.5 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
+            <div class="space-y-1">
+              <div class="flex items-center gap-2 flex-wrap">
+                <span class="text-xs font-mono font-bold bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">${escapeHtml(s.date)}</span>
+                <span class="text-sm font-extrabold text-white">${escapeHtml(s.event_name)}</span>
+                <span class="text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">${escapeHtml(s.session_category)}</span>
+                <span class="text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">${s.golds_10s}×10+ (${s.x_count}X)</span>
+              </div>
+              <div class="text-[11px] text-slate-400">
+                ${s.ends_shot} Ends (${s.arrows_shot} Arrows) • Gold Zone (9+): <strong>${s.gold_pct}%</strong> • Grouping Spread StdDev: <strong>±${s.arrow_std_dev}</strong>
+              </div>
+              ${s.notes ? `<div class="text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 mt-1">📝 <strong>${escapeHtml(primary.name)}'s Note:</strong> <em>"${escapeHtml(s.notes)}"</em></div>` : ''}
+            </div>
+            <div class="flex items-center gap-4 shrink-0 self-end sm:self-center">
+              <div class="text-right">
+                <div class="text-[10px] font-bold uppercase text-slate-400">Total Score</div>
+                <div class="text-base font-black text-emerald-400">${s.total_score} <span class="text-xs text-slate-400">/ ${s.max_possible}</span></div>
+              </div>
+              <div class="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
+                <div class="text-[10px] font-bold uppercase text-slate-400">Per-Shot Avg</div>
+                <div class="text-base font-black text-amber-400">${s.avg_per_arrow.toFixed(2)}</div>
+              </div>
+            </div>
+          </div>
+        `).join('');
+      }
+    }
+
+    function renderChart1AvgTrend(target) {
+      destroyChart('avgTrend');
+      const ctx = document.getElementById('chart-avg-trend');
+      if (!ctx) return;
+
+      const labels = target.sessions.map(s => s.date.slice(5));
+      const avgs = target.sessions.map(s => s.avg_per_arrow);
+      const rolling = target.sessions.map(s => s.filtered_rolling_avg);
+      const goalLine = target.sessions.map(() => 8.0);
+
+      chartInstances['avgTrend'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: `${target.name} Per-Shot Avg`,
+              data: avgs,
+              borderColor: '#d97706',
+              backgroundColor: 'rgba(245, 158, 11, 0.08)',
+              borderWidth: 2,
+              pointRadius: 1.5,
+              pointHoverRadius: 4,
+              pointBackgroundColor: '#d97706',
+              tension: 0.25,
+              fill: false
+            },
+            {
+              label: '3-Session Moving Avg',
+              data: rolling,
+              borderColor: '#0284c7',
+              borderWidth: 2,
+              pointRadius: 0,
+              pointHoverRadius: 3,
+              tension: 0.3,
+              fill: false
+            },
+            {
+              label: '8.00 Goal Line (240/300)',
+              data: goalLine,
+              borderColor: '#10b981',
+              borderWidth: 1.5,
+              borderDash: [4, 4],
+              pointRadius: 0,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          plugins: {
+            tooltip: {
+              callbacks: {
+                afterLabel: function(context) {
+                  const s = target.sessions[context.dataIndex];
+                  if (!s || context.datasetIndex !== 0) return '';
+                  return `${s.session_category} • Score: ${s.total_score}/${s.max_possible} (${s.normalized_300}/300 pace) • ${s.golds_10s} Tens`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: {
+              suggestedMin: 6.0,
+              suggestedMax: 9.0,
+              title: { display: true, text: 'Points Per Arrow' }
+            }
+          }
+        }
+      });
+    }
+
+    function renderChart4RingDist(primary) {
+      destroyChart('ringDist');
+      const ctx = document.getElementById('chart-ring-dist');
+      if (!ctx) return;
+
+      const keys = ['X', '10', '9', '8', '7', '6', '5', '4', '3', '2', '1', 'M'];
+      const counts = keys.map(k => primary.ringCounts[k] || 0);
+      const bgColors = [
+        '#eab308', '#facc15', '#fde047',
+        '#ef4444', '#f87171',
+        '#0ea5e9', '#38bdf8',
+        '#1e293b', '#334155',
+        '#cbd5e1', '#e2e8f0',
+        '#fda4af'
+      ];
+
+      chartInstances['ringDist'] = new Chart(ctx, {
+        type: 'bar',
+        data: {
+          labels: keys,
+          datasets: [{
+            label: 'Arrow Count',
+            data: counts,
+            backgroundColor: bgColors,
+            borderColor: '#64748b',
+            borderWidth: 1,
+            borderRadius: 5
+          }]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          plugins: {
+            legend: { display: false },
+            tooltip: {
+              callbacks: {
+                label: function(c) {
+                  const val = c.raw || 0;
+                  const pct = primary.lifetimeArrows > 0 ? ((val / primary.lifetimeArrows) * 100).toFixed(1) : 0;
+                  return `${val} arrows (${pct}%)`;
+                }
+              }
+            }
+          },
+          scales: {
+            y: { beginAtZero: true, title: { display: true, text: 'Number of Arrows' } }
+          }
+        }
+      });
+    }
+
+    function renderChart5Consistency(primary) {
+      destroyChart('consistency');
+      const ctx = document.getElementById('chart-consistency');
+      if (!ctx) return;
+
+      const labels = primary.sessions.map(s => s.date.slice(5));
+      chartInstances['consistency'] = new Chart(ctx, {
+        type: 'line',
+        data: {
+          labels,
+          datasets: [
+            {
+              label: 'Gold Rate % (9s + 10s + Xs)',
+              data: primary.sessions.map(s => s.gold_pct),
+              borderColor: '#eab308',
+              backgroundColor: 'rgba(234, 179, 8, 0.12)',
+              borderWidth: 2,
+              pointRadius: 1.5,
+              pointHoverRadius: 4,
+              yAxisID: 'yPct',
+              tension: 0.25,
+              fill: false
+            },
+            {
+              label: 'Arrow Spread StdDev (Lower = Tighter)',
+              data: primary.sessions.map(s => s.arrow_std_dev),
+              borderColor: '#e11d48',
+              backgroundColor: 'rgba(225, 29, 72, 0.08)',
+              borderWidth: 2,
+              pointRadius: 1.5,
+              pointHoverRadius: 4,
+              yAxisID: 'yStd',
+              tension: 0.25,
+              fill: false
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          interaction: { mode: 'index', intersect: false },
+          scales: {
+            yPct: {
+              type: 'linear',
+              position: 'left',
+              min: 0,
+              max: 100,
+              title: { display: true, text: 'Gold Ring %' }
+            },
+            yStd: {
+              type: 'linear',
+              position: 'right',
+              min: 0,
+              max: 3.5,
+              grid: { drawOnChartArea: false },
+              title: { display: true, text: 'Std Dev (Points)' }
+            }
+          }
+        }
+      });
+    }
+
+    async function exportAllPrivateSessionsCSV() {
+      if (!activePrivateHub) return;
+      try {
+        const data = analyticsRawData || await getPrivateAnalyticsData(
+          activePrivateHub.id,
+          activePrivateHub.linked_archers || ['Long', 'Weijia']
+        );
+        const rows = [
+          ['Archer', 'Date', 'Category', 'Event_Name', 'Distance', 'Target_Face', 'Ends', 'Arrows', 'Total_Score', 'Max_Score', 'Average', 'Golds_10s', 'X_Count', 'Gold_9Plus_Pct', 'Std_Dev', 'Notes']
+        ];
+        Object.values(data.archers || {}).forEach(arch => {
+          (arch.sessions || []).forEach(s => {
+            rows.push([
+              `"${String(arch.name).replace(/"/g, '""')}"`,
+              s.date,
+              s.session_category || 'Practice',
+              `"${String(s.event_name || '').replace(/"/g, '""')}"`,
+              s.distance || '18m',
+              `"${String(s.target_face || 'Multi-color face').replace(/"/g, '""')}"`,
+              s.ends_shot,
+              s.arrows_shot,
+              s.total_score,
+              s.max_possible,
+              s.avg_per_arrow,
+              s.golds_10s,
+              s.x_count,
+              s.gold_pct,
+              s.arrow_std_dev,
+              `"${String(s.notes || '').replace(/"/g, '""')}"`
+            ]);
+          });
+        });
+        const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(r => r.join(',')).join('\n');
+        const encodedUri = encodeURI(csvContent);
+        const link = document.createElement('a');
+        link.setAttribute('href', encodedUri);
+        link.setAttribute('download', `${activePrivateHub.id}_all_sessions_export.csv`);
+        document.body.appendChild(link);
+        link.click();
+        document.body.removeChild(link);
+      } catch (err) {
+        alert('Error exporting CSV: ' + (err.message || err));
+      }
+    }
+
     // Expose all interactive functions to window because this script is type="module"
     Object.assign(window, {
+      enterPrivateHubMode,
+      switchToPublicLeagueMode,
+      logoutPrivateHub,
+      switchPrivateAuthTab,
+      handlePrivateLoginSubmit,
+      handlePrivateSignupSubmit,
+      handlePrivateBiometricUnlock,
+      openPrivateSecurityModal,
+      closePrivateSecurityModal,
+      handleRegisterPasskeyDevice,
+      applyCreatePreset,
+      openArcherNoteModal,
+      closeArcherNoteModal,
+      submitArcherNoteModal,
+      saveScorecardModalNote,
+      showAnalyticsPage,
+      selectAnalyticsArcher,
+      setAnalyticsTimeFilter,
+      onCustomMonthsInput,
+      setAnalyticsCategoryFilter,
+      exportAllPrivateSessionsCSV,
       showEventsHub,
       openCreateEventModal,
       closeCreateEventModal,
