@@ -328,7 +328,6 @@
             <label class="block text-slate-300 font-bold mb-1">Select Private Hub</label>
             <select id="login-hub-name" required
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
-              <option value="long_weijia">My Private Hub</option>
             </select>
           </div>
           <div>
@@ -349,7 +348,7 @@
         <form id="form-private-signup" onsubmit="handlePrivateSignupSubmit(event)" class="hidden space-y-3.5 text-xs">
           <div>
             <label class="block text-slate-300 font-bold mb-1">Hub Space Name</label>
-            <input type="text" id="signup-hub-name" required value="My Private Hub" placeholder="e.g. My Private Hub"
+            <input type="text" id="signup-hub-name" required placeholder="Enter a name for your hub..."
               class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
             <p class="text-[10px] text-slate-400 mt-1">Choose a name for your personal or shared practice workspace.</p>
           </div>
@@ -2612,12 +2611,11 @@
         if (pushHistory) {
           window.history.pushState({ mode: 'private', view: 'auth' }, '', `${window.location.pathname}?mode=private`);
         }
-        // Populate hub dropdown from Firestore and check if long_weijia is registered
+        // Populate hub dropdown from Firestore
         try {
           const spaces = await listPrivateHubSpaces();
           populateLoginHubDropdown(spaces);
-          const hasDefault = spaces.some(s => s.id === 'long_weijia');
-          switchPrivateAuthTab(hasDefault ? 'login' : 'signup');
+          switchPrivateAuthTab(spaces.length > 0 ? 'login' : 'signup');
         } catch (e) {
           populateLoginHubDropdown([]);
           switchPrivateAuthTab('signup');
@@ -2629,11 +2627,9 @@
       const sel = document.getElementById('login-hub-name');
       if (!sel) return;
       const list = Array.isArray(spaces) ? [...spaces] : [];
-      if (!list.some(s => s.id === 'long_weijia')) {
-        list.unshift({
-          id: 'long_weijia',
-          name: 'My Private Hub'
-        });
+      if (list.length === 0) {
+        sel.innerHTML = `<option value="">-- No Hubs Registered Yet (Use First-Time Sign Up) --</option>`;
+        return;
       }
       sel.innerHTML = list.map(s => {
         const disp = s.name || s.id;
