@@ -11,8 +11,92 @@ import {
   query, 
   where, 
   orderBy,
-  onSnapshot 
+  onSnapshot,
+  writeBatch
 } from "./firebase-config.js";
+
+// Known duplicate/typo spellings of other archers' names: never surfaced from history or re-added to the roster
+const ALIAS_SKIP = new Set([
+  'long ma', 'weijia li', 'ling fang', 'ling fangng',
+  'xianchu chen', 'xianchuu', 'alex grossman', 'alex grossmanx',
+  'maxwell shepherd', 'wei', 'qihuanan', 'qihuan aixinjueluo', 'magnur gilmutdin', 'joy'
+]);
+
+// Helper: Firestore doc ID for an archer name. Ordinary names map to their lowercased form (matching existing
+// roster docs); characters Firestore rejects in IDs ('/', '.', '..', '__x__') are made safe. Returns null for blank names.
+export function rosterDocId(name) {
+  let id = String(name || '').trim().toLowerCase().replace(/\//g, '_');
+  if (!id) return null;
+  if (id === '.' || id === '..' || /^__.*__$/.test(id)) id = 'name-' + id;
+  return id;
+}
+
+// Helper: Set of roster doc IDs and lowercased names, used to tell walk-ins apart from existing archers
+async function getExistingRosterKeys() {
+  const keys = new Set();
+  const rosterSnap = await getDocs(collection(db, "roster"));
+  rosterSnap.forEach(d => {
+    keys.add(d.id);
+    const key = String(d.data().name || '').trim().toLowerCase();
+    if (key) keys.add(key);
+  });
+  return keys;
+}
+
+// Helper: Queue a roster entry for a walk-in archer who isn't on the roster yet.
+// Existing roster profiles (name casing, bow category, avatar) are never overwritten from event data.
+function queueNewRosterArcher(batch, existingKeys, p) {
+  const cleanName = String(p.name || '').trim();
+  const key = cleanName.toLowerCase();
+  const id = rosterDocId(cleanName);
+  if (!id || existingKeys.has(id) || existingKeys.has(key) || ALIAS_SKIP.has(key)) return;
+  existingKeys.add(id);
+  existingKeys.add(key);
+  const entry = { name: cleanName };
+  if (p.bow_category) entry.bowCategory = p.bow_category;
+  if (p.avatar_id) entry.avatarId = p.avatar_id;
+  if (p.custom_title) entry.customTitle = p.custom_title;
+  batch.set(doc(db, "roster", id), entry);
+}
+
+// Helper: Merge roster + historical event participants into the known-archers list.
+// Roster entries win; otherwise the participant record from the most recent event is used.
+// bow_category stays null when unknown so the client can apply its own per-name defaults.
+export function mergeKnownArchers(roster, participants, eventDateById = {}) {
+  const allArchersMap = new Map();
+  roster.forEach(r => {
+    const clean = String(r.name || '').trim();
+    const key = clean.toLowerCase();
+    if (key) {
+      allArchersMap.set(key, {
+        name: clean,
+        bow_category: r.bowCategory || null,
+        avatar_id: r.avatarId || null,
+        custom_title: r.customTitle || null
+      });
+    }
+  });
+
+  const latestByKey = new Map();
+  participants.forEach(p => {
+    const clean = String(p.name || '').trim();
+    const key = clean.toLowerCase();
+    if (!key || allArchersMap.has(key) || ALIAS_SKIP.has(key)) return;
+    const date = eventDateById[p.event_id] || '';
+    const prev = latestByKey.get(key);
+    if (!prev || date > prev.date) latestByKey.set(key, { date, clean, p });
+  });
+  latestByKey.forEach(({ clean, p }, key) => {
+    allArchersMap.set(key, {
+      name: clean,
+      bow_category: p.bow_category || null,
+      avatar_id: p.avatar_id || null,
+      custom_title: p.custom_title || null
+    });
+  });
+
+  return Array.from(allArchersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
 
 // Helper: Calculate next upcoming Sunday
 export function getUpcomingSundayStr() {
@@ -81,7 +165,8 @@ export async function getAppState() {
 export async function submitRsvp({ name, status, avatarId, bowCategory, customTitle, email, remindMe }) {
   const currentSunday = getUpcomingSundayStr();
   const cleanName = name.trim();
-  const id = `${currentSunday}_${cleanName.toLowerCase()}`;
+  const archerId = rosterDocId(cleanName);
+  const id = `${currentSunday}_${archerId}`;
   const now = new Date().toISOString();
 
   // Save/update RSVP
@@ -97,7 +182,7 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, customTi
   }, { merge: true });
 
   // Update Roster profile so chosen avatar/bow persist
-  const rosterRef = doc(db, "roster", cleanName.toLowerCase());
+  const rosterRef = doc(db, "roster", archerId);
   const updateData = {
     name: cleanName,
     avatarId: avatarId || null,
@@ -151,8 +236,10 @@ export async function getScoringEventsHub() {
   });
 
   const events = [];
+  const eventDateById = {};
   eventsSnap.forEach(d => {
     const ev = d.data();
+    eventDateById[ev.id] = ev.date || '';
     const pList = participantsByEvent[ev.id] || [];
     const gList = groupsByEvent[ev.id] || [];
     const baleSet = new Set();
@@ -198,39 +285,9 @@ export async function getScoringEventsHub() {
   } catch (e) {}
 
   // Merge roster + any historical event_participants so archers who participated without RSVPing are always included
-  const allArchersMap = new Map();
-  roster.forEach(r => {
-    const clean = String(r.name || '').trim();
-    const key = clean.toLowerCase();
-    if (key) {
-      allArchersMap.set(key, {
-        name: clean,
-        bow_category: r.bowCategory || 'BAREBOW',
-        avatar_id: r.avatarId || null,
-        custom_title: r.customTitle || null
-      });
-    }
-  });
-  const aliasSkip = new Set([
-    'long ma', 'weijia li', 'ling fang', 'ling fangng',
-    'xianchu chen', 'xianchuu', 'alex grossman', 'alex grossmanx',
-    'maxwell shepherd', 'wei', 'qihuanan', 'qihuan aixinjueluo', 'magnur gilmutdin', 'joy'
-  ]);
-  pSnap.forEach(d => {
-    const p = d.data();
-    const clean = String(p.name || '').trim();
-    const key = clean.toLowerCase();
-    if (key && !allArchersMap.has(key) && !aliasSkip.has(key)) {
-      allArchersMap.set(key, {
-        name: clean,
-        bow_category: p.bow_category || 'BAREBOW',
-        avatar_id: p.avatar_id || null,
-        custom_title: p.custom_title || null
-      });
-    }
-  });
-
-  const allArchers = Array.from(allArchersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
+  const allParticipants = [];
+  pSnap.forEach(d => allParticipants.push(d.data()));
+  const allArchers = mergeKnownArchers(roster, allParticipants, eventDateById);
 
   return {
     success: true,
@@ -444,7 +501,10 @@ export async function createScoringEvent({ event, participants, groups }) {
     created_at: now,
     updated_at: now
   };
-  await setDoc(doc(db, "scoring_events", eventId), eventData);
+  // All writes go in one batch so a failure never leaves a half-created event
+  const existingRosterKeys = (participants && participants.length > 0) ? await getExistingRosterKeys() : new Set();
+  const batch = writeBatch(db);
+  batch.set(doc(db, "scoring_events", eventId), eventData);
 
   // Construct and save initial groups so they exist immediately in Firestore
   const baleSet = new Set();
@@ -459,7 +519,7 @@ export async function createScoringEvent({ event, participants, groups }) {
       const gId = g.id || ('grp_' + eventId + '_' + (idx + 1));
       const gBales = Array.isArray(g.bales) ? g.bales.map(Number) : [];
       gBales.forEach(b => { baleToGroupId[b] = gId; });
-      await setDoc(doc(db, "scoring_groups", gId), {
+      batch.set(doc(db, "scoring_groups", gId), {
         id: gId,
         event_id: eventId,
         name: g.name || (`Scoring Group ${idx + 1}`),
@@ -476,7 +536,7 @@ export async function createScoringEvent({ event, participants, groups }) {
       const gId = 'grp_' + eventId + '_' + gNum;
       const baleLabel = groupBales.length > 1 ? `Bales ${groupBales.join(' & ')}` : `Bale ${groupBales[0]}`;
       groupBales.forEach(b => { baleToGroupId[b] = gId; });
-      await setDoc(doc(db, "scoring_groups", gId), {
+      batch.set(doc(db, "scoring_groups", gId), {
         id: gId,
         event_id: eventId,
         name: `Scoring Group ${gNum} (${baleLabel})`,
@@ -493,13 +553,11 @@ export async function createScoringEvent({ event, participants, groups }) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}`);
       const bNum = Number(p.bale_number) || 1;
-      const cleanName = String(p.name || 'Archer').trim();
-      const bowCat = p.bow_category || 'BAREBOW';
-      await setDoc(doc(db, "event_participants", pId), {
+      batch.set(doc(db, "event_participants", pId), {
         id: pId,
         event_id: eventId,
-        name: cleanName,
-        bow_category: bowCat,
+        name: String(p.name || '').trim() || 'Archer',
+        bow_category: p.bow_category || 'BAREBOW',
         avatar_id: p.avatar_id || null,
         custom_title: p.custom_title || null,
         bale_number: bNum,
@@ -510,19 +568,12 @@ export async function createScoringEvent({ event, participants, groups }) {
         group_id: p.group_id || baleToGroupId[bNum] || ('grp_' + eventId + '_1'),
         sort_order: idx
       });
-      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions
-      if (cleanName) {
-        const rosterUpdate = {
-          name: cleanName,
-          bowCategory: bowCat
-        };
-        if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
-        if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
-        await setDoc(doc(db, "roster", cleanName.toLowerCase()), rosterUpdate, { merge: true });
-      }
+      // Also add walk-in archers who didn't RSVP to the global roster so they're saved for future sessions
+      queueNewRosterArcher(batch, existingRosterKeys, p);
     }
   }
 
+  await batch.commit();
   return { success: true, eventId };
 }
 
@@ -553,8 +604,18 @@ export async function deleteScoringEvent(eventId) {
 
 // 10. Scoring: Save Bale & Group Assignments
 export async function saveBaleAssignments(eventId, { participants, groups, balesPerGroup }) {
+  // Read everything first, then apply all writes in one batch so a failure never leaves a half-saved setup
+  const oldGSnap = Array.isArray(groups)
+    ? await getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId)))
+    : null;
+  const oldPSnap = Array.isArray(participants)
+    ? await getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId)))
+    : null;
+  const existingRosterKeys = Array.isArray(participants) ? await getExistingRosterKeys() : new Set();
+  const batch = writeBatch(db);
+
   if (balesPerGroup !== undefined) {
-    await updateDoc(doc(db, "scoring_events", eventId), {
+    batch.update(doc(db, "scoring_events", eventId), {
       bales_per_group: Number(balesPerGroup) || 2,
       updated_at: new Date().toISOString()
     });
@@ -562,18 +623,15 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
 
   const baleToGroupId = {};
   if (Array.isArray(groups)) {
-    // Delete old groups for this event and write new ones
-    const oldGSnap = await getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId)));
-    for (const d of oldGSnap.docs) {
-      await deleteDoc(d.ref);
-    }
-
+    // Replace old groups for this event with the new ones
+    const newGroupIds = new Set();
     for (let idx = 0; idx < groups.length; idx++) {
       const g = groups[idx];
       const gId = g.id || (`grp_${eventId}_${idx + 1}`);
+      newGroupIds.add(gId);
       const gBales = Array.isArray(g.bales) ? g.bales.map(Number) : [];
       gBales.forEach(b => { baleToGroupId[b] = gId; });
-      await setDoc(doc(db, "scoring_groups", gId), {
+      batch.set(doc(db, "scoring_groups", gId), {
         id: gId,
         event_id: eventId,
         name: g.name || (`Scoring Group ${idx + 1}`),
@@ -583,10 +641,13 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
         current_end: g.current_end || 1
       });
     }
+    for (const d of oldGSnap.docs) {
+      if (!newGroupIds.has(d.id)) batch.delete(d.ref);
+    }
   }
 
   if (Array.isArray(participants)) {
-    const oldPSnap = await getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId)));
+    const oldIds = new Set(oldPSnap.docs.map(d => d.id));
     const keepIds = new Set();
 
     for (let idx = 0; idx < participants.length; idx++) {
@@ -595,38 +656,29 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
       keepIds.add(pId);
       const bNum = Number(p.bale_number) || 1;
       const resolvedGroupId = baleToGroupId[bNum] || p.group_id || (`grp_${eventId}_1`);
-      const cleanName = String(p.name || 'Archer').trim();
-      const bowCat = p.bow_category || 'BAREBOW';
-      await setDoc(doc(db, "event_participants", pId), {
+      batch.set(doc(db, "event_participants", pId), {
         ...p,
         id: pId,
         event_id: eventId,
-        name: cleanName,
-        bow_category: bowCat,
+        name: String(p.name || '').trim() || 'Archer',
+        bow_category: p.bow_category || 'BAREBOW',
         bale_number: bNum,
         group_id: resolvedGroupId,
         sort_order: idx
       }, { merge: true });
 
-      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions
-      if (cleanName) {
-        const rosterUpdate = {
-          name: cleanName,
-          bowCategory: bowCat
-        };
-        if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
-        if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
-        await setDoc(doc(db, "roster", cleanName.toLowerCase()), rosterUpdate, { merge: true });
-      }
+      // Add walk-ins newly added to this event to the global roster; archers already in the event were
+      // handled when they were added, so re-saving an old event can't resurrect removed roster entries
+      if (!oldIds.has(pId)) queueNewRosterArcher(batch, existingRosterKeys, p);
     }
 
     // Delete removed participants
     for (const d of oldPSnap.docs) {
-      if (!keepIds.has(d.id)) {
-        await deleteDoc(d.ref);
-      }
+      if (!keepIds.has(d.id)) batch.delete(d.ref);
     }
   }
+
+  await batch.commit();
   return await getEventData(eventId);
 }
 
