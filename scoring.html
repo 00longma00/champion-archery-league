@@ -329,9 +329,11 @@
         <!-- TAB 1: SIGN IN FORM -->
         <form id="form-private-login" onsubmit="handlePrivateLoginSubmit(event)" class="space-y-3.5 text-xs">
           <div>
-            <label class="block text-slate-300 font-bold mb-1">Hub / Archer Name</label>
-            <input type="text" id="login-hub-name" required value="My Private Hub" placeholder="e.g. My Private Hub or Long & Weijia"
-              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500">
+            <label class="block text-slate-300 font-bold mb-1">Select Private Hub</label>
+            <select id="login-hub-name" required
+              class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3.5 py-2.5 text-white font-semibold focus:outline-none focus:border-amber-500 cursor-pointer">
+              <option value="long_weijia">My Private Hub (Long &amp; Weijia)</option>
+            </select>
           </div>
           <div>
             <label class="block text-slate-300 font-bold mb-1">Password</label>
@@ -2662,15 +2664,39 @@
         if (pushHistory) {
           window.history.pushState({ mode: 'private', view: 'auth' }, '', `${window.location.pathname}?mode=private`);
         }
-        // Check if long_weijia is already registered; if not, default to First-Time Sign Up tab so user sees the setup right away!
+        // Populate hub dropdown from Firestore and check if long_weijia is registered
         try {
           const spaces = await listPrivateHubSpaces();
+          populateLoginHubDropdown(spaces);
           const hasDefault = spaces.some(s => s.id === 'long_weijia');
           switchPrivateAuthTab(hasDefault ? 'login' : 'signup');
         } catch (e) {
+          populateLoginHubDropdown([]);
           switchPrivateAuthTab('signup');
         }
       }
+    }
+
+    function populateLoginHubDropdown(spaces = []) {
+      const sel = document.getElementById('login-hub-name');
+      if (!sel) return;
+      const list = Array.isArray(spaces) ? [...spaces] : [];
+      if (!list.some(s => s.id === 'long_weijia')) {
+        list.unshift({
+          id: 'long_weijia',
+          name: 'My Private Hub',
+          linked_archers: ['Long', 'Weijia']
+        });
+      }
+      sel.innerHTML = list.map(s => {
+        const archersLabel = Array.isArray(s.linked_archers) && s.linked_archers.length > 0
+          ? ` (${s.linked_archers.join(' & ')})`
+          : '';
+        const disp = s.name && !s.name.includes(s.linked_archers?.[0] || '__')
+          ? `${s.name}${archersLabel}`
+          : (s.name || s.id);
+        return `<option value="${escapeHtml(s.id)}">${escapeHtml(disp)}</option>`;
+      }).join('');
     }
 
     function switchToPublicLeagueMode(pushHistory = true) {
