@@ -1472,6 +1472,12 @@
         return;
       }
 
+      const existingRsvp = (appState && appState.rsvps || []).find(r => (r.archerName || '').toLowerCase() === name.toLowerCase());
+      if (!existingRsvp && (appState && appState.rsvps || []).length >= 50) {
+        alert('Maximum RSVP limit reached (50 RSVPs allowed per session).');
+        return;
+      }
+
       const submitBtn = document.getElementById('btn-submit');
       submitBtn.disabled = true;
       submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
@@ -1494,7 +1500,7 @@
         onArcherNameChange();
       } catch (err) {
         console.error(err);
-        alert('Network error submitting RSVP: ' + (err.message || err));
+        alert(err.message || ('Error submitting RSVP: ' + err));
       } finally {
         submitBtn.disabled = false;
         submitBtn.innerHTML = `<span>🏹</span> <span>Save RSVP</span>`;

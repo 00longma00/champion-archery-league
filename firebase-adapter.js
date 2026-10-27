@@ -81,8 +81,28 @@ export async function getAppState() {
 export async function submitRsvp({ name, status, avatarId, bowCategory, customTitle, email, remindMe }) {
   const currentSunday = getUpcomingSundayStr();
   const cleanName = name.trim();
-  const id = `${currentSunday}_${cleanName.toLowerCase()}`;
+  const cleanLower = cleanName.toLowerCase();
+  const id = `${currentSunday}_${cleanLower}`;
   const now = new Date().toISOString();
+  const MAX_RSVPS = 50;
+
+  // Enforce upper limit of 50 RSVPs for the upcoming session and 50 archers in roster
+  const existingRsvpSnap = await getDoc(doc(db, "rsvps", id));
+  if (!existingRsvpSnap.exists()) {
+    const rsvpDateSnap = await getDocs(query(collection(db, "rsvps"), where("date", "==", currentSunday)));
+    if (rsvpDateSnap.size >= MAX_RSVPS) {
+      throw new Error(`Maximum RSVP limit reached (${MAX_RSVPS} RSVPs allowed per session).`);
+    }
+  }
+
+  const rosterRef = doc(db, "roster", cleanLower);
+  const existingRosterSnap = await getDoc(rosterRef);
+  if (!existingRosterSnap.exists()) {
+    const allRosterSnap = await getDocs(collection(db, "roster"));
+    if (allRosterSnap.size >= MAX_RSVPS) {
+      throw new Error(`League roster is full (maximum ${MAX_RSVPS} archers allowed).`);
+    }
+  }
 
   // Save/update RSVP
   await setDoc(doc(db, "rsvps", id), {
@@ -97,7 +117,6 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, customTi
   }, { merge: true });
 
   // Update Roster profile so chosen avatar/bow persist
-  const rosterRef = doc(db, "roster", cleanName.toLowerCase());
   const updateData = {
     name: cleanName,
     avatarId: avatarId || null,
@@ -424,6 +443,24 @@ export async function submitEndScore({ eventId, participantId, roundNumber, endN
 // 7. Scoring: Create Event
 export async function createScoringEvent({ event, participants, groups }) {
   const now = new Date().toISOString();
+  const todayPrefix = now.slice(0, 10);
+  const targetDate = event.date || todayPrefix;
+  const MAX_SESSIONS_PER_DAY = 5;
+
+  // Enforce upper limit of 5 sessions created per day (by event date or creation date)
+  const existingEventsSnap = await getDocs(collection(db, "scoring_events"));
+  let sameTargetDateCount = 0;
+  let createdTodayCount = 0;
+  existingEventsSnap.forEach(d => {
+    const ev = d.data();
+    if (ev.date === targetDate) sameTargetDateCount++;
+    if (ev.created_at && String(ev.created_at).startsWith(todayPrefix)) createdTodayCount++;
+  });
+
+  if (sameTargetDateCount >= MAX_SESSIONS_PER_DAY || createdTodayCount >= MAX_SESSIONS_PER_DAY) {
+    throw new Error(`Daily limit reached: A maximum of ${MAX_SESSIONS_PER_DAY} sessions can be created in one day.`);
+  }
+
   const eventId = event.id || ('evt_' + Date.now());
   const balesPerGroup = Math.max(1, Number(event.bales_per_group) || 2);
 
@@ -489,6 +526,11 @@ export async function createScoringEvent({ event, participants, groups }) {
   }
 
   if (participants && participants.length > 0) {
+    const rosterSnap = await getDocs(collection(db, "roster"));
+    let rosterCount = rosterSnap.size;
+    const knownRosterIds = new Set();
+    rosterSnap.forEach(d => knownRosterIds.add(d.id));
+
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}`);
@@ -510,15 +552,22 @@ export async function createScoringEvent({ event, participants, groups }) {
         group_id: p.group_id || baleToGroupId[bNum] || ('grp_' + eventId + '_1'),
         sort_order: idx
       });
-      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions
+      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions (capped at 50)
       if (cleanName) {
-        const rosterUpdate = {
-          name: cleanName,
-          bowCategory: bowCat
-        };
-        if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
-        if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
-        await setDoc(doc(db, "roster", cleanName.toLowerCase()), rosterUpdate, { merge: true });
+        const rKey = cleanName.toLowerCase();
+        if (knownRosterIds.has(rKey) || rosterCount < 50) {
+          const rosterUpdate = {
+            name: cleanName,
+            bowCategory: bowCat
+          };
+          if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
+          if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
+          await setDoc(doc(db, "roster", rKey), rosterUpdate, { merge: true });
+          if (!knownRosterIds.has(rKey)) {
+            knownRosterIds.add(rKey);
+            rosterCount++;
+          }
+        }
       }
     }
   }
@@ -589,6 +638,11 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
     const oldPSnap = await getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId)));
     const keepIds = new Set();
 
+    const rosterSnap = await getDocs(collection(db, "roster"));
+    let rosterCount = rosterSnap.size;
+    const knownRosterIds = new Set();
+    rosterSnap.forEach(d => knownRosterIds.add(d.id));
+
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}_${Date.now()}`);
@@ -608,15 +662,22 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
         sort_order: idx
       }, { merge: true });
 
-      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions
+      // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions (capped at 50)
       if (cleanName) {
-        const rosterUpdate = {
-          name: cleanName,
-          bowCategory: bowCat
-        };
-        if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
-        if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
-        await setDoc(doc(db, "roster", cleanName.toLowerCase()), rosterUpdate, { merge: true });
+        const rKey = cleanName.toLowerCase();
+        if (knownRosterIds.has(rKey) || rosterCount < 50) {
+          const rosterUpdate = {
+            name: cleanName,
+            bowCategory: bowCat
+          };
+          if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
+          if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
+          await setDoc(doc(db, "roster", rKey), rosterUpdate, { merge: true });
+          if (!knownRosterIds.has(rKey)) {
+            knownRosterIds.add(rKey);
+            rosterCount++;
+          }
+        }
       }
     }
 

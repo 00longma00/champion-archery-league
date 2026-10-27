@@ -544,9 +544,20 @@ function getFullEvent(eventId) {
 
 function createEvent(payload) {
   const now = new Date().toISOString();
+  const todayPrefix = now.slice(0, 10);
   const id = 'evt_' + Date.now() + '_' + Math.random().toString(36).slice(2, 6);
   const name = String(payload.name || 'Sunday League Night').trim();
-  const date = String(payload.date || new Date().toISOString().slice(0, 10)).trim();
+  const date = String(payload.date || todayPrefix).trim();
+
+  const MAX_SESSIONS_PER_DAY = 5;
+  const countRow = db.prepare(`
+    SELECT COUNT(*) as cnt FROM scoring_events
+    WHERE date = ? OR created_at LIKE ?
+  `).get(date, `${todayPrefix}%`);
+  if (countRow && countRow.cnt >= MAX_SESSIONS_PER_DAY) {
+    throw new Error(`Daily limit reached: A maximum of ${MAX_SESSIONS_PER_DAY} sessions can be created in one day.`);
+  }
+
   const startTime = String(payload.start_time || '18:00').trim();
   const maxBales = Math.max(1, Math.min(6, parseInt(payload.max_bales, 10) || 6));
   const rounds = Math.max(1, Math.min(4, parseInt(payload.rounds, 10) || 1));

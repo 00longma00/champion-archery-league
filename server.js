@@ -190,6 +190,9 @@ app.post('/api/rsvp', (req, res) => {
 
   // Update existing RSVP or push new
   const existingIndex = db.rsvps[nextSunday].findIndex(r => r.archerName.toLowerCase() === cleanName.toLowerCase());
+  if (existingIndex < 0 && db.rsvps[nextSunday].length >= MAX_ARCHERS) {
+    return res.status(400).json({ error: `Maximum RSVP limit reached (${MAX_ARCHERS} RSVPs allowed per session).` });
+  }
   const rsvpObj = {
     archerName: cleanName,
     avatarId: archer.avatarId || null,

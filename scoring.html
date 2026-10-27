@@ -2978,6 +2978,16 @@
 
     async function handleCreateEventSubmit(e) {
       if (e && typeof e.preventDefault === 'function') e.preventDefault();
+      const targetDateVal = document.getElementById('new-ev-date') ? document.getElementById('new-ev-date').value : '';
+      const todayIsoPrefix = new Date().toISOString().slice(0, 10);
+      if (hubData && Array.isArray(hubData.events)) {
+        const sameDateEvents = hubData.events.filter(ev => ev.date === targetDateVal);
+        const createdTodayEvents = hubData.events.filter(ev => ev.created_at && String(ev.created_at).startsWith(todayIsoPrefix));
+        if (sameDateEvents.length >= 5 || createdTodayEvents.length >= 5) {
+          alert('Daily limit reached: A maximum of 5 sessions can be created in one day.');
+          return false;
+        }
+      }
       const activeBales = getSelectedCreateBalesList();
       const shouldRandomize = document.getElementById('new-ev-randomize') ? document.getElementById('new-ev-randomize').checked : true;
 
