@@ -403,13 +403,9 @@
             <p id="hub-hero-desc" class="text-xs text-slate-400 mt-1">Select an active league night below to score your group or view live standings, or create a new event.</p>
           </div>
           <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button id="btn-hero-progress" onclick="showAnalyticsPage()" class="hidden bg-slate-800 hover:bg-slate-700 text-emerald-300 border border-emerald-500/40 font-extrabold text-xs px-3.5 py-3 rounded-xl flex items-center justify-center gap-2 transition">
-              <i class="fa-solid fa-chart-line"></i>
-              <span>Progress Graphs</span>
-            </button>
             <button id="btn-hero-export-all" onclick="exportAllPrivateSessionsCSV()" class="hidden bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/40 font-extrabold text-xs px-3.5 py-3 rounded-xl flex items-center justify-center gap-2 transition" title="Export All Sessions CSV">
               <i class="fa-solid fa-file-csv"></i>
-              <span>Export CSV</span>
+              <span class="hidden sm:inline">Export CSV</span>
             </button>
             <button onclick="openCreateEventModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs px-4 py-3 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 shrink-0 transition">
               <i class="fa-solid fa-plus"></i>
@@ -2454,7 +2450,6 @@
       const heroEyebrow = document.getElementById('hub-hero-eyebrow');
       const heroTitle = document.getElementById('hub-hero-title');
       const heroDesc = document.getElementById('hub-hero-desc');
-      const btnHeroProgress = document.getElementById('btn-hero-progress');
       const btnHeroExport = document.getElementById('btn-hero-export-all');
       const btnHeroCreateLabel = document.getElementById('btn-hero-create-label');
       const listHeading = document.getElementById('hub-events-list-heading');
@@ -2475,7 +2470,6 @@
         if (heroEyebrow) heroEyebrow.textContent = '🐱 Personal & Couple Range Log • Auto-Synced League Scores';
         if (heroTitle) heroTitle.textContent = hubName;
         if (heroDesc) heroDesc.textContent = 'Score practice sessions with the live keypad, add private process notes, or view your progression graphs.';
-        if (btnHeroProgress) btnHeroProgress.classList.remove('hidden');
         if (btnHeroExport) btnHeroExport.classList.remove('hidden');
         if (btnHeroCreateLabel) btnHeroCreateLabel.textContent = 'New Session';
         if (listHeading) listHeading.textContent = 'Sessions & Synced League Rounds';
@@ -2494,7 +2488,6 @@
         if (heroEyebrow) heroEyebrow.textContent = 'Indoor Range Scoring';
         if (heroTitle) heroTitle.textContent = 'Archery League Night';
         if (heroDesc) heroDesc.textContent = 'Select an active league night below to score your group or view live standings, or create a new event.';
-        if (btnHeroProgress) btnHeroProgress.classList.add('hidden');
         if (btnHeroExport) btnHeroExport.classList.add('hidden');
         if (btnHeroCreateLabel) btnHeroCreateLabel.textContent = 'New League Event';
         if (listHeading) listHeading.textContent = 'League Events';
