@@ -31,41 +31,28 @@ export function getUpcomingSundayStr() {
 export async function getAppState() {
   const currentSunday = getUpcomingSundayStr();
   
-  // App Config & Status
+  // Fetch App Config, Roster, and upcoming Sunday RSVPs in parallel
   let config = { leagueTime: "6:00 PM", defaultStatus: "PENDING" };
   let event = { status: "PENDING" };
-  try {
-    const snap = await getDoc(doc(db, "app_state", "current"));
-    if (snap.exists()) {
-      const data = snap.data();
-      if (data.config) config = { ...config, ...data.config };
-      if (data.event) event = { ...event, ...data.event };
-    }
-  } catch (e) {
-    console.error("Error reading app_state:", e);
-  }
-
-  // Roster
   const archers = [];
-  try {
-    const rosterSnap = await getDocs(collection(db, "roster"));
-    rosterSnap.forEach(d => archers.push(d.data()));
-  } catch (e) {
-    console.error("Error reading roster:", e);
-  }
-
-  // RSVPs for upcoming Sunday
   const rsvps = [];
-  try {
-    const rsvpSnap = await getDocs(collection(db, "rsvps"));
-    rsvpSnap.forEach(d => {
-      const r = d.data();
-      if (r.date === currentSunday) {
-        rsvps.push(r);
-      }
-    });
-  } catch (e) {
-    console.error("Error reading rsvps:", e);
+
+  const [stateSnap, rosterSnap, rsvpSnap] = await Promise.all([
+    getDoc(doc(db, "app_state", "current")).catch(e => { console.error("Error reading app_state:", e); return null; }),
+    getDocs(collection(db, "roster")).catch(e => { console.error("Error reading roster:", e); return null; }),
+    getDocs(query(collection(db, "rsvps"), where("date", "==", currentSunday))).catch(e => { console.error("Error reading rsvps:", e); return null; })
+  ]);
+
+  if (stateSnap && stateSnap.exists()) {
+    const data = stateSnap.data();
+    if (data.config) config = { ...config, ...data.config };
+    if (data.event) event = { ...event, ...data.event };
+  }
+  if (rosterSnap) {
+    rosterSnap.forEach(d => archers.push(d.data()));
+  }
+  if (rsvpSnap) {
+    rsvpSnap.forEach(d => rsvps.push(d.data()));
   }
 
   return {
@@ -147,9 +134,14 @@ export async function updateAdminStatus({ status, leagueTime }) {
 
 // 4. Scoring: List Events Hub
 export async function getScoringEventsHub() {
-  const eventsSnap = await getDocs(collection(db, "scoring_events"));
-  const pSnap = await getDocs(collection(db, "event_participants"));
-  const gSnap = await getDocs(collection(db, "scoring_groups"));
+  const sunday = getUpcomingSundayStr();
+  const [eventsSnap, pSnap, gSnap, rosterSnap, rsvpSnap] = await Promise.all([
+    getDocs(collection(db, "scoring_events")),
+    getDocs(collection(db, "event_participants")),
+    getDocs(collection(db, "scoring_groups")),
+    getDocs(collection(db, "roster")),
+    getDocs(query(collection(db, "rsvps"), where("date", "==", sunday))).catch(() => ({ forEach: () => {} }))
+  ]);
 
   const participantsByEvent = {};
   pSnap.forEach(d => {
@@ -194,15 +186,12 @@ export async function getScoringEventsHub() {
   });
 
   // Get current roster and RSVPs for event creator modal
-  const rosterSnap = await getDocs(collection(db, "roster"));
   const roster = [];
   rosterSnap.forEach(d => roster.push(d.data()));
   roster.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
 
-  const sunday = getUpcomingSundayStr();
   const yesArchers = [];
   try {
-    const rsvpSnap = await getDocs(collection(db, "rsvps"));
     rsvpSnap.forEach(d => {
       const r = d.data();
       if (r.date === sunday && r.status === 'YES') {
@@ -265,7 +254,12 @@ export async function getScoringEventsHub() {
 
 // 5. Scoring: Get Event Data (Full participants, scores, leaderboard)
 export async function getEventData(eventId) {
-  const evSnap = await getDoc(doc(db, "scoring_events", eventId));
+  const [evSnap, pSnap, sSnap, gSnap] = await Promise.all([
+    getDoc(doc(db, "scoring_events", eventId)),
+    getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId))),
+    getDocs(query(collection(db, "end_scores"), where("event_id", "==", eventId))),
+    getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId)))
+  ]);
   if (!evSnap.exists()) return { success: false, error: 'Event not found' };
   const ev = evSnap.data();
 
@@ -273,15 +267,11 @@ export async function getEventData(eventId) {
   ev.is_locked = ev.status === 'COMPLETED';
 
   // Participants
-  const pQuery = query(collection(db, "event_participants"), where("event_id", "==", eventId));
-  const pSnap = await getDocs(pQuery);
   const participants = [];
   pSnap.forEach(d => participants.push(d.data()));
   participants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
 
   // Scores
-  const sQuery = query(collection(db, "end_scores"), where("event_id", "==", eventId));
-  const sSnap = await getDocs(sQuery);
   const eventScores = [];
   sSnap.forEach(d => {
     const s = d.data();
@@ -362,8 +352,6 @@ export async function getEventData(eventId) {
   };
 
     // Groupings: Load from scoring_groups collection first, or generate based on event.bales_per_group
-    const gQuery = query(collection(db, "scoring_groups"), where("event_id", "==", eventId));
-    const gSnap = await getDocs(gQuery);
     const groups = [];
     gSnap.forEach(d => {
       const g = d.data();
@@ -1933,5 +1921,68 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
     total_events: events.length
   };
 }
+
+// ============================================================================
+// SITE FEEDBACK — FREE-FORM TEXT (MAX 500 CHARS, MAX 20 PER DAY)
+// ============================================================================
+export const FEEDBACK_DAILY_LIMIT = 20;
+export const FEEDBACK_MAX_CHARS = 500;
+
+function getLocalTodayStr() {
+  const now = new Date();
+  const y = now.getFullYear();
+  const m = String(now.getMonth() + 1).padStart(2, "0");
+  const d = String(now.getDate()).padStart(2, "0");
+  return `${y}-${m}-${d}`;
+}
+
+export async function getFeedbackDailyStatus() {
+  const today = getLocalTodayStr();
+  const q = query(collection(db, "feedback"), where("date", "==", today));
+  const snap = await getDocs(q);
+  const count = snap.size;
+  return {
+    date: today,
+    count,
+    limit: FEEDBACK_DAILY_LIMIT,
+    remaining: Math.max(0, FEEDBACK_DAILY_LIMIT - count)
+  };
+}
+
+export async function submitSiteFeedback({ message, page = "unknown" }) {
+  const cleanMsg = String(message || "").trim();
+  if (!cleanMsg) {
+    throw new Error("Please enter a feedback message before submitting.");
+  }
+  if (cleanMsg.length > FEEDBACK_MAX_CHARS) {
+    throw new Error(`Feedback is limited to ${FEEDBACK_MAX_CHARS} characters (currently ${cleanMsg.length}).`);
+  }
+
+  const status = await getFeedbackDailyStatus();
+  if (status.count >= FEEDBACK_DAILY_LIMIT) {
+    throw new Error(`Daily feedback limit reached (${FEEDBACK_DAILY_LIMIT} per day). Please try again tomorrow!`);
+  }
+
+  const now = new Date().toISOString();
+  const id = `fb_${status.date}_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`;
+  await setDoc(doc(db, "feedback", id), {
+    id,
+    date: status.date,
+    message: cleanMsg,
+    page: String(page || "unknown").slice(0, 60),
+    created_at: now
+  });
+
+  const newCount = status.count + 1;
+  return {
+    success: true,
+    id,
+    date: status.date,
+    count: newCount,
+    limit: FEEDBACK_DAILY_LIMIT,
+    remaining: Math.max(0, FEEDBACK_DAILY_LIMIT - newCount)
+  };
+}
+
 
 

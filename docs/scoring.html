@@ -421,16 +421,25 @@
 
       <!-- Events List -->
       <section class="space-y-3">
-        <div class="flex items-center justify-between px-1">
+        <div class="flex flex-wrap items-center justify-between gap-2 px-1">
           <h3 class="text-sm font-bold text-slate-200 flex items-center gap-2">
             <i class="fa-solid fa-bullseye text-amber-400"></i>
             <span id="hub-events-list-heading">League Events</span>
           </h3>
-          <span id="hub-event-count" class="text-[11px] text-slate-500 font-mono">0 Events</span>
+          <div class="flex items-center gap-2">
+            <span id="hub-event-count" class="text-[11px] text-slate-500 font-mono">0 Events</span>
+            <select id="hub-page-size-select" onchange="setHubPageSize(this.value)" class="bg-slate-900 border border-slate-700 text-slate-300 text-[11px] font-bold rounded-lg px-2 py-1 focus:outline-none focus:border-amber-500 cursor-pointer">
+              <option value="10" selected>10 / page</option>
+              <option value="20">20 / page</option>
+              <option value="50">50 / page</option>
+              <option value="all">Show All</option>
+            </select>
+          </div>
         </div>
         <div id="events-list-container" class="space-y-3">
           <!-- Populated by JS -->
         </div>
+        <div id="hub-pagination-controls" class="pt-1"></div>
       </section>
     </div>
 
@@ -938,14 +947,23 @@
             </h3>
             <p class="text-xs text-slate-400">Click any session row to open the full scorecard or jump to live scoring.</p>
           </div>
-          <button onclick="exportAllPrivateSessionsCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition">
-            <i class="fa-solid fa-file-csv"></i>
-            <span>Export All Sessions CSV</span>
-          </button>
+          <div class="flex flex-wrap items-center gap-2">
+            <select id="analytics-journal-page-size" onchange="setAnalyticsJournalPageSize(this.value)" class="bg-slate-950 border border-slate-700 text-slate-300 text-[11px] font-bold rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-500 cursor-pointer">
+              <option value="10" selected>10 / page</option>
+              <option value="20">20 / page</option>
+              <option value="50">50 / page</option>
+              <option value="all">Show All</option>
+            </select>
+            <button onclick="exportAllPrivateSessionsCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition">
+              <i class="fa-solid fa-file-csv"></i>
+              <span>Export All Sessions CSV</span>
+            </button>
+          </div>
         </div>
         <div id="analytics-session-journal" class="space-y-2.5">
           <!-- Populated by JS -->
         </div>
+        <div id="analytics-journal-pagination" class="pt-1"></div>
       </section>
     </div>
 
@@ -1564,7 +1582,7 @@
       savePrivateBaleAssignments,
       updatePrivateParticipantNote,
       getPrivateAnalyticsData
-    } from './firebase-adapter.js?v=20261027';
+    } from './firebase-adapter.js?v=20261027b';
     let appMode = 'league'; // 'league' | 'private'
     let activePrivateHub = null; // { id, name, linked_archers, passkeys }
     let hubData = { events: [], rsvpImport: { yesArchers: [], allArchers: [] } };
@@ -1573,6 +1591,12 @@
     let selectedGroupId = null;
     let activeRound = 1;
     let activeEnd = 1;
+
+    // Pagination state for Events Hub & Analytics Session Journal
+    let hubCurrentPage = 1;
+    let hubPageSize = 10;
+    let analyticsJournalPage = 1;
+    let analyticsJournalPageSize = 10;
 
     // Setup draft state (for editing bales/positions/groups before saving)
     let setupParticipantsDraft = [];
@@ -2585,6 +2609,7 @@
 
     async function enterPrivateHubMode(pushHistory = true) {
       appMode = 'private';
+      hubCurrentPage = 1;
       closeKeypad();
       closeArcherScorecard();
       closeQrModal();
@@ -2639,6 +2664,7 @@
 
     function switchToPublicLeagueMode(pushHistory = true) {
       appMode = 'league';
+      hubCurrentPage = 1;
       activeEventData = null;
       closeKeypad();
       closeArcherScorecard();
@@ -2897,15 +2923,98 @@
       }
     });
 
+    function buildPaginationControlsHtml(currentPage, totalItems, pageSize, pageFuncName) {
+      if (!pageSize || pageSize === 'all' || totalItems <= pageSize) return '';
+      const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
+      const safePage = Math.min(Math.max(1, currentPage), totalPages);
+      const startItem = (safePage - 1) * pageSize + 1;
+      const endItem = Math.min(totalItems, safePage * pageSize);
+
+      const pages = [];
+      for (let p = 1; p <= totalPages; p++) {
+        if (p === 1 || p === totalPages || (p >= safePage - 1 && p <= safePage + 1)) {
+          pages.push(p);
+        } else if (pages[pages.length - 1] !== '...') {
+          pages.push('...');
+        }
+      }
+
+      const pageButtonsHtml = pages.map(p => {
+        if (p === '...') {
+          return `<span class="px-1.5 py-1 text-xs text-slate-500 font-bold">…</span>`;
+        }
+        const isCurrent = p === safePage;
+        return `
+          <button type="button" onclick="${pageFuncName}(${p})"
+            class="min-w-[32px] h-8 px-2 rounded-lg text-xs font-extrabold transition ${
+              isCurrent
+                ? 'bg-amber-500 text-slate-950 shadow'
+                : 'bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700'
+            }">
+            ${p}
+          </button>
+        `;
+      }).join('');
+
+      return `
+        <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-slate-900/70 border border-slate-800 rounded-xl px-3.5 py-2.5">
+          <div class="text-xs text-slate-400 font-mono">
+            Showing <span class="text-white font-bold">${startItem}–${endItem}</span> of <span class="text-amber-300 font-bold">${totalItems}</span> sessions
+          </div>
+          <div class="flex items-center gap-1.5 flex-wrap justify-center">
+            <button type="button" onclick="${pageFuncName}(${safePage - 1})" ${safePage <= 1 ? 'disabled' : ''}
+              class="h-8 px-2.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 disabled:opacity-40 disabled:pointer-events-none transition flex items-center gap-1">
+              <i class="fa-solid fa-chevron-left text-[10px]"></i>
+              <span>Prev</span>
+            </button>
+            ${pageButtonsHtml}
+            <button type="button" onclick="${pageFuncName}(${safePage + 1})" ${safePage >= totalPages ? 'disabled' : ''}
+              class="h-8 px-2.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 disabled:opacity-40 disabled:pointer-events-none transition flex items-center gap-1">
+              <span>Next</span>
+              <i class="fa-solid fa-chevron-right text-[10px]"></i>
+            </button>
+          </div>
+        </div>
+      `;
+    }
+
+    function setHubPage(page) {
+      hubCurrentPage = Math.max(1, parseInt(page, 10) || 1);
+      renderEventsHub();
+      const heading = document.getElementById('hub-events-list-heading');
+      if (heading) heading.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function setHubPageSize(val) {
+      hubPageSize = val === 'all' ? 'all' : (parseInt(val, 10) || 10);
+      hubCurrentPage = 1;
+      renderEventsHub();
+    }
+
+    function setAnalyticsJournalPage(page) {
+      analyticsJournalPage = Math.max(1, parseInt(page, 10) || 1);
+      renderAnalyticsSessionJournal();
+      const journalEl = document.getElementById('analytics-session-journal');
+      if (journalEl) journalEl.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+    }
+
+    function setAnalyticsJournalPageSize(val) {
+      analyticsJournalPageSize = val === 'all' ? 'all' : (parseInt(val, 10) || 10);
+      analyticsJournalPage = 1;
+      renderAnalyticsSessionJournal();
+    }
+
     function renderEventsHub() {
       const events = hubData.events || [];
-      document.getElementById('hub-event-count').textContent = `${events.length} Session${events.length === 1 ? '' : 's'}`;
       const yesCount = (hubData.rsvpImport && hubData.rsvpImport.yesArchers) ? hubData.rsvpImport.yesArchers.length : 0;
       const modalYesEl = document.getElementById('modal-yes-count');
       if (modalYesEl) modalYesEl.textContent = yesCount;
 
       const container = document.getElementById('events-list-container');
+      const paginationEl = document.getElementById('hub-pagination-controls');
       if (events.length === 0) {
+        document.getElementById('hub-event-count').textContent = `0 Sessions`;
+        if (paginationEl) paginationEl.innerHTML = '';
         container.innerHTML = `
           <div class="rounded-2xl bg-slate-900/60 border border-slate-800/80 p-8 text-center space-y-3">
             <div class="w-12 h-12 rounded-2xl bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center mx-auto text-xl">
@@ -2924,7 +3033,23 @@
         return;
       }
 
-      container.innerHTML = events.map(ev => {
+      let pagedEvents = events;
+      if (hubPageSize !== 'all') {
+        const totalPages = Math.max(1, Math.ceil(events.length / hubPageSize));
+        if (hubCurrentPage > totalPages) hubCurrentPage = totalPages;
+        if (hubCurrentPage < 1) hubCurrentPage = 1;
+        const startIdx = (hubCurrentPage - 1) * hubPageSize;
+        pagedEvents = events.slice(startIdx, startIdx + hubPageSize);
+        document.getElementById('hub-event-count').textContent = `${startIdx + 1}–${Math.min(events.length, startIdx + hubPageSize)} of ${events.length} Session${events.length === 1 ? '' : 's'}`;
+      } else {
+        document.getElementById('hub-event-count').textContent = `${events.length} Session${events.length === 1 ? '' : 's'}`;
+      }
+
+      if (paginationEl) {
+        paginationEl.innerHTML = buildPaginationControlsHtml(hubCurrentPage, events.length, hubPageSize, 'setHubPage');
+      }
+
+      container.innerHTML = pagedEvents.map(ev => {
         const fmt = FORMAT_META[ev.scoring_type] || FORMAT_META.USAA_10;
         const isDoneOrLocked = Boolean(ev.is_locked || ev.all_scores_filled || ev.status === 'COMPLETED');
         let statusPill = `<span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">Open</span>`;
@@ -5817,6 +5942,7 @@
 
     function selectAnalyticsArcher(who) {
       selectedAnalyticsArcher = String(who || 'long').toLowerCase();
+      analyticsJournalPage = 1;
       renderAnalyticsArcherTabs();
       renderAnalyticsDashboard();
     }
@@ -5843,6 +5969,7 @@
 
     function setAnalyticsTimeFilter(timeRange) {
       selectedAnalyticsTime = timeRange;
+      analyticsJournalPage = 1;
       const customInput = document.getElementById('custom-lookback-months');
       if (timeRange === '6M') { customLookbackMonths = 6; if (customInput) customInput.value = 6; }
       else if (timeRange === '3M') { customLookbackMonths = 3; if (customInput) customInput.value = 3; }
@@ -5854,6 +5981,7 @@
     function onCustomMonthsInput(val) {
       const m = Math.max(1, Math.min(36, parseInt(val, 10) || 6));
       customLookbackMonths = m;
+      analyticsJournalPage = 1;
       if (m === 6) selectedAnalyticsTime = '6M';
       else if (m === 3) selectedAnalyticsTime = '3M';
       else if (m === 12) selectedAnalyticsTime = '12M';
@@ -5864,6 +5992,7 @@
 
     function setAnalyticsCategoryFilter(cat) {
       selectedAnalyticsCategory = cat;
+      analyticsJournalPage = 1;
       ['ALL', 'Practice', 'League'].forEach(c => {
         const btn = document.getElementById(`filter-cat-${c}`);
         if (!btn) return;
@@ -6103,12 +6232,48 @@
       renderChart4RingDist(primary);
       renderChart5Consistency(primary);
 
+      renderAnalyticsSessionJournal(primary);
+    }
+
+    function renderAnalyticsSessionJournal(primaryArg = null) {
+      let primary = primaryArg;
+      if (!primary) {
+        if (!analyticsRawData || !analyticsRawData.archers) return;
+        const archerKey = selectedAnalyticsArcher || 'long';
+        const rawTarget = analyticsRawData.archers[archerKey] || {
+          name: archerKey.charAt(0).toUpperCase() + archerKey.slice(1),
+          avatar_id: NAME_TO_DEFAULT_AVATAR[archerKey] || 'bengal_cat',
+          bow_category: 'BAREBOW',
+          sessions: []
+        };
+        primary = computeFilteredArcherStats(rawTarget);
+      }
+
       const journalEl = document.getElementById('analytics-session-journal');
+      const journalPagEl = document.getElementById('analytics-journal-pagination');
       const journalSessions = [...primary.sessions].reverse();
       if (journalSessions.length === 0) {
+        if (journalPagEl) journalPagEl.innerHTML = '';
         journalEl.innerHTML = `<div class="text-xs text-slate-500 py-4 text-center">No sessions recorded in this window for ${escapeHtml(primary.name)}.</div>`;
       } else {
-        journalEl.innerHTML = journalSessions.map(s => `
+        let pagedSessions = journalSessions;
+        if (analyticsJournalPageSize !== 'all') {
+          const totalPages = Math.max(1, Math.ceil(journalSessions.length / analyticsJournalPageSize));
+          if (analyticsJournalPage > totalPages) analyticsJournalPage = totalPages;
+          if (analyticsJournalPage < 1) analyticsJournalPage = 1;
+          const startIdx = (analyticsJournalPage - 1) * analyticsJournalPageSize;
+          pagedSessions = journalSessions.slice(startIdx, startIdx + analyticsJournalPageSize);
+        }
+        if (journalPagEl) {
+          journalPagEl.innerHTML = buildPaginationControlsHtml(
+            analyticsJournalPage,
+            journalSessions.length,
+            analyticsJournalPageSize,
+            'setAnalyticsJournalPage'
+          );
+        }
+
+        journalEl.innerHTML = pagedSessions.map(s => `
           <div onclick="openEventWorkspace('${s.event_id}')" class="cursor-pointer rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 p-3.5 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
             <div class="space-y-1">
               <div class="flex items-center gap-2 flex-wrap">
@@ -6371,6 +6536,10 @@
 
     // Expose all interactive functions to window because this script is type="module"
     Object.assign(window, {
+      setHubPage,
+      setHubPageSize,
+      setAnalyticsJournalPage,
+      setAnalyticsJournalPageSize,
       enterPrivateHubMode,
       switchToPublicLeagueMode,
       logoutPrivateHub,
