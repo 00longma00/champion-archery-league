@@ -250,7 +250,7 @@
     <!-- ================================================================== -->
     <div id="view-private-auth" class="hidden space-y-5">
       <!-- Welcome Feature Overview Banner -->
-      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-slate-800/80 p-5 sm:p-6 shadow-2xl wa-target-bg space-y-4">
+      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-slate-800/80 p-4 sm:p-5 shadow-2xl wa-target-bg">
         <div class="absolute top-0 left-0 right-0 h-1 flex">
           <div class="flex-1 bg-yellow-400"></div>
           <div class="flex-1 bg-red-500"></div>
@@ -259,52 +259,15 @@
           <div class="flex-1 bg-slate-200"></div>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-1">
-          <div>
-            <span class="text-[11px] font-extrabold uppercase tracking-wider text-sky-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-user-shield"></i>
-              <span>Personal &amp; Couple Archery Workspace</span>
-            </span>
-            <h2 class="text-xl sm:text-2xl font-black text-white mt-0.5">Welcome to My Private Hub 🎯</h2>
-            <p class="text-xs text-slate-400 mt-1">
-              Your dedicated space to score personal practice sessions, track long-term arrow averages, and keep private process notes.
-            </p>
+        <div class="flex items-center justify-between gap-3 pt-0.5">
+          <div class="min-w-0 flex-1">
+            <h2 class="text-lg sm:text-xl font-black text-white truncate">My Private Hub 🎯</h2>
+            <p class="text-xs text-slate-400 mt-0.5">Personal practice scoring &amp; progression</p>
           </div>
-          <button onclick="switchToPublicLeagueMode()" class="self-start sm:self-center text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shrink-0 transition">
+          <button onclick="switchToPublicLeagueMode()" class="text-xs bg-slate-800 hover:bg-slate-700 text-slate-300 border border-slate-700 px-3 py-2 rounded-xl font-bold flex items-center gap-1.5 shrink-0 transition">
             <i class="fa-solid fa-arrow-left text-amber-400"></i>
-            <span>Back to League</span>
+            <span>League</span>
           </button>
-        </div>
-
-        <!-- Feature Highlights Grid -->
-        <div class="grid grid-cols-1 sm:grid-cols-3 gap-3 pt-1">
-          <div class="rounded-xl bg-slate-950/90 border border-amber-500/40 p-3.5 space-y-1.5">
-            <div class="text-xs font-extrabold text-amber-300 flex items-center gap-1.5">
-              <i class="fa-solid fa-bolt text-amber-400"></i>
-              <span>Auto League Score Import</span>
-            </div>
-            <p class="text-[11px] text-slate-300 leading-relaxed">
-              Every official score you shoot during <strong>Sunday Night League</strong> is <strong>automatically imported</strong> into your private history and progression charts—zero duplicate entry!
-            </p>
-          </div>
-          <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-3.5 space-y-1.5">
-            <div class="text-xs font-extrabold text-emerald-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-bullseye"></i>
-              <span>Practice Rounds &amp; Notes</span>
-            </div>
-            <p class="text-[11px] text-slate-300 leading-relaxed">
-              Log 3-arrow, 5-arrow, or 6-arrow practice ends with the live keypad and save private shot-process notes that stay strictly in your hub.
-            </p>
-          </div>
-          <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-3.5 space-y-1.5">
-            <div class="text-xs font-extrabold text-sky-400 flex items-center gap-1.5">
-              <i class="fa-solid fa-chart-line"></i>
-              <span>Progression &amp; CSV Export</span>
-            </div>
-            <p class="text-[11px] text-slate-300 leading-relaxed">
-              Compare your 6-month baseline against your last 14 days, track grouping spread (StdDev) &amp; gold %, and export all scores to CSV anytime.
-            </p>
-          </div>
         </div>
       </section>
 
@@ -388,7 +351,7 @@
     <!-- ================================================================== -->
     <div id="view-hub" class="space-y-5">
       <!-- Hero Card -->
-      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-slate-800/80 p-5 shadow-2xl wa-target-bg">
+      <section class="relative overflow-hidden rounded-2xl bg-gradient-to-b from-slate-900/95 to-slate-950/95 border border-slate-800/80 p-4 sm:p-5 shadow-2xl wa-target-bg">
         <div class="absolute top-0 left-0 right-0 h-1 flex">
           <div class="flex-1 bg-yellow-400"></div>
           <div class="flex-1 bg-red-500"></div>
@@ -396,20 +359,20 @@
           <div class="flex-1 bg-slate-700"></div>
           <div class="flex-1 bg-slate-200"></div>
         </div>
-        <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-4 pt-1">
-          <div>
-            <span id="hub-hero-eyebrow" class="text-[11px] font-bold uppercase tracking-wider text-amber-400">Indoor Range Scoring</span>
-            <h2 id="hub-hero-title" class="text-xl sm:text-2xl font-black text-white mt-0.5">Archery League Night</h2>
-            <p id="hub-hero-desc" class="text-xs text-slate-400 mt-1">Select an active league night below to score your group or view live standings, or create a new event.</p>
+        <div class="flex items-center justify-between gap-3 pt-0.5">
+          <div class="min-w-0 flex-1">
+            <span id="hub-hero-eyebrow" class="hidden text-[11px] font-bold uppercase tracking-wider text-amber-400">Indoor Range Scoring</span>
+            <h2 id="hub-hero-title" class="text-lg sm:text-xl font-black text-white truncate">Archery League Night</h2>
+            <p id="hub-hero-desc" class="hidden text-xs text-slate-400 mt-1"></p>
           </div>
-          <div class="flex flex-wrap items-center gap-2 shrink-0">
-            <button id="btn-hero-export-all" onclick="exportAllPrivateSessionsCSV()" class="hidden bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/40 font-extrabold text-xs px-3.5 py-3 rounded-xl flex items-center justify-center gap-2 transition" title="Export All Sessions CSV">
+          <div class="flex items-center gap-2 shrink-0">
+            <button id="btn-hero-export-all" onclick="exportAllPrivateSessionsCSV()" class="hidden bg-slate-800 hover:bg-slate-700 text-sky-300 border border-sky-500/40 font-extrabold text-xs px-3 py-2.5 rounded-xl flex items-center justify-center gap-1.5 transition" title="Export All Sessions CSV">
               <i class="fa-solid fa-file-csv"></i>
               <span class="hidden sm:inline">Export CSV</span>
             </button>
-            <button onclick="openCreateEventModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs px-4 py-3 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 shrink-0 transition">
+            <button onclick="openCreateEventModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-extrabold text-xs px-3.5 py-2.5 rounded-xl shadow-lg shadow-amber-500/20 flex items-center justify-center gap-1.5 shrink-0 transition">
               <i class="fa-solid fa-plus"></i>
-              <span id="btn-hero-create-label">New League Event</span>
+              <span id="btn-hero-create-label">New Event</span>
             </button>
           </div>
         </div>
@@ -453,21 +416,19 @@
           <div class="flex-1 bg-slate-200"></div>
         </div>
 
-        <div class="flex flex-wrap items-start justify-between gap-2 pt-1">
-          <div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <h2 id="active-event-name" class="text-lg sm:text-xl font-black text-white">Sunday League Night</h2>
+        <div class="flex items-start justify-between gap-3 pt-0.5">
+          <div class="min-w-0 flex-1">
+            <h2 id="active-event-name" class="text-base sm:text-xl font-black text-white leading-snug break-words">Sunday League Night</h2>
+            <div class="flex items-center gap-1.5 flex-wrap mt-1">
               <span id="active-event-date-badge" class="text-[11px] font-mono bg-slate-800 text-amber-300 border border-slate-700 px-2 py-0.5 rounded-md">2026-10-18</span>
               <span id="active-event-lock-badge" class="text-[10px] font-extrabold px-2 py-0.5 rounded-full border"></span>
+              <span id="active-event-meta" class="text-[11px] text-slate-400">USAA 10-Ring • 10×3</span>
             </div>
-            <p id="active-event-meta" class="text-xs text-slate-400 mt-1">
-              USAA 10-Ring • 10 Ends × 3 Arrows • Midpoint Swap ON
-            </p>
           </div>
-          <div class="flex items-center gap-1.5">
-            <button onclick="openQrModal()" title="Show QR Code for Scorers" class="text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 px-2.5 py-1.5 rounded-lg border border-amber-500/40 font-bold transition flex items-center gap-1.5 shadow-sm">
+          <div class="flex items-center gap-1.5 shrink-0">
+            <button onclick="openQrModal()" title="Show QR Code for Scorers" class="text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 px-2.5 py-1.5 rounded-lg border border-amber-500/40 font-bold transition flex items-center gap-1 shadow-sm">
               <i class="fa-solid fa-qrcode text-amber-400"></i>
-              <span>QR Code</span>
+              <span class="hidden sm:inline">QR Code</span>
             </button>
             <button onclick="refreshActiveEvent()" title="Refresh Live Scores" class="text-xs bg-slate-800/90 hover:bg-slate-700 text-slate-300 px-2.5 py-1.5 rounded-lg border border-slate-700 transition flex items-center gap-1">
               <i id="refresh-icon" class="fa-solid fa-arrows-rotate text-amber-400"></i>
@@ -513,26 +474,16 @@
         </div>
 
         <!-- Scoring Group Selector Strip -->
-        <section class="rounded-2xl bg-slate-900/85 border border-slate-800 p-4 space-y-3">
-          <!-- Obvious Scorer Group Selection Callout Banner -->
-          <div class="rounded-xl bg-amber-950 border border-amber-400/60 p-3 flex items-center justify-between gap-3 shadow-sm">
-            <div class="flex items-center gap-2.5">
-              <div class="w-8 h-8 rounded-lg bg-amber-500 text-slate-950 flex items-center justify-center shrink-0 font-black text-sm shadow">
-                <i class="fa-solid fa-hand-pointer"></i>
-              </div>
-              <div>
-                <div class="text-xs font-black text-amber-300 uppercase tracking-wide">
-                  Step 1: Select Your Bale Group Below to Score
-                </div>
-                <div class="text-[11px] text-slate-300 mt-0.5">
-                  Tap the scoring group for your assigned bale(s) to view and enter arrows for those archers.
-                </div>
-              </div>
-            </div>
-            <span id="group-bales-hint" class="hidden sm:inline-block text-[11px] font-extrabold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-full shrink-0"></span>
+        <section class="rounded-2xl bg-slate-900/85 border border-slate-800 p-3.5 sm:p-4 space-y-2.5">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs font-extrabold uppercase tracking-wider text-slate-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-layer-group text-amber-400"></i>
+              <span>Bale Group</span>
+            </span>
+            <span id="group-bales-hint" class="text-[11px] font-bold text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2 py-0.5 rounded-full shrink-0"></span>
           </div>
 
-          <div id="scoring-group-pills" class="grid grid-cols-1 sm:grid-cols-2 gap-2.5">
+          <div id="scoring-group-pills" class="grid grid-cols-1 sm:grid-cols-2 gap-2">
             <!-- All Group buttons populated by JS -->
           </div>
 
@@ -617,13 +568,10 @@
       <div id="subview-leaderboard" class="hidden space-y-4">
         <section class="rounded-2xl bg-slate-900/85 border border-slate-800 p-4 sm:p-5 space-y-4">
           <div class="flex flex-wrap items-center justify-between gap-2">
-            <div>
-              <h3 class="text-base font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-trophy text-amber-400"></i>
-                <span>Division Standings</span>
-              </h3>
-              <p class="text-xs text-slate-400">Split by Archery Category — Barebow, Olympic Recurve &amp; Traditional</p>
-            </div>
+            <h3 class="text-base font-black text-white flex items-center gap-2">
+              <i class="fa-solid fa-trophy text-amber-400"></i>
+              <span>Division Standings</span>
+            </h3>
             <button onclick="exportLeaderboardCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition">
               <i class="fa-solid fa-file-csv"></i>
               <span>Export CSV</span>
@@ -658,9 +606,8 @@
             <div>
               <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center">1</span>
-                <span>Participants &amp; Bale Assignment</span>
+                <span>Participants &amp; Bales (<span id="setup-max-bales-label">6</span> Bales)</span>
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">One entry per archer — add archers with discipline options or import tonight's RSVPs, then auto-assign up to <span id="setup-max-bales-label">6</span> bales.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <button type="button" onclick="openBulkRosterSelectModal('setup')" class="text-xs bg-sky-500/15 hover:bg-sky-500/25 text-sky-300 border border-sky-500/30 px-3 py-1.5 rounded-lg font-bold transition flex items-center gap-1.5">
@@ -705,9 +652,8 @@
             <div>
               <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
                 <span class="w-6 h-6 rounded-full bg-amber-500 text-slate-950 text-xs font-black flex items-center justify-center">2</span>
-                <span>Scoring Groups &amp; Scorers Setup</span>
+                <span>Scoring Groups</span>
               </h3>
-              <p class="text-xs text-slate-400 mt-0.5">Set how many bales each scorer manages (e.g. 1 scorer per 1 bale, 2 bales, or 3 bales) or customize groups below.</p>
             </div>
             <div class="flex flex-wrap items-center gap-2">
               <div class="flex items-center gap-1.5 bg-slate-950 border border-slate-800 rounded-lg px-2.5 py-1">
@@ -815,7 +761,7 @@
     <!-- ================================================================== -->
     <div id="view-analytics" class="hidden space-y-5">
       <!-- Archer Filter & Top Banner -->
-      <section class="relative overflow-hidden rounded-2xl bg-slate-900/95 border border-slate-800 p-5 shadow-xl wa-target-bg">
+      <section class="relative overflow-hidden rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-xl wa-target-bg">
         <div class="absolute top-0 left-0 right-0 h-1 flex">
           <div class="flex-1 bg-yellow-400"></div>
           <div class="flex-1 bg-red-500"></div>
@@ -824,15 +770,13 @@
           <div class="flex-1 bg-slate-200"></div>
         </div>
 
-        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-4 pt-1">
-          <div>
-            <span class="text-[11px] font-bold uppercase tracking-wider text-emerald-400">📊 Shot Process &amp; Performance Lab</span>
-            <h2 class="text-xl sm:text-2xl font-black text-white mt-0.5">Archery Progression &amp; Trends</h2>
-            <p class="text-xs text-slate-400 mt-1">Compare your lookback baseline against your Last 2 Weeks form, and track per-shot averages &amp; grouping consistency.</p>
+        <div class="flex items-center justify-between gap-3 pt-0.5">
+          <div class="min-w-0 flex-1">
+            <h2 class="text-lg sm:text-xl font-black text-white truncate">Progression &amp; Trends</h2>
           </div>
 
           <!-- Archer Selector Pills -->
-          <div id="analytics-archer-pills-container" class="flex items-center gap-1.5 bg-slate-950 p-1.5 rounded-xl border border-slate-800 shrink-0">
+          <div id="analytics-archer-pills-container" class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
             <button type="button" id="analytics-archer-long" onclick="selectAnalyticsArcher('long')"
               class="px-3 py-1.5 rounded-lg text-xs font-extrabold transition flex items-center gap-1.5 bg-amber-500 text-slate-950 shadow">
               <span>🐱 Long</span>
@@ -879,16 +823,12 @@
       </section>
 
       <!-- Graph 1: Per-Shot Average Per Session Trend (Clean Line Graph) -->
-      <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
-        <div class="flex items-start justify-between gap-2">
-          <div>
-            <span class="text-[10px] font-extrabold uppercase tracking-wider text-amber-400">Core Progression Metric</span>
-            <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
-              <i class="fa-solid fa-chart-line text-amber-400"></i>
-              <span>Per-Shot Average Trend by Session</span>
-            </h3>
-            <p class="text-[11px] text-slate-400">Clean line progression of your arrow average (out of 10.0) with 3-session moving average &amp; 8.0 target line.</p>
-          </div>
+      <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-2.5">
+        <div class="flex items-center justify-between gap-2">
+          <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+            <i class="fa-solid fa-chart-line text-amber-400"></i>
+            <span>Per-Shot Average Trend</span>
+          </h3>
           <span id="chart1-badge" class="text-[11px] font-mono font-bold px-2 py-0.5 rounded-md bg-amber-500/15 text-amber-300 border border-amber-500/30 shrink-0">Avg / Arrow</span>
         </div>
         <div class="h-64 w-full relative">
@@ -899,34 +839,22 @@
       <!-- CHART ROW 2: Grouping Spread & Gold Rate + Ring Color Distribution -->
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <!-- Graph 2: Shot Consistency (Arrow Standard Deviation & Gold %) -->
-        <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-rose-400">Grouping Tightness</span>
-              <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-compress text-rose-400"></i>
-                <span>Grouping Spread (Std Dev) &amp; Gold Rate (%)</span>
-              </h3>
-              <p class="text-[11px] text-slate-400">Lower arrow standard deviation = tighter groups &amp; fewer stray flyers; Gold % = 9s, 10s &amp; Xs.</p>
-            </div>
-          </div>
+        <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-2.5">
+          <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+            <i class="fa-solid fa-compress text-rose-400"></i>
+            <span>Grouping Spread (Std Dev) &amp; Gold %</span>
+          </h3>
           <div class="h-60 w-full relative">
             <canvas id="chart-consistency"></canvas>
           </div>
         </section>
 
         <!-- Graph 3: WA Target Ring & Color Zone Breakdown -->
-        <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
-          <div class="flex items-start justify-between gap-2">
-            <div>
-              <span class="text-[10px] font-extrabold uppercase tracking-wider text-purple-400">Accuracy Distribution</span>
-              <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
-                <i class="fa-solid fa-bullseye text-purple-400"></i>
-                <span>Arrow Value &amp; Color Zone Distribution</span>
-              </h3>
-              <p class="text-[11px] text-slate-400">Breakdown of every arrow shot across X, 10, 9 (Gold), 8–7 (Red), 6–5 (Blue), and 4–1.</p>
-            </div>
-          </div>
+        <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-2.5">
+          <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+            <i class="fa-solid fa-bullseye text-purple-400"></i>
+            <span>Ring Distribution</span>
+          </h3>
           <div class="h-60 w-full relative">
             <canvas id="chart-ring-dist"></canvas>
           </div>
@@ -936,13 +864,10 @@
       <!-- Detailed Session-by-Session Progression Log & Notes Table -->
       <section class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3">
         <div class="flex flex-wrap items-center justify-between gap-2">
-          <div>
-            <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
-              <i class="fa-solid fa-book-open text-amber-400"></i>
-              <span>Session History &amp; Process Journal</span>
-            </h3>
-            <p class="text-xs text-slate-400">Click any session row to open the full scorecard or jump to live scoring.</p>
-          </div>
+          <h3 class="text-sm sm:text-base font-black text-white flex items-center gap-2">
+            <i class="fa-solid fa-book-open text-amber-400"></i>
+            <span>Session History</span>
+          </h3>
           <div class="flex flex-wrap items-center gap-2">
             <select id="analytics-journal-page-size" onchange="setAnalyticsJournalPageSize(this.value)" class="bg-slate-950 border border-slate-700 text-slate-300 text-[11px] font-bold rounded-lg px-2 py-1.5 focus:outline-none focus:border-amber-500 cursor-pointer">
               <option value="10" selected>10 / page</option>
@@ -952,7 +877,7 @@
             </select>
             <button onclick="exportAllPrivateSessionsCSV()" class="text-xs bg-slate-800 hover:bg-slate-700 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-lg font-bold flex items-center gap-1.5 transition">
               <i class="fa-solid fa-file-csv"></i>
-              <span>Export All Sessions CSV</span>
+              <span>Export CSV</span>
             </button>
           </div>
         </div>
@@ -1009,7 +934,7 @@
           <div class="grid grid-cols-2 sm:contents gap-2.5">
             <div>
               <label class="block text-slate-300 font-semibold mb-1">Date</label>
-              <input type="date" id="new-ev-date" required
+              <input type="date" id="new-ev-date" required onchange="onNewEventDateChange(this.value)"
                 class="w-full bg-slate-950 border border-slate-700 rounded-xl px-2.5 py-2 text-white focus:outline-none focus:border-amber-500">
             </div>
             <div>
@@ -2461,19 +2386,19 @@
         const hubName = (activePrivateHub && activePrivateHub.name) || 'My Private Hub';
         if (titleEl) titleEl.textContent = hubName;
         if (badgeEl) {
-          badgeEl.textContent = 'Private Hub';
+          badgeEl.textContent = 'Private';
           badgeEl.className = 'text-[10px] bg-sky-500/15 text-sky-300 font-bold px-2 py-0.5 rounded-full border border-sky-500/30 uppercase';
         }
-        if (subEl) subEl.textContent = 'Personal Session Scoring • Auto-Synced League Rounds • Process Analytics';
+        if (subEl) subEl.textContent = 'Practice & Analytics';
         if (navLeague) navLeague.classList.add('hidden');
         if (navPrivate && activePrivateHub) navPrivate.classList.remove('hidden');
-        if (heroEyebrow) heroEyebrow.textContent = '🐱 Personal & Couple Range Log • Auto-Synced League Scores';
+        if (heroEyebrow) heroEyebrow.textContent = '';
         if (heroTitle) heroTitle.textContent = hubName;
-        if (heroDesc) heroDesc.textContent = 'Score practice sessions with the live keypad, add private process notes, or view your progression graphs.';
+        if (heroDesc) heroDesc.textContent = '';
         if (btnHeroExport) btnHeroExport.classList.remove('hidden');
         if (btnHeroCreateLabel) btnHeroCreateLabel.textContent = 'New Session';
-        if (listHeading) listHeading.textContent = 'Sessions & Synced League Rounds';
-        if (createHeading) createHeading.textContent = 'Create Private Practice Session';
+        if (listHeading) listHeading.textContent = 'Sessions';
+        if (createHeading) createHeading.textContent = 'New Practice Session';
         if (createPresets) createPresets.classList.remove('hidden');
       } else {
         if (container) container.className = 'w-full max-w-2xl mx-auto space-y-5';
@@ -2482,14 +2407,14 @@
           badgeEl.textContent = 'Live';
           badgeEl.className = 'text-[10px] bg-amber-500/15 text-amber-300 font-bold px-2 py-0.5 rounded-full border border-amber-500/30 uppercase';
         }
-        if (subEl) subEl.textContent = 'Bale Assignment • Keypad Scoring • Leaderboard';
+        if (subEl) subEl.textContent = 'Sunday Night Rounds';
         if (navLeague) navLeague.classList.remove('hidden');
         if (navPrivate) navPrivate.classList.add('hidden');
-        if (heroEyebrow) heroEyebrow.textContent = 'Indoor Range Scoring';
+        if (heroEyebrow) heroEyebrow.textContent = '';
         if (heroTitle) heroTitle.textContent = 'Archery League Night';
-        if (heroDesc) heroDesc.textContent = 'Select an active league night below to score your group or view live standings, or create a new event.';
+        if (heroDesc) heroDesc.textContent = '';
         if (btnHeroExport) btnHeroExport.classList.add('hidden');
-        if (btnHeroCreateLabel) btnHeroCreateLabel.textContent = 'New League Event';
+        if (btnHeroCreateLabel) btnHeroCreateLabel.textContent = 'New Event';
         if (listHeading) listHeading.textContent = 'League Events';
         if (createHeading) createHeading.textContent = 'Create League Scoring Event';
         if (createPresets) createPresets.classList.add('hidden');
@@ -3047,25 +2972,25 @@
         const isDoneOrLocked = Boolean(ev.is_locked || ev.all_scores_filled || ev.status === 'COMPLETED');
         let statusPill = `<span class="text-[10px] font-bold bg-emerald-500/15 text-emerald-300 border border-emerald-500/30 px-2 py-0.5 rounded-full">Open</span>`;
         if (ev.all_scores_filled) {
-          statusPill = `<span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full"><i class="fa-solid fa-trophy mr-1"></i>All Ends Scored</span>`;
+          statusPill = `<span class="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/40 px-2 py-0.5 rounded-full"><i class="fa-solid fa-check mr-1"></i>Scored</span>`;
         } else if (ev.is_locked) {
-          statusPill = `<span class="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full"><i class="fa-solid fa-lock mr-1"></i>Ended / Locked</span>`;
+          statusPill = `<span class="text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/40 px-2 py-0.5 rounded-full"><i class="fa-solid fa-lock mr-1"></i>Locked</span>`;
         }
 
         const summariesHtml = (appMode === 'private' && ev.participant_summaries && ev.participant_summaries.length > 0) ? `
-          <div class="space-y-1.5 pt-2">
+          <div class="space-y-1.5 pt-1.5">
             ${ev.participant_summaries.map(ps => `
-              <div class="flex flex-col sm:flex-row sm:items-center gap-1.5 sm:gap-2.5 bg-slate-950 border border-slate-800 px-3 py-2 rounded-xl">
-                <div class="flex items-center gap-1.5 shrink-0">
+              <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 bg-slate-950 border border-slate-800 px-2.5 py-1.5 rounded-xl min-w-0">
+                <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
                   ${renderArcherAvatarCircle(ps.name, ps.avatar_id, 'w-5 h-5')}
                   <span class="text-xs font-extrabold text-white">${escapeHtml(ps.name)}:</span>
                   ${ps.arrows > 0 ? `
                     <span class="text-xs text-emerald-400 font-black">${ps.score}</span>
-                    <span class="text-amber-300 font-mono text-[10px] font-bold">(Avg ${ps.avg}/shot • ${ps.tens}×10+)</span>
-                  ` : `<span class="text-[10px] text-slate-400 italic">No arrows scored</span>`}
+                    <span class="text-amber-300 font-mono text-[10px] font-bold">(${ps.avg}/shot • ${ps.tens}×10+)</span>
+                  ` : `<span class="text-[10px] text-slate-400 italic">No arrows</span>`}
                 </div>
                 ${ps.archer_notes ? `
-                  <div class="text-[11px] text-slate-300 sm:border-l sm:border-slate-700 sm:pl-2.5 italic">
+                  <div class="text-[11px] text-slate-300 sm:border-l sm:border-slate-700 sm:pl-2.5 italic truncate">
                     📝 "${escapeHtml(ps.archer_notes)}"
                   </div>
                 ` : ''}
@@ -3075,30 +3000,24 @@
         ` : '';
 
         return `
-          <div onclick="openEventWorkspace('${ev.id}')" class="cursor-pointer rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 p-4 shadow-lg transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="space-y-1 flex-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-sm font-extrabold text-white">${escapeHtml(ev.name)}</span>
-                <span class="text-[11px] font-mono bg-slate-800 text-amber-300 px-2 py-0.5 rounded-md border border-slate-700">${escapeHtml(ev.date)} @ ${escapeHtml(ev.start_time || '18:00')}</span>
+          <div onclick="openEventWorkspace('${ev.id}')" class="cursor-pointer rounded-2xl bg-slate-900/90 hover:bg-slate-900 border border-slate-800 hover:border-amber-500/50 p-3.5 sm:p-4 shadow-lg transition flex items-center justify-between gap-3">
+            <div class="space-y-1 min-w-0 flex-1">
+              <div class="text-sm font-extrabold text-white leading-snug break-words">${escapeHtml(ev.name)}</div>
+              <div class="flex items-center gap-1.5 flex-wrap pt-0.5">
+                <span class="text-[11px] font-mono bg-slate-800 text-amber-300 px-2 py-0.5 rounded-md border border-slate-700">${escapeHtml(ev.date)}</span>
                 ${statusPill}
-                ${ev.is_league_synced ? `<span class="text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-link mr-1"></i>Auto-Synced League Score</span>` : ''}
-                ${ev.swap_top_bottom ? `<span class="text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">↕ Midpoint Swap</span>` : ''}
-              </div>
-              <div class="text-xs text-slate-400 flex items-center gap-2 flex-wrap">
-                <span>${fmt.shortLabel}</span>
-                <span>•</span>
-                <span>${ev.ends_per_round} Ends × ${ev.arrows_per_end} Arrows</span>
-                <span>•</span>
+                ${ev.is_league_synced ? `<span class="text-[10px] font-bold bg-indigo-500/15 text-indigo-300 border border-indigo-500/30 px-2 py-0.5 rounded-full"><i class="fa-solid fa-link mr-1"></i>League</span>` : ''}
+                <span class="text-[11px] text-slate-400">${fmt.shortLabel} • ${ev.ends_per_round}×${ev.arrows_per_end}</span>
                 ${appMode === 'private'
-                  ? `<span class="text-sky-400 font-semibold">${escapeHtml(ev.session_category || 'Practice')}</span>`
-                  : `<span class="text-emerald-400 font-semibold">${ev.participant_count} Archers (${ev.group_count} Groups)</span>`}
+                  ? `<span class="text-[11px] text-sky-400 font-semibold">• ${escapeHtml(ev.session_category || 'Practice')}</span>`
+                  : `<span class="text-[11px] text-emerald-400 font-semibold">• ${ev.participant_count} Archers</span>`}
               </div>
               ${summariesHtml}
             </div>
-            <div class="flex items-center gap-2 self-end sm:self-center shrink-0">
-              <span class="text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 px-3 py-1.5 rounded-xl flex items-center gap-1.5">
-                <span>${isDoneOrLocked ? 'View Scorecard' : 'Open Session'}</span>
-                <i class="fa-solid ${isDoneOrLocked ? 'fa-trophy' : 'fa-arrow-right'}"></i>
+            <div class="flex items-center shrink-0">
+              <span class="text-xs font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2.5 sm:px-3 py-1.5 rounded-xl flex items-center gap-1.5">
+                <span class="hidden sm:inline">${isDoneOrLocked ? 'Scorecard' : 'Open'}</span>
+                <i class="fa-solid ${isDoneOrLocked ? 'fa-trophy' : 'fa-chevron-right'}"></i>
               </span>
             </div>
           </div>
@@ -3279,13 +3198,18 @@
     // CREATE EVENT MODAL & ADD ARCHER MENU (WITH DISCIPLINE & AUTOFILL POPUP)
     // ========================================================================
     function openCreateEventModal() {
+      const now = new Date();
+      const yyyy = now.getFullYear();
+      const mm = String(now.getMonth() + 1).padStart(2, '0');
+      const dd = String(now.getDate()).padStart(2, '0');
+      const todayIso = `${yyyy}-${mm}-${dd}`;
       const dateInput = document.getElementById('new-ev-date');
       if (dateInput) {
-        const now = new Date();
-        const yyyy = now.getFullYear();
-        const mm = String(now.getMonth() + 1).padStart(2, '0');
-        const dd = String(now.getDate()).padStart(2, '0');
-        dateInput.value = `${yyyy}-${mm}-${dd}`;
+        dateInput.value = todayIso;
+      }
+      const nameInput = document.getElementById('new-ev-name');
+      if (nameInput) {
+        nameInput.value = appMode === 'private' ? `Practice ${todayIso}` : 'Sunday Night League';
       }
       const maxBalesInput = document.getElementById('new-ev-max-bales');
       const maxBales = maxBalesInput ? (parseInt(maxBalesInput.value, 10) || 6) : 6;
@@ -3298,6 +3222,14 @@
         renderCreateEventParticipantsList();
       }
       document.getElementById('create-event-modal').classList.remove('hidden');
+    }
+
+    function onNewEventDateChange(newDateVal) {
+      if (appMode !== 'private' || !newDateVal) return;
+      const nameInput = document.getElementById('new-ev-name');
+      if (nameInput && /^Practice(\s+\d{4}-\d{2}-\d{2})?$/i.test(nameInput.value.trim())) {
+        nameInput.value = `Practice ${newDateVal}`;
+      }
     }
 
     function closeCreateEventModal() {
@@ -4193,21 +4125,21 @@
       const fmt = FORMAT_META[ev.scoring_type] || FORMAT_META.USAA_10;
 
       document.getElementById('active-event-name').textContent = ev.name;
-      document.getElementById('active-event-date-badge').textContent = `${ev.date} @ ${ev.start_time || '18:00'}`;
+      document.getElementById('active-event-date-badge').textContent = ev.date;
 
       const lockBadge = document.getElementById('active-event-lock-badge');
       if (lockBadge) {
         if (ev.is_locked) {
-          lockBadge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/40';
-          lockBadge.innerHTML = `<i class="fa-solid fa-lock mr-1"></i>Locked (8h+ Past Event)`;
+          lockBadge.className = 'text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-rose-500/20 text-rose-300 border-rose-500/40';
+          lockBadge.innerHTML = `<i class="fa-solid fa-lock mr-1"></i>Locked`;
         } else {
-          lockBadge.className = 'text-[10px] font-extrabold px-2.5 py-0.5 rounded-full border bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
-          lockBadge.innerHTML = `<i class="fa-regular fa-clock mr-1"></i>Locks ${escapeHtml(ev.lock_deadline_display || '+8h')}`;
+          lockBadge.className = 'text-[10px] font-extrabold px-2 py-0.5 rounded-full border bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+          lockBadge.innerHTML = `<i class="fa-regular fa-clock mr-1"></i>Open`;
         }
       }
 
       document.getElementById('active-event-meta').textContent =
-        `${fmt.shortLabel} • ${ev.rounds > 1 ? ev.rounds + ' Rounds × ' : ''}${ev.ends_per_round} Ends × ${ev.arrows_per_end} Arrows • ${ev.swap_top_bottom ? 'Midpoint Swap ON (End ' + ev.midpoint_end + ')' : 'No Target Swap'}`;
+        `${fmt.shortLabel} • ${ev.rounds > 1 ? ev.rounds + '×' : ''}${ev.ends_per_round}×${ev.arrows_per_end}${ev.swap_top_bottom ? ' • ↕ Swap E' + ev.midpoint_end : ''}`;
 
       if (currentEventTab === 'scoring') {
         renderScoringSubview();
@@ -6267,27 +6199,27 @@
         }
 
         journalEl.innerHTML = pagedSessions.map(s => `
-          <div onclick="openEventWorkspace('${s.event_id}')" class="cursor-pointer rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 p-3.5 transition flex flex-col sm:flex-row sm:items-center justify-between gap-3">
-            <div class="space-y-1">
-              <div class="flex items-center gap-2 flex-wrap">
-                <span class="text-xs font-mono font-bold bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">${escapeHtml(s.date)}</span>
-                <span class="text-sm font-extrabold text-white">${escapeHtml(s.event_name)}</span>
+          <div onclick="openEventWorkspace('${s.event_id}')" class="cursor-pointer rounded-xl bg-slate-950 border border-slate-800 hover:border-amber-500/50 p-3.5 transition flex items-start sm:items-center justify-between gap-3">
+            <div class="space-y-1 min-w-0 flex-1">
+              <div class="text-sm font-extrabold text-white leading-snug break-words">${escapeHtml(s.event_name)}</div>
+              <div class="flex items-center gap-1.5 flex-wrap">
+                <span class="text-[11px] font-mono font-bold bg-slate-800 text-amber-300 px-2 py-0.5 rounded border border-slate-700">${escapeHtml(s.date)}</span>
                 <span class="text-[10px] font-bold bg-sky-500/15 text-sky-300 border border-sky-500/30 px-2 py-0.5 rounded-full">${escapeHtml(s.session_category)}</span>
                 <span class="text-[10px] font-bold bg-amber-500/15 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">${s.golds_10s}×10+ (${s.x_count}X)</span>
               </div>
               <div class="text-[11px] text-slate-400">
-                ${s.ends_shot} Ends (${s.arrows_shot} Arrows) • Gold Zone (9+): <strong>${s.gold_pct}%</strong> • Grouping Spread StdDev: <strong>±${s.arrow_std_dev}</strong>
+                ${s.arrows_shot} Arr • Gold: <strong>${s.gold_pct}%</strong> • Spread: <strong>±${s.arrow_std_dev}</strong>
               </div>
-              ${s.notes ? `<div class="text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1.5 mt-1">📝 <strong>${escapeHtml(primary.name)}'s Note:</strong> <em>"${escapeHtml(s.notes)}"</em></div>` : ''}
+              ${s.notes ? `<div class="text-xs text-slate-300 bg-slate-900 border border-slate-800 rounded-lg px-2.5 py-1 mt-1 truncate">📝 <em>"${escapeHtml(s.notes)}"</em></div>` : ''}
             </div>
-            <div class="flex items-center gap-4 shrink-0 self-end sm:self-center">
-              <div class="text-right">
-                <div class="text-[10px] font-bold uppercase text-slate-400">Total Score</div>
-                <div class="text-base font-black text-emerald-400">${s.total_score} <span class="text-xs text-slate-400">/ ${s.max_possible}</span></div>
+            <div class="flex items-center gap-2.5 sm:gap-4 shrink-0 text-right">
+              <div>
+                <div class="text-[9px] font-bold uppercase text-slate-400">Score</div>
+                <div class="text-sm sm:text-base font-black text-emerald-400">${s.total_score}<span class="text-[10px] text-slate-400">/${s.max_possible}</span></div>
               </div>
-              <div class="text-right bg-slate-900 px-3 py-1.5 rounded-xl border border-slate-800">
-                <div class="text-[10px] font-bold uppercase text-slate-400">Per-Shot Avg</div>
-                <div class="text-base font-black text-amber-400">${s.avg_per_arrow.toFixed(2)}</div>
+              <div class="bg-slate-900 px-2.5 py-1.5 rounded-xl border border-slate-800">
+                <div class="text-[9px] font-bold uppercase text-slate-400">Avg</div>
+                <div class="text-sm sm:text-base font-black text-amber-400">${s.avg_per_arrow.toFixed(2)}</div>
               </div>
             </div>
           </div>
@@ -6556,6 +6488,7 @@
       exportAllPrivateSessionsCSV,
       showEventsHub,
       openCreateEventModal,
+      onNewEventDateChange,
       closeCreateEventModal,
       openBulkRosterSelectModal,
       closeBulkRosterSelectModal,
