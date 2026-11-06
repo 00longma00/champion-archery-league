@@ -1,10 +1,9 @@
 const express = require('express');
 const path = require('path');
 const fs = require('fs');
-const cron = require('node-cron');
 const { readDB, writeDB, getUpcomingSunday } = require('./db');
-const { sendSaturdayReminders } = require('./notifier');
 const scoringDB = require('./scoring-db');
+const { generateArcheryInsights } = require('./ai-insights');
 
 // Load environment variables if .env exists
 if (fs.existsSync(path.join(__dirname, '.env'))) {
@@ -210,21 +209,6 @@ app.post('/api/admin/status', (req, res) => {
   res.json({ success: true, event: db.events[nextSunday], config: db.config });
 });
 
-// POST /api/admin/test-remind - Manually test Saturday reminders (open)
-app.post('/api/admin/test-remind', async (req, res) => {
-  try {
-    const result = await sendSaturdayReminders();
-    res.json({ success: true, message: `Dispatched reminders to ${result.count} archers.` });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// Saturday Cron Schedule: Runs every Saturday at 10:00 AM local time
-cron.schedule('0 10 * * 6', () => {
-  console.log('[Cron] Running scheduled Saturday 10:00 AM attendance reminder check...');
-  sendSaturdayReminders().catch(err => console.error('[Cron] Error in reminder job:', err));
-});
 
 // ============================================================================
 // ARCHERY LEAGUE SCORING API ROUTES (/api/scoring/*)
@@ -371,6 +355,17 @@ app.post('/api/scoring/events/:id/score', (req, res) => {
     res.json({ success: true, data: fullEvent });
   } catch (err) {
     res.status(400).json({ error: err.message });
+  }
+});
+
+// POST /api/scoring/ai-insights - AI-powered archery insights based on 14-day vs 3-month performance
+app.post('/api/scoring/ai-insights', async (req, res) => {
+  try {
+    const result = await generateArcheryInsights(req.body || {});
+    res.json(result);
+  } catch (err) {
+    console.error('AI Insights endpoint error:', err);
+    res.status(500).json({ success: false, error: err.message || 'Failed to generate archery insights' });
   }
 });
 

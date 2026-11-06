@@ -155,6 +155,8 @@
     .bg-emerald-600.text-white,
     .bg-amber-600.text-white,
     .bg-rose-500.text-white,
+    .bg-purple-600.text-white,
+    .bg-purple-600,
     .ring-black-43.text-white {
       color: #ffffff !important;
     }
@@ -164,6 +166,10 @@
     }
 
     /* Soft Tinted Counters & Banners */
+    .bg-purple-950\/60, .bg-purple-950\/40, .bg-purple-950\/30, .bg-purple-950 {
+      background-color: #faf5ff !important;
+      border-color: #e9d5ff !important;
+    }
     .bg-emerald-950\/70, .bg-emerald-950\/60, .bg-emerald-950\/40, .bg-emerald-950\/30, .bg-emerald-950 {
       background-color: #ecfdf5 !important;
       border-color: #a7f3d0 !important;
@@ -234,6 +240,10 @@
         <button id="nav-btn-analytics" onclick="showAnalyticsPage()" class="text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 text-slate-400 hover:text-white">
           <i class="fa-solid fa-chart-line text-emerald-400"></i>
           <span>Progress &amp; Graphs</span>
+        </button>
+        <button id="nav-btn-ai-insights" onclick="showAiInsightsPage()" class="text-xs font-bold px-3 py-1.5 rounded-lg transition flex items-center gap-1.5 text-slate-400 hover:text-white">
+          <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+          <span>AI Insights</span>
         </button>
         <button onclick="switchToPublicLeagueMode()" class="text-xs font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 text-slate-300 hover:text-white bg-slate-900 border border-slate-800">
           <i class="fa-solid fa-trophy text-amber-400"></i>
@@ -885,6 +895,128 @@
           <!-- Populated by JS -->
         </div>
         <div id="analytics-journal-pagination" class="pt-1"></div>
+      </section>
+    </div>
+
+    <!-- ================================================================== -->
+    <!-- VIEW 4: AI ARCHERY INSIGHTS & COACH (PRIVATE HUB)                   -->
+    <!-- ================================================================== -->
+    <div id="view-ai-insights" class="hidden space-y-5">
+      <!-- AI Coach Hero & Archer Selector -->
+      <section class="relative overflow-hidden rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-xl wa-target-bg">
+        <div class="absolute top-0 left-0 right-0 h-1 flex">
+          <div class="flex-1 bg-yellow-400"></div>
+          <div class="flex-1 bg-red-500"></div>
+          <div class="flex-1 bg-sky-500"></div>
+          <div class="flex-1 bg-slate-700"></div>
+          <div class="flex-1 bg-slate-200"></div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 pt-0.5">
+          <div class="min-w-0 flex-1">
+            <div class="flex items-center gap-2 flex-wrap">
+              <h2 class="text-lg sm:text-xl font-black text-white flex items-center gap-2">
+                <i class="fa-solid fa-wand-magic-sparkles text-purple-400"></i>
+                <span>AI Archery Coach</span>
+              </h2>
+              <span class="text-[10px] font-extrabold px-2 py-0.5 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 flex items-center gap-1">
+                <i class="fa-solid fa-microchip text-[9px]"></i>
+                <span>Gemini 3.8 Flash</span>
+              </span>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">Benchmarking your last 14 days against your 3-month baseline for form consistency, flyer spread &amp; drills</p>
+          </div>
+
+          <!-- Archer Selector Pills -->
+          <div id="ai-archer-pills-container" class="flex items-center gap-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0">
+            <!-- Populated dynamically by JS -->
+          </div>
+        </div>
+
+        <div class="flex flex-col sm:flex-row sm:items-center justify-between gap-3 mt-4 pt-3.5 border-t border-slate-800/80">
+          <div id="ai-active-archer-badge" class="text-xs font-bold text-slate-300 flex items-center gap-2">
+            <!-- Populated by JS -->
+          </div>
+          <button type="button" id="btn-generate-ai-insights" onclick="generateAiInsights(true)"
+            class="px-4 py-2 rounded-xl text-xs font-black transition flex items-center justify-center gap-2 bg-gradient-to-r from-purple-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white shadow-lg shadow-purple-500/25 active:scale-95 disabled:opacity-60 disabled:cursor-not-allowed cursor-pointer">
+            <i class="fa-solid fa-wand-magic-sparkles"></i>
+            <span id="btn-generate-ai-text">Analyze &amp; Generate Insights</span>
+          </button>
+        </div>
+      </section>
+
+      <!-- Dual Baseline Comparison Cards (Last 14 Days vs 3 Months) -->
+      <section id="ai-comparison-metric-cards" class="grid grid-cols-1 md:grid-cols-2 gap-4">
+        <!-- Card 1: 14 Days -->
+        <div class="rounded-2xl bg-slate-900/95 border border-purple-500/30 p-4 shadow-lg space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-black uppercase tracking-wider text-purple-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-calendar-week"></i>
+              <span>Last 14 Days Form</span>
+            </span>
+            <span id="ai-card-14d-badge" class="text-[11px] font-mono text-slate-400">Loading...</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">14d Shot Avg</div>
+              <div id="ai-stat-14d-avg" class="text-lg font-black text-purple-400">--</div>
+              <div id="ai-stat-14d-pace" class="text-[10px] text-slate-400">-- /300 pace</div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Volume</div>
+              <div id="ai-stat-14d-arrows" class="text-lg font-black text-white">--</div>
+              <div id="ai-stat-14d-sessions" class="text-[10px] text-slate-400">-- sessions</div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Gold % (9+10)</div>
+              <div id="ai-stat-14d-gold" class="text-lg font-black text-amber-400">--%</div>
+              <div id="ai-stat-14d-xs" class="text-[10px] text-slate-400">-- 10s • -- Xs</div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Spread (StdDev)</div>
+              <div id="ai-stat-14d-stddev" class="text-lg font-black text-sky-400">--</div>
+              <div class="text-[10px] text-slate-400">Grouping tightness</div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Card 2: 3-Month Baseline -->
+        <div class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 shadow-lg space-y-3">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-[10px] font-black uppercase tracking-wider text-amber-400 flex items-center gap-1.5">
+              <i class="fa-solid fa-clock-rotate-left"></i>
+              <span>3-Month Baseline</span>
+            </span>
+            <span id="ai-card-3m-badge" class="text-[11px] font-mono text-slate-400">Loading...</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2">
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">3M Shot Avg</div>
+              <div id="ai-stat-3m-avg" class="text-lg font-black text-amber-400">--</div>
+              <div id="ai-stat-3m-pace" class="text-[10px] text-slate-400">-- /300 pace</div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Volume</div>
+              <div id="ai-stat-3m-arrows" class="text-lg font-black text-white">--</div>
+              <div id="ai-stat-3m-sessions" class="text-[10px] text-slate-400">-- sessions</div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Gold % (9+10)</div>
+              <div id="ai-stat-3m-gold" class="text-lg font-black text-amber-400">--%</div>
+              <div id="ai-stat-3m-xs" class="text-[10px] text-slate-400">-- 10s • -- Xs</div>
+            </div>
+            <div class="bg-slate-950 border border-slate-800 rounded-xl p-2.5">
+              <div class="text-[9px] uppercase font-bold text-slate-400">Best Session</div>
+              <div id="ai-stat-3m-best" class="text-lg font-black text-emerald-400">--</div>
+              <div class="text-[10px] text-slate-400">Peak average</div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- AI Insights Output Container -->
+      <section id="ai-insights-display-container" class="space-y-4">
+        <!-- Populated by JS -->
       </section>
     </div>
 
@@ -2539,6 +2671,7 @@
         document.getElementById('view-private-auth').classList.add('hidden');
         document.getElementById('view-event').classList.add('hidden');
         document.getElementById('view-analytics').classList.add('hidden');
+        const vAi = document.getElementById('view-ai-insights'); if (vAi) vAi.classList.add('hidden');
         document.getElementById('view-hub').classList.remove('hidden');
         setTopNavActive('sessions');
         if (pushHistory) {
@@ -2550,6 +2683,7 @@
         document.getElementById('view-hub').classList.add('hidden');
         document.getElementById('view-event').classList.add('hidden');
         document.getElementById('view-analytics').classList.add('hidden');
+        const vAi = document.getElementById('view-ai-insights'); if (vAi) vAi.classList.add('hidden');
         document.getElementById('view-private-auth').classList.remove('hidden');
         if (pushHistory) {
           window.history.pushState({ mode: 'private', view: 'auth' }, '', `${window.location.pathname}?mode=private`);
@@ -2591,6 +2725,7 @@
       document.getElementById('view-private-auth').classList.add('hidden');
       document.getElementById('view-event').classList.add('hidden');
       document.getElementById('view-analytics').classList.add('hidden');
+      const vAi = document.getElementById('view-ai-insights'); if (vAi) vAi.classList.add('hidden');
       document.getElementById('btn-all-events').classList.add('hidden');
       document.getElementById('view-hub').classList.remove('hidden');
       if (pushHistory) {
@@ -2760,7 +2895,7 @@
         const modeParam = params.get('mode');
         const viewParam = params.get('view');
 
-        if (modeParam === 'private' || viewParam === 'analytics') {
+        if (modeParam === 'private' || viewParam === 'analytics' || viewParam === 'insights') {
           appMode = 'private';
           const saved = getSavedPrivateHubSession();
           if (!saved || !saved.id) {
@@ -2788,6 +2923,10 @@
           await showAnalyticsPage(false);
           return;
         }
+        if (appMode === 'private' && viewParam === 'insights') {
+          await showAiInsightsPage(false);
+          return;
+        }
 
         // Check URL query param for direct event & group link
         const eventIdParam = params.get('event');
@@ -2811,6 +2950,8 @@
       document.getElementById('view-event').classList.add('hidden');
       const vAnalytics = document.getElementById('view-analytics');
       if (vAnalytics) vAnalytics.classList.add('hidden');
+      const vAi = document.getElementById('view-ai-insights');
+      if (vAi) vAi.classList.add('hidden');
       const vAuth = document.getElementById('view-private-auth');
       if (vAuth) vAuth.classList.add('hidden');
       document.getElementById('btn-all-events').classList.add('hidden');
@@ -2827,7 +2968,7 @@
     window.addEventListener('popstate', async () => {
       const params = new URLSearchParams(window.location.search);
       const modeParam = params.get('mode');
-      appMode = (modeParam === 'private' || params.get('view') === 'analytics') ? 'private' : 'league';
+      appMode = (modeParam === 'private' || params.get('view') === 'analytics' || params.get('view') === 'insights') ? 'private' : 'league';
       const eventIdParam = params.get('event');
       const groupIdParam = params.get('group');
       const tabParam = params.get('tab');
@@ -2836,6 +2977,8 @@
         await openEventWorkspace(eventIdParam, tabParam || null, false);
       } else if (params.get('view') === 'analytics') {
         await showAnalyticsPage(false);
+      } else if (params.get('view') === 'insights') {
+        await showAiInsightsPage(false);
       } else {
         showEventsHub(false);
       }
@@ -4010,6 +4153,8 @@
         closeQrModal();
         const vAnalytics = document.getElementById('view-analytics');
         if (vAnalytics) vAnalytics.classList.add('hidden');
+        const vAi = document.getElementById('view-ai-insights');
+        if (vAi) vAi.classList.add('hidden');
         if (!selectedGroupId || !activeEventData.groups.some(g => g.id === selectedGroupId)) {
           const savedLocalName = (localStorage.getItem('archery_league_name') || '').trim();
           let matchedGroup = null;
@@ -5863,7 +6008,8 @@
     function setTopNavActive(mode) {
       const mapping = {
         sessions: 'nav-btn-sessions',
-        analytics: 'nav-btn-analytics'
+        analytics: 'nav-btn-analytics',
+        insights: 'nav-btn-ai-insights'
       };
       Object.entries(mapping).forEach(([k, btnId]) => {
         const btn = document.getElementById(btnId);
@@ -5890,6 +6036,8 @@
       document.getElementById('view-hub').classList.add('hidden');
       document.getElementById('view-event').classList.add('hidden');
       document.getElementById('view-private-auth').classList.add('hidden');
+      const vAi = document.getElementById('view-ai-insights');
+      if (vAi) vAi.classList.add('hidden');
       document.getElementById('view-analytics').classList.remove('hidden');
 
       setTopNavActive('analytics');
@@ -6529,8 +6677,557 @@
       }
     }
 
+    // ========================================================================
+    // AI ARCHERY COACH & INSIGHTS (14-DAY VS. 3-MONTH DUAL BASELINE)
+    // ========================================================================
+    let selectedAiArcher = 'long';
+    const aiInsightsCache = {};
+    let isAiGenerating = false;
+
+    async function showAiInsightsPage(pushHistory = true) {
+      if (!activePrivateHub) {
+        await enterPrivateHubMode(true);
+        return;
+      }
+      appMode = 'private';
+      applyModeUIChrome();
+      closeKeypad();
+      closeArcherScorecard();
+      closeQrModal();
+
+      document.getElementById('view-hub').classList.add('hidden');
+      document.getElementById('view-event').classList.add('hidden');
+      document.getElementById('view-private-auth').classList.add('hidden');
+      const vAnalytics = document.getElementById('view-analytics');
+      if (vAnalytics) vAnalytics.classList.add('hidden');
+      const vAi = document.getElementById('view-ai-insights');
+      if (vAi) vAi.classList.remove('hidden');
+
+      setTopNavActive('insights');
+
+      if (pushHistory) {
+        window.history.pushState({ mode: 'private', view: 'insights' }, '', `${window.location.pathname}?mode=private&view=insights`);
+      }
+
+      try {
+        if (!analyticsRawData) {
+          analyticsRawData = await getPrivateAnalyticsData(
+            activePrivateHub.id,
+            activePrivateHub.linked_archers || ['Long', 'Weijia']
+          );
+        }
+        renderAiArcherTabs();
+        renderAiArcherInsightsView();
+      } catch (err) {
+        console.error('Failed to load archery data for AI insights:', err);
+      }
+    }
+
+    function renderAiArcherTabs() {
+      const container = document.getElementById('ai-archer-pills-container');
+      if (!container) return;
+      const archersList = (activePrivateHub && Array.isArray(activePrivateHub.linked_archers) && activePrivateHub.linked_archers.length > 0)
+        ? activePrivateHub.linked_archers
+        : ['Long', 'Weijia'];
+
+      const keys = archersList.map(a => String(a).trim().toLowerCase());
+      if (!keys.includes(selectedAiArcher)) {
+        selectedAiArcher = keys[0] || 'long';
+      }
+
+      container.innerHTML = archersList.map(name => {
+        const k = String(name).trim().toLowerCase();
+        const isSel = k === selectedAiArcher;
+        const av = getAvatarForArcher(name, null);
+        return `
+          <button type="button" id="ai-archer-${escapeHtml(k)}" onclick="selectAiArcher('${escapeHtml(k)}')"
+            class="px-3 py-1.5 rounded-lg text-xs ${isSel ? 'font-extrabold bg-gradient-to-r from-purple-600 to-indigo-600 text-white shadow-md' : 'font-bold text-slate-400 hover:text-white'} transition flex items-center gap-1.5 cursor-pointer">
+            <span>${av.emoji || '🐱'} ${escapeHtml(name)}</span>
+          </button>
+        `;
+      }).join('');
+    }
+
+    function selectAiArcher(who) {
+      selectedAiArcher = String(who || 'long').toLowerCase();
+      renderAiArcherTabs();
+      renderAiArcherInsightsView();
+    }
+
+    function renderAiArcherInsightsView() {
+      if (!analyticsRawData || !analyticsRawData.archers) return;
+      const archerKey = selectedAiArcher || 'long';
+      const rawTarget = analyticsRawData.archers[archerKey] || {
+        name: archerKey.charAt(0).toUpperCase() + archerKey.slice(1),
+        avatar_id: null,
+        bow_category: 'BAREBOW',
+        sessions: []
+      };
+
+      const stats14D = computeFilteredArcherStats(rawTarget, '14D');
+      const stats3M = computeFilteredArcherStats(rawTarget, '3M');
+
+      // Update Active Archer Badge
+      const badgeEl = document.getElementById('ai-active-archer-badge');
+      if (badgeEl) {
+        badgeEl.innerHTML = `
+          ${renderArcherAvatarCircle(stats3M.name, stats3M.avatar_id, 'w-6 h-6')}
+          <span>Archer: <strong class="text-white">${escapeHtml(stats3M.name)}</strong> (${escapeHtml(stats3M.bow_category || 'Barebow')}) • ${stats14D.sessions.length} in 14d / ${stats3M.sessions.length} in 3m</span>
+        `;
+      }
+
+      // Update 14 Days Card
+      const card14Badge = document.getElementById('ai-card-14d-badge');
+      if (card14Badge) card14Badge.textContent = `${stats14D.sessions.length} Sessions • ${stats14D.lifetimeArrows} Arrows`;
+      const avg14El = document.getElementById('ai-stat-14d-avg');
+      if (avg14El) avg14El.textContent = stats14D.lifetimeAvg > 0 ? stats14D.lifetimeAvg.toFixed(2) : '--';
+      const pace14El = document.getElementById('ai-stat-14d-pace');
+      if (pace14El) pace14El.textContent = stats14D.lifetimeAvg > 0 ? `${Math.round(stats14D.lifetimeAvg * 30)}/300 pace` : '--';
+      const arr14El = document.getElementById('ai-stat-14d-arrows');
+      if (arr14El) arr14El.textContent = stats14D.lifetimeArrows;
+      const sess14El = document.getElementById('ai-stat-14d-sessions');
+      if (sess14El) sess14El.textContent = `${stats14D.sessions.length} session${stats14D.sessions.length === 1 ? '' : 's'}`;
+      const gold14El = document.getElementById('ai-stat-14d-gold');
+      if (gold14El) gold14El.textContent = `${stats14D.goldPct.toFixed(1)}%`;
+      const xs14El = document.getElementById('ai-stat-14d-xs');
+      if (xs14El) xs14El.textContent = `${stats14D.lifetimeTens} 10s • ${stats14D.lifetimeXs} Xs`;
+      const dev14El = document.getElementById('ai-stat-14d-stddev');
+      if (dev14El) dev14El.textContent = stats14D.avgStdDev > 0 ? stats14D.avgStdDev.toFixed(2) : '--';
+
+      // Update 3 Months Card
+      const card3mBadge = document.getElementById('ai-card-3m-badge');
+      if (card3mBadge) card3mBadge.textContent = `${stats3M.sessions.length} Sessions • ${stats3M.lifetimeArrows} Arrows`;
+      const avg3mEl = document.getElementById('ai-stat-3m-avg');
+      if (avg3mEl) avg3mEl.textContent = stats3M.lifetimeAvg > 0 ? stats3M.lifetimeAvg.toFixed(2) : '--';
+      const pace3mEl = document.getElementById('ai-stat-3m-pace');
+      if (pace3mEl) pace3mEl.textContent = stats3M.lifetimeAvg > 0 ? `${Math.round(stats3M.lifetimeAvg * 30)}/300 pace` : '--';
+      const arr3mEl = document.getElementById('ai-stat-3m-arrows');
+      if (arr3mEl) arr3mEl.textContent = stats3M.lifetimeArrows;
+      const sess3mEl = document.getElementById('ai-stat-3m-sessions');
+      if (sess3mEl) sess3mEl.textContent = `${stats3M.sessions.length} session${stats3M.sessions.length === 1 ? '' : 's'}`;
+      const gold3mEl = document.getElementById('ai-stat-3m-gold');
+      if (gold3mEl) gold3mEl.textContent = `${stats3M.goldPct.toFixed(1)}%`;
+      const xs3mEl = document.getElementById('ai-stat-3m-xs');
+      if (xs3mEl) xs3mEl.textContent = `${stats3M.lifetimeTens} 10s • ${stats3M.lifetimeXs} Xs`;
+      const best3mEl = document.getElementById('ai-stat-3m-best');
+      if (best3mEl) best3mEl.textContent = stats3M.bestArrowAvg > 0 ? stats3M.bestArrowAvg.toFixed(2) : '--';
+
+      // Check if cache exists
+      const cached = aiInsightsCache[archerKey];
+      if (cached && cached.insights) {
+        renderAiInsightsDisplay(cached.insights, cached.source, cached.model);
+      } else {
+        generateAiInsights(false);
+      }
+    }
+
+    function computeClientSideArcheryInsights(payload) {
+      const { archerName = 'Archer', bowCategory = 'BAREBOW', stats14d = {}, stats3m = {} } = payload || {};
+      const s14 = stats14d;
+      const s3m = stats3m;
+      const deltaAvg = Number(((s14.avgScorePerArrow || 0) - (s3m.avgScorePerArrow || 0)).toFixed(2));
+      const deltaGold = Number(((s14.goldPct || 0) - (s3m.goldPct || 0)).toFixed(1));
+
+      const trajectory = deltaAvg >= 0.2
+        ? 'Surging Upward'
+        : deltaAvg >= 0.05
+        ? 'Solidifying Baseline'
+        : deltaAvg > -0.15
+        ? 'Consistent Holding Pattern'
+        : 'Adjusting Form / Variance';
+
+      const trajectoryColor = deltaAvg >= 0.2 ? 'emerald' : deltaAvg >= 0.05 ? 'sky' : deltaAvg > -0.15 ? 'amber' : 'purple';
+
+      const volumeNote = (s14.sessionCount || 0) === 0
+        ? `No sessions recorded in the past 14 days. Compared to your 3-month baseline of ${s3m.sessionCount || 0} sessions (${s3m.totalArrows || 0} arrows), rebuilding a steady shooting cadence is the top priority.`
+        : `Shot ${s14.totalArrows} arrows across ${s14.sessionCount} session${s14.sessionCount === 1 ? '' : 's'} in the last 14 days (${Math.round((s14.totalArrows || 0) / (s14.sessionCount || 1))} arrows/session), maintaining regular training pace against the 3-month volume.`;
+
+      const scoringNote = (s14.sessionCount || 0) === 0
+        ? `Your 3-month benchmark stands at ${(s3m.avgScorePerArrow || 0).toFixed(2)} pts/arrow (${Math.round((s3m.avgScorePerArrow || 0) * 30)}/300 pace) with a ${(s3m.goldPct || 0).toFixed(1)}% gold rate.`
+        : `Averaging ${(s14.avgScorePerArrow || 0).toFixed(2)} pts/arrow (${Math.round((s14.avgScorePerArrow || 0) * 30)}/300 pace) over the last 14 days, reflecting a ${deltaAvg >= 0 ? '+' : ''}${deltaAvg} shift relative to your 3-month baseline of ${(s3m.avgScorePerArrow || 0).toFixed(2)}. Gold accuracy (9s & 10s) shifted by ${deltaGold >= 0 ? '+' : ''}${deltaGold}%.`;
+
+      const groupingNote = (s14.avgStdDev || 0) > 0
+        ? `Recent grouping dispersion is ${(s14.avgStdDev || 0).toFixed(2)} pts/arrow. ${s14.avgStdDev <= 1.25 ? 'Tight cluster density with minimal flyers.' : 'Wider spread indicating occasional dropouts or release inconsistency.'}`
+        : `3-month baseline standard deviation is ${s3m.avgStdDev ? s3m.avgStdDev.toFixed(2) : '1.30'} pts/arrow.`;
+
+      const pVsL = ((s14.leagueCount || 0) > 0 && (s14.practiceCount || 0) > 0)
+        ? `In the last 14 days, Practice averaged ${(s14.practiceAvg || 0).toFixed(2)} vs League at ${(s14.leagueAvg || 0).toFixed(2)} pts/arrow (${(s14.leagueAvg - s14.practiceAvg) >= 0 ? 'Excelling under tournament pressure' : 'Practice scores lead tournament output by ' + Math.abs(Number((s14.leagueAvg - s14.practiceAvg).toFixed(2))) + ' pts/arrow'}).`
+        : ((s3m.leagueCount || 0) > 0 && (s3m.practiceCount || 0) > 0)
+        ? `3-month data shows Practice average of ${(s3m.practiceAvg || 0).toFixed(2)} vs League average of ${(s3m.leagueAvg || 0).toFixed(2)} pts/arrow.`
+        : `Most logged volume is currently practice sessions. Transitioning practice flow directly onto the scoring line will build tournament confidence.`;
+
+      return {
+        success: true,
+        source: 'analytics',
+        model: 'archery-analytics-engine',
+        insights: {
+          headline: (s14.sessionCount || 0) > 0
+            ? `${archerName} is showing ${trajectory.toLowerCase()} with ${(s14.avgScorePerArrow || 0).toFixed(2)} pts/arrow over the last 14 days (${deltaAvg >= 0 ? '+' : ''}${deltaAvg} vs 3-month baseline).`
+            : `${archerName}'s 3-month baseline establishes a solid ${(s3m.avgScorePerArrow || 0).toFixed(2)} pts/arrow benchmark across ${s3m.totalArrows || 0} arrows.`,
+          formTrajectory: trajectory,
+          trajectoryColor: trajectoryColor,
+          comparison14dVs3m: {
+            scoringDelta: scoringNote,
+            volumeAndRhythm: volumeNote,
+            groupingAndSpread: groupingNote
+          },
+          environmentBreakdown: {
+            practiceVsLeague: pVsL
+          },
+          keyStrengths: [
+            (s14.goldPct || 0) >= 50
+              ? `High gold-ring conversion rate (${(s14.goldPct || 0).toFixed(1)}% in 14d) reflecting dependable sight picture and anchor stability.`
+              : `Solid arrow base with ${s3m.totalArrows || 0} lifetime logged arrows developing muscle memory.`,
+            (s14.xCount || 0) > 0
+              ? `Strong center-ring execution with ${s14.xCount} Xs logged in the past 14 days.`
+              : `Consistent session participation throughout the 3-month lookback period.`,
+            `Committed journaling of session notes and ends for progressive refinement.`
+          ],
+          actionableFocusAreas: [
+            {
+              title: 'Blank-Bale Expansion Drill (First 15 Arrows)',
+              description: 'Dedicate the first 15 arrows of each practice to a blank bale at 5 yards. Focus 100% on continuous back-tension expansion and letting the clicker/release happen naturally without target panic.',
+              targetMetric: `Maintain grouping standard deviation under ${Math.max(1.0, (s14.avgStdDev || 1.3) * 0.9).toFixed(2)} pts`
+            },
+            {
+              title: 'League Match Simulation (Pressure Ends)',
+              description: 'During practice, shoot three 3-arrow ends with a strict 2-minute shot clock. Treat each shot with competition routine: deep breath at setup, consistent anchor touch, and static follow-through until arrow impacts.',
+              targetMetric: `Target 14-day average of ${Math.max(s14.avgScorePerArrow || 0, (s3m.avgScorePerArrow || 0) + 0.15).toFixed(2)} pts/arrow`
+            }
+          ],
+          coachQuote: 'The arrow does not lie: trust the process, execute the back expansion, and let the gold come to you.'
+        }
+      };
+    }
+
+    async function generateAiInsights(forceRefresh = false) {
+      if (isAiGenerating) return;
+      const archerKey = selectedAiArcher || 'long';
+      if (!analyticsRawData || !analyticsRawData.archers) return;
+
+      const rawTarget = analyticsRawData.archers[archerKey] || {
+        name: archerKey.charAt(0).toUpperCase() + archerKey.slice(1),
+        avatar_id: null,
+        bow_category: 'BAREBOW',
+        sessions: []
+      };
+
+      const stats14D = computeFilteredArcherStats(rawTarget, '14D');
+      const stats3M = computeFilteredArcherStats(rawTarget, '3M');
+
+      const btn = document.getElementById('btn-generate-ai-insights');
+      const displayContainer = document.getElementById('ai-insights-display-container');
+
+      isAiGenerating = true;
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i><span>Analyzing 14d &amp; 3m Data...</span>`;
+      }
+
+      if (displayContainer) {
+        displayContainer.innerHTML = `
+          <div class="rounded-2xl bg-slate-900/95 border border-purple-500/30 p-8 text-center space-y-4 shadow-xl">
+            <div class="inline-flex items-center justify-center w-14 h-14 rounded-2xl bg-purple-500/15 border border-purple-500/30 text-purple-400 text-2xl animate-pulse mx-auto">
+              <i class="fa-solid fa-wand-magic-sparkles"></i>
+            </div>
+            <div>
+              <h3 class="text-base font-extrabold text-white">Synthesizing Archery Insights...</h3>
+              <p class="text-xs text-slate-400 mt-1">Benchmarking 14-day arrow volume and gold percentages against 3-month baseline with Gemini 3.8 Flash</p>
+            </div>
+            <div class="flex items-center justify-center gap-1.5 text-xs text-purple-300 font-semibold">
+              <i class="fa-solid fa-circle-notch fa-spin text-purple-400"></i>
+              <span>Evaluating anchor consistency, grouping dispersion &amp; competition pressure</span>
+            </div>
+          </div>
+        `;
+      }
+
+      try {
+        const p14 = stats14D.sessions.filter(s => (s.session_category || 'Practice').toLowerCase() === 'practice');
+        const l14 = stats14D.sessions.filter(s => (s.session_category || '').toLowerCase() === 'league');
+        const p3m = stats3M.sessions.filter(s => (s.session_category || 'Practice').toLowerCase() === 'practice');
+        const l3m = stats3M.sessions.filter(s => (s.session_category || '').toLowerCase() === 'league');
+
+        const calcAvg = arr => {
+          const arrs = arr.reduce((acc, x) => acc + x.arrows_shot, 0);
+          const scrs = arr.reduce((acc, x) => acc + x.total_score, 0);
+          return arrs > 0 ? Number((scrs / arrs).toFixed(2)) : 0;
+        };
+
+        const payload = {
+          archerName: rawTarget.name || archerKey,
+          bowCategory: rawTarget.bow_category || 'BAREBOW',
+          stats14d: {
+            sessionCount: stats14D.sessions.length,
+            totalArrows: stats14D.lifetimeArrows,
+            avgScorePerArrow: stats14D.lifetimeAvg,
+            xCount: stats14D.lifetimeXs,
+            tenCount: stats14D.lifetimeTens,
+            goldPct: stats14D.goldPct,
+            avgStdDev: stats14D.avgStdDev,
+            practiceCount: p14.length,
+            leagueCount: l14.length,
+            practiceAvg: calcAvg(p14),
+            leagueAvg: calcAvg(l14)
+          },
+          stats3m: {
+            sessionCount: stats3M.sessions.length,
+            totalArrows: stats3M.lifetimeArrows,
+            avgScorePerArrow: stats3M.lifetimeAvg,
+            xCount: stats3M.lifetimeXs,
+            tenCount: stats3M.lifetimeTens,
+            goldPct: stats3M.goldPct,
+            avgStdDev: stats3M.avgStdDev,
+            bestArrowAvg: stats3M.bestArrowAvg,
+            practiceCount: p3m.length,
+            leagueCount: l3m.length,
+            practiceAvg: calcAvg(p3m),
+            leagueAvg: calcAvg(l3m)
+          },
+          recentSessionsSummary: (rawTarget.sessions || []).slice(-10).reverse().map(s => ({
+            date: s.date,
+            category: s.session_category || 'Practice',
+            arrows_shot: s.arrows_shot,
+            total_score: s.total_score,
+            avg_per_arrow: s.avg_per_arrow,
+            golds_10s: s.golds_10s,
+            x_count: s.x_count,
+            notes: s.notes || ''
+          }))
+        };
+
+        let json = null;
+        try {
+          const res = await fetch('/api/scoring/ai-insights', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify(payload)
+          });
+          if (res.ok) {
+            json = await res.json();
+          }
+        } catch (fetchErr) {
+          console.warn('Backend /api/scoring/ai-insights unreachable (e.g. static hosting like GitHub Pages), engaging client coaching engine:', fetchErr);
+        }
+
+        if (!json || !json.success || !json.insights) {
+          json = computeClientSideArcheryInsights(payload);
+        }
+
+        if (json && json.success && json.insights) {
+          aiInsightsCache[archerKey] = {
+            insights: json.insights,
+            source: json.source || 'gemini',
+            model: json.model || 'gemini-3.8-flash',
+            timestamp: Date.now()
+          };
+          renderAiInsightsDisplay(json.insights, json.source, json.model);
+        } else {
+          throw new Error((json && json.error) || 'Failed to generate insights');
+        }
+      } catch (err) {
+        console.error('Error generating AI archery insights:', err);
+        if (displayContainer) {
+          displayContainer.innerHTML = `
+            <div class="rounded-2xl bg-rose-950/60 border border-rose-500/40 p-5 space-y-3 shadow-lg">
+              <div class="flex items-center gap-2 text-rose-300 font-extrabold text-sm">
+                <i class="fa-solid fa-triangle-exclamation"></i>
+                <span>Unable to Generate Insights</span>
+              </div>
+              <p class="text-xs text-rose-200">${escapeHtml(err.message || 'An error occurred contacting the insights engine.')}</p>
+              <button type="button" onclick="generateAiInsights(true)" class="px-3.5 py-1.5 rounded-lg bg-rose-500 hover:bg-rose-600 text-white font-bold text-xs transition cursor-pointer">
+                <i class="fa-solid fa-rotate-right mr-1.5"></i>Retry Analysis
+              </button>
+            </div>
+          `;
+        }
+      } finally {
+        isAiGenerating = false;
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-rotate-right"></i><span>Re-Analyze Insights</span>`;
+        }
+      }
+    }
+
+    function renderAiInsightsDisplay(insights, source, model) {
+      const container = document.getElementById('ai-insights-display-container');
+      if (!container || !insights) return;
+
+      const traj = insights.formTrajectory || 'Steady Progression';
+      let trajBadgeColor = 'bg-sky-500/15 text-sky-300 border-sky-500/30';
+      if (insights.trajectoryColor === 'emerald' || traj.toLowerCase().includes('surg') || traj.toLowerCase().includes('upward')) {
+        trajBadgeColor = 'bg-emerald-500/15 text-emerald-300 border-emerald-500/30';
+      } else if (insights.trajectoryColor === 'amber' || traj.toLowerCase().includes('plateau') || traj.toLowerCase().includes('holding')) {
+        trajBadgeColor = 'bg-amber-500/15 text-amber-300 border-amber-500/30';
+      } else if (insights.trajectoryColor === 'purple' || traj.toLowerCase().includes('variance')) {
+        trajBadgeColor = 'bg-purple-500/15 text-purple-300 border-purple-500/30';
+      }
+
+      const modelBadge = source === 'gemini'
+        ? `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-purple-500/15 text-purple-300 border border-purple-500/30 text-[10px] font-bold">
+            <i class="fa-solid fa-sparkles text-purple-400"></i>
+            <span>Gemini 3.8 Flash • Olympic Coach AI</span>
+          </span>`
+        : `<span class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-slate-800 text-slate-300 border border-slate-700 text-[10px] font-bold">
+            <i class="fa-solid fa-chart-line text-amber-400"></i>
+            <span>Archery Biomechanics Engine</span>
+          </span>`;
+
+      const comp = insights.comparison14dVs3m || {};
+      const env = insights.environmentBreakdown || {};
+      const strengths = Array.isArray(insights.keyStrengths) ? insights.keyStrengths : [];
+      const focusAreas = Array.isArray(insights.actionableFocusAreas) ? insights.actionableFocusAreas : [];
+
+      container.innerHTML = `
+        <!-- Hero Evaluation Card -->
+        <div class="relative overflow-hidden rounded-2xl bg-gradient-to-br from-slate-900/95 via-purple-950/20 to-slate-900/95 border border-purple-500/40 p-5 sm:p-6 shadow-2xl space-y-4">
+          <div class="flex items-center justify-between gap-3 flex-wrap">
+            <div class="flex items-center gap-2 flex-wrap">
+              <span class="inline-flex items-center gap-1.5 px-3 py-1 rounded-full text-xs font-black uppercase tracking-wider border ${trajBadgeColor}">
+                <span class="w-2 h-2 rounded-full bg-current animate-ping"></span>
+                <span>${escapeHtml(traj)}</span>
+              </span>
+              ${modelBadge}
+            </div>
+            <span class="text-[11px] font-mono text-slate-400">Analysis updated just now</span>
+          </div>
+
+          <div>
+            <h3 class="text-base sm:text-lg font-black text-white leading-snug">
+              ${escapeHtml(insights.headline || '')}
+            </h3>
+          </div>
+
+          ${insights.coachQuote ? `
+            <div class="rounded-xl bg-slate-950/80 border border-slate-800/80 p-3.5 flex items-start gap-3">
+              <i class="fa-solid fa-quote-left text-purple-400 text-lg mt-0.5 shrink-0"></i>
+              <div class="text-xs italic text-slate-300 font-medium leading-relaxed">
+                "${escapeHtml(insights.coachQuote)}"
+              </div>
+            </div>
+          ` : ''}
+        </div>
+
+        <!-- 2-Column Comparison Analysis -->
+        <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+          <!-- Col 1: 14-Day Trajectory vs 3-Month Baseline -->
+          <div class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3.5">
+            <div class="flex items-center gap-2 border-b border-slate-800/80 pb-2.5">
+              <i class="fa-solid fa-chart-line text-purple-400 text-sm"></i>
+              <h4 class="text-xs font-black uppercase tracking-wider text-white">14d Form vs. 3M Baseline</h4>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              ${comp.scoringDelta ? `
+                <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/60 space-y-1">
+                  <div class="text-[10px] uppercase font-bold text-amber-400 flex items-center gap-1">
+                    <i class="fa-solid fa-bullseye text-[9px]"></i>
+                    <span>Scoring &amp; Gold Trajectory</span>
+                  </div>
+                  <p class="text-slate-300 leading-relaxed font-medium">${escapeHtml(comp.scoringDelta)}</p>
+                </div>
+              ` : ''}
+
+              ${comp.volumeAndRhythm ? `
+                <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/60 space-y-1">
+                  <div class="text-[10px] uppercase font-bold text-sky-400 flex items-center gap-1">
+                    <i class="fa-solid fa-arrows-spin text-[9px]"></i>
+                    <span>Arrow Volume &amp; Rhythm</span>
+                  </div>
+                  <p class="text-slate-300 leading-relaxed font-medium">${escapeHtml(comp.volumeAndRhythm)}</p>
+                </div>
+              ` : ''}
+
+              ${comp.groupingAndSpread ? `
+                <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/60 space-y-1">
+                  <div class="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
+                    <i class="fa-solid fa-compress text-[9px]"></i>
+                    <span>Grouping Dispersion &amp; Consistency</span>
+                  </div>
+                  <p class="text-slate-300 leading-relaxed font-medium">${escapeHtml(comp.groupingAndSpread)}</p>
+                </div>
+              ` : ''}
+            </div>
+          </div>
+
+          <!-- Col 2: Environment & Competition Dynamics -->
+          <div class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3.5">
+            <div class="flex items-center gap-2 border-b border-slate-800/80 pb-2.5">
+              <i class="fa-solid fa-trophy text-amber-400 text-sm"></i>
+              <h4 class="text-xs font-black uppercase tracking-wider text-white">Practice vs. League Pressure</h4>
+            </div>
+
+            <div class="space-y-3 text-xs">
+              <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/60 space-y-1">
+                <div class="text-[10px] uppercase font-bold text-amber-400 flex items-center gap-1">
+                  <i class="fa-solid fa-scale-balanced text-[9px]"></i>
+                  <span>Competitive Performance Differential</span>
+                </div>
+                <p class="text-slate-300 leading-relaxed font-medium">${escapeHtml(env.practiceVsLeague || 'Balanced performance across practice and league lines.')}</p>
+              </div>
+
+              <!-- Technical Strengths -->
+              <div class="bg-slate-950/60 rounded-xl p-3 border border-slate-800/60 space-y-2">
+                <div class="text-[10px] uppercase font-bold text-emerald-400 flex items-center gap-1">
+                  <i class="fa-solid fa-shield-check text-[9px]"></i>
+                  <span>Identified Strengths</span>
+                </div>
+                <ul class="space-y-1.5">
+                  ${strengths.map(s => `
+                    <li class="flex items-start gap-2 text-slate-300">
+                      <i class="fa-solid fa-check text-emerald-400 mt-1 shrink-0 text-[10px]"></i>
+                      <span class="leading-relaxed font-medium">${escapeHtml(s)}</span>
+                    </li>
+                  `).join('')}
+                </ul>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Actionable Focus Prescriptions (Drills for next 14 days) -->
+        <div class="rounded-2xl bg-slate-900/95 border border-slate-800 p-4 sm:p-5 shadow-lg space-y-3.5">
+          <div class="flex items-center justify-between gap-2 border-b border-slate-800/80 pb-2.5">
+            <div class="flex items-center gap-2">
+              <i class="fa-solid fa-crosshairs text-purple-400 text-sm"></i>
+              <h4 class="text-xs font-black uppercase tracking-wider text-white">Targeted 14-Day Focus Plan</h4>
+            </div>
+            <span class="text-[10px] font-bold text-purple-300 bg-purple-500/15 border border-purple-500/30 px-2 py-0.5 rounded-full">High-Leverage Drills</span>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3.5">
+            ${focusAreas.map((f, idx) => `
+              <div class="bg-slate-950 border border-slate-800 rounded-xl p-3.5 space-y-2 flex flex-col justify-between">
+                <div class="space-y-1.5">
+                  <div class="flex items-center gap-2">
+                    <span class="w-5 h-5 rounded-lg bg-purple-500/20 text-purple-300 border border-purple-500/40 text-[11px] font-black flex items-center justify-center shrink-0">
+                      ${idx + 1}
+                    </span>
+                    <h5 class="text-xs font-black text-white">${escapeHtml(f.title || 'Technical Drill')}</h5>
+                  </div>
+                  <p class="text-xs text-slate-300 leading-relaxed font-medium">${escapeHtml(f.description || '')}</p>
+                </div>
+                ${f.targetMetric ? `
+                  <div class="pt-2 border-t border-slate-800/80 flex items-center justify-between gap-2">
+                    <span class="text-[10px] font-bold text-slate-400 uppercase">Target:</span>
+                    <span class="text-[11px] font-mono font-bold text-amber-300 bg-amber-500/10 border border-amber-500/30 px-2 py-0.5 rounded-md truncate">
+                      ${escapeHtml(f.targetMetric)}
+                    </span>
+                  </div>
+                ` : ''}
+              </div>
+            `).join('')}
+          </div>
+        </div>
+      `;
+    }
+
     // Expose all interactive functions to window because this script is type="module"
     Object.assign(window, {
+      showAiInsightsPage,
+      selectAiArcher,
+      generateAiInsights,
       setHubPage,
       setHubPageSize,
       setAnalyticsJournalPage,

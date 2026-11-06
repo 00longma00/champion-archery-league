@@ -6,24 +6,20 @@ A clean, mobile-responsive attendance tracker for weekly Sunday night archery le
 - **Upcoming Sunday Event Banner:** Countdown clock and Sunday date generator.
 - **League Status Indicator:** Organizer-controlled status badge (`LEAGUE IS ON`, `STATUS PENDING`, `LEAGUE IS OFF`) with custom announcements/notes.
 - **RSVP Form:** Fast 1-click **Yes / Maybe / No** attendance submission with optional notes.
-- **Email Reminders:** Archers can opt in to receive an automated Saturday morning email reminder (10:00 AM) if they haven't submitted their RSVP yet.
-- **Gmail SMTP Integration:** Sends reminders directly through your Gmail account using a standard Google App Password.
-- **Zero Cloud Database Dependencies:** Data stored cleanly in `data.json` on your local hardware.
+- **Live Scoring Hub:** Target bale assignments, on-screen target keypad, live leaderboard, and private practice hub.
+- **Zero Cloud Server Setup:** Runs seamlessly with Express and Firebase.
 
 ## Quick Start (Run Locally)
 
 1. **Install dependencies:**
    ```bash
-   cd archery-league
-   npm install express nodemailer node-cron
+   npm install
    ```
 
 2. **Configure environment:**
    Copy `.env.example` to `.env` and configure:
    - `ADMIN_PIN`: Secret PIN for the Organizer button (default `1234`).
-   - `SMTP_USER`: Your Gmail address (e.g. `yourname@gmail.com`).
-   - `SMTP_PASS`: Your 16-character Google App Password.
-   - `PUBLIC_URL`: Your public Cloudflare Tunnel URL.
+   - `LEAGUE_TIME`: Default league time (e.g. 7:00 PM).
 
 3. **Start the server:**
    ```bash

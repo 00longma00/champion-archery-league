@@ -428,13 +428,6 @@
         <button type="button" id="btn-save-admin-status" onclick="saveAdminStatus()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
           <span>Update League Status</span>
         </button>
-
-        <div class="hidden pt-3 border-t border-slate-800/80">
-          <button type="button" id="btn-test-reminder" onclick="triggerTestReminder()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
-            <i class="fa-regular fa-paper-plane text-amber-400"></i>
-            <span>Test Saturday Reminder Dispatch</span>
-          </button>
-        </div>
       </div>
     </div>
   </div>
@@ -1652,27 +1645,7 @@
       }
     }
 
-    function triggerTestReminder() {
-      const btn = document.getElementById('btn-test-reminder');
-      if (btn) {
-        btn.disabled = true;
-        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> <span>Sending Reminders...</span>`;
-      }
-      fetch('/api/admin/test-remind', {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({})
-      })
-      .then(res => res.json())
-      .then(data => alert(data.success ? data.message : ('Failed: ' + (data.error || 'Unknown error'))))
-      .catch(() => alert('Network error testing reminders.'))
-      .finally(() => {
-        if (btn) {
-          btn.disabled = false;
-          btn.innerHTML = `<i class="fa-regular fa-paper-plane text-amber-400"></i> <span>Test Saturday Reminder Dispatch</span>`;
-        }
-      });
-    }
+
 
     function timeAgo(dateString) {
       if (!dateString) return '';
@@ -1719,7 +1692,6 @@
     window.openAdminModal = openAdminModal;
     window.closeAdminModal = closeAdminModal;
     window.saveAdminStatus = saveAdminStatus;
-    window.triggerTestReminder = triggerTestReminder;
     window.handleRsvpSubmit = handleRsvpSubmit;
     window.toggleEmailField = toggleEmailField;
 
