@@ -4,13 +4,14 @@
   "description": "Weekly Archery League Attendance and RSVP Tracker",
   "main": "server.js",
   "scripts": {
-    "start": "node server.js"
+    "dev": "node server.js",
+    "start": "node server.js",
+    "build": "node --check server.js db.js scoring-db.js notifier.js",
+    "lint": "node --check server.js db.js scoring-db.js notifier.js"
   },
   "dependencies": {
-    "better-sqlite3": "^11.1.2",
     "express": "^4.22.3",
     "firebase": "^13.1.0",
-    "localtunnel": "^2.0.2",
     "node-cron": "^3.0.3",
     "nodemailer": "^6.10.1"
   }

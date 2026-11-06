@@ -3,7 +3,10 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Sunday Archery League RSVP</title>
+  <title>Champion Archery League - RSVP & Scoring</title>
+  <meta name="description" content="Weekly Archery League Attendance, RSVP Tracker, and Live Tournament Scoring Hub">
+  <meta property="og:title" content="Champion Archery League - RSVP & Scoring">
+  <meta property="og:description" content="Weekly Archery League Attendance, RSVP Tracker, and Live Tournament Scoring Hub">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
   <style>
@@ -343,7 +346,7 @@
 
         <!-- Submit Button -->
         <button type="submit" id="btn-submit"
-          class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2">
+          class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
           <span>🏹</span>
           <span>Save RSVP</span>
         </button>
@@ -422,12 +425,12 @@
             class="w-full bg-slate-950 border border-slate-700 rounded-xl px-3 py-2 text-xs text-white">
         </div>
 
-        <button onclick="saveAdminStatus()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition">
-          Update League Status
+        <button type="button" id="btn-save-admin-status" onclick="saveAdminStatus()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+          <span>Update League Status</span>
         </button>
 
         <div class="hidden pt-3 border-t border-slate-800/80">
-          <button onclick="triggerTestReminder()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5">
+          <button type="button" id="btn-test-reminder" onclick="triggerTestReminder()" class="w-full bg-slate-800 hover:bg-slate-700 text-slate-300 font-semibold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
             <i class="fa-regular fa-paper-plane text-amber-400"></i>
             <span>Test Saturday Reminder Dispatch</span>
           </button>
@@ -1482,8 +1485,10 @@
       }
 
       const submitBtn = document.getElementById('btn-submit');
-      submitBtn.disabled = true;
-      submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin"></i> Saving...`;
+      if (submitBtn) {
+        submitBtn.disabled = true;
+        submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> <span>Saving RSVP...</span>`;
+      }
 
       try {
         await submitRsvp({
@@ -1505,8 +1510,10 @@
         console.error(err);
         alert(err.message || ('Error submitting RSVP: ' + err));
       } finally {
-        submitBtn.disabled = false;
-        submitBtn.innerHTML = `<span>🏹</span> <span>Save RSVP</span>`;
+        if (submitBtn) {
+          submitBtn.disabled = false;
+          submitBtn.innerHTML = `<span>🏹</span> <span>Save RSVP</span>`;
+        }
       }
     }
 
@@ -1623,6 +1630,11 @@
     async function saveAdminStatus() {
       const status = document.getElementById('admin-status').value;
       const leagueTime = document.getElementById('admin-time').value;
+      const btn = document.getElementById('btn-save-admin-status');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> <span>Updating Status...</span>`;
+      }
 
       try {
         await updateAdminStatus({ status, leagueTime });
@@ -1632,10 +1644,20 @@
       } catch (err) {
         console.error(err);
         alert('Failed to update league status: ' + (err.message || err));
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Update League Status</span>`;
+        }
       }
     }
 
     function triggerTestReminder() {
+      const btn = document.getElementById('btn-test-reminder');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i> <span>Sending Reminders...</span>`;
+      }
       fetch('/api/admin/test-remind', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -1643,7 +1665,13 @@
       })
       .then(res => res.json())
       .then(data => alert(data.success ? data.message : ('Failed: ' + (data.error || 'Unknown error'))))
-      .catch(() => alert('Network error testing reminders.'));
+      .catch(() => alert('Network error testing reminders.'))
+      .finally(() => {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-regular fa-paper-plane text-amber-400"></i> <span>Test Saturday Reminder Dispatch</span>`;
+        }
+      });
     }
 
     function timeAgo(dateString) {

@@ -1,0 +1,8 @@
+{
+  "name": "Champion Archery League",
+  "description": "Weekly Archery League Attendance, RSVP Tracker, and Live Tournament Scoring Hub",
+  "permissions": [],
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

@@ -693,8 +693,8 @@
               <span class="w-6 h-6 rounded-full bg-slate-700 text-white text-xs font-black flex items-center justify-center">3</span>
               <span>Event Format &amp; Rules</span>
             </h3>
-            <button type="button" onclick="deleteCurrentEvent()" class="text-[11px] text-rose-400 hover:text-rose-300 bg-rose-950/40 border border-rose-800/50 px-2.5 py-1 rounded-lg font-semibold">
-              <i class="fa-solid fa-trash-can mr-1"></i>Delete Event
+            <button type="button" id="btn-delete-event" onclick="deleteCurrentEvent()" class="text-[11px] text-rose-400 hover:text-rose-300 bg-rose-950/40 border border-rose-800/50 px-2.5 py-1 rounded-lg font-semibold flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+              <i class="fa-solid fa-trash-can mr-1"></i><span>Delete Event</span>
             </button>
           </div>
 
@@ -748,8 +748,8 @@
             <input type="checkbox" id="edit-ev-swap" class="w-5 h-5 accent-amber-500 rounded cursor-pointer">
           </div>
 
-          <button type="button" onclick="saveEventFormatSettings()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs border border-slate-700 transition">
-            Update Event Format Settings
+          <button type="button" id="btn-save-event-format" onclick="saveEventFormatSettings()" class="w-full bg-slate-800 hover:bg-slate-700 text-white font-bold py-2.5 rounded-xl text-xs border border-slate-700 transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+            <span>Update Event Format Settings</span>
           </button>
         </section>
       </div>
@@ -1366,8 +1366,8 @@
         <div class="flex items-center gap-2">
           <input type="text" id="sc-modal-note-input" placeholder="Add personal shot process or bow tuning note for this session..."
             class="flex-1 bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:border-amber-500">
-          <button type="button" onclick="saveScorecardModalNote()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs transition shrink-0">
-            Save Note
+          <button type="button" id="btn-save-sc-note" onclick="saveScorecardModalNote()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold px-3 py-1.5 rounded-lg text-xs transition shrink-0 flex items-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+            <span>Save Note</span>
           </button>
         </div>
       </div>
@@ -1405,8 +1405,8 @@
         <button type="button" onclick="closeArcherNoteModal()" class="bg-slate-800 hover:bg-slate-700 text-slate-300 font-bold py-2.5 rounded-xl text-xs border border-slate-700 transition">
           Cancel
         </button>
-        <button type="button" onclick="submitArcherNoteModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition">
-          Save Personal Note
+        <button type="button" id="btn-submit-archer-note" onclick="submitArcherNoteModal()" class="bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-2.5 rounded-xl text-xs shadow-lg shadow-amber-500/20 transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
+          <span>Save Personal Note</span>
         </button>
       </div>
     </div>
@@ -1467,11 +1467,11 @@
           <i class="fa-solid fa-rotate-left text-slate-400"></i>
           <span>Clear</span>
         </button>
-        <button type="button" onclick="saveKeypadAndNext(false)" class="keypad-btn bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow">
+        <button type="button" id="btn-keypad-save" onclick="saveKeypadAndNext(false)" class="keypad-btn bg-emerald-600 hover:bg-emerald-500 text-white font-extrabold py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow disabled:opacity-50 disabled:cursor-not-allowed">
           <i class="fa-solid fa-check"></i>
           <span>Save</span>
         </button>
-        <button type="button" onclick="saveKeypadAndNext(true)" class="keypad-btn bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20">
+        <button type="button" id="btn-keypad-next" onclick="saveKeypadAndNext(true)" class="keypad-btn bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-black py-3 rounded-xl text-xs flex items-center justify-center gap-1.5 shadow-lg shadow-amber-500/20 disabled:opacity-50 disabled:cursor-not-allowed">
           <span>Next</span>
           <i class="fa-solid fa-arrow-down"></i>
         </button>
@@ -4615,6 +4615,22 @@
       const xCount = arrowsToSave.filter(a => String(a).toUpperCase() === 'X').length;
       const tenCount = arrowsToSave.filter(a => (fmt.values[String(a).toUpperCase()] || 0) === maxVal).length;
 
+      const saveBtn = document.getElementById('btn-keypad-save');
+      const nextBtn = document.getElementById('btn-keypad-next');
+      if (advanceToNextArcher) {
+        if (nextBtn) {
+          nextBtn.disabled = true;
+          nextBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i><span>Saving...</span>`;
+        }
+        if (saveBtn) saveBtn.disabled = true;
+      } else {
+        if (saveBtn) {
+          saveBtn.disabled = true;
+          saveBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i><span>Saving...</span>`;
+        }
+        if (nextBtn) nextBtn.disabled = true;
+      }
+
       try {
         if (appMode === 'private' && activePrivateHub) {
           await submitPrivateEndScore(activePrivateHub.id, {
@@ -4706,6 +4722,15 @@
         closeKeypad();
       } catch (err) {
         alert('Network error saving score.');
+      } finally {
+        if (saveBtn) {
+          saveBtn.disabled = false;
+          saveBtn.innerHTML = `<i class="fa-solid fa-check"></i><span>Save</span>`;
+        }
+        if (nextBtn) {
+          nextBtn.disabled = false;
+          nextBtn.innerHTML = `<span>Next</span><i class="fa-solid fa-arrow-down"></i>`;
+        }
       }
     }
 
@@ -5069,18 +5094,42 @@
     async function submitArcherNoteModal() {
       if (!activeEventData || !activeEventData.event || !noteModalParticipantId) return;
       const noteText = (document.getElementById('note-modal-textarea').value || '').trim();
-      await saveParticipantPersonalNote(noteModalParticipantId, noteText);
-      closeArcherNoteModal();
+      const btn = document.getElementById('btn-submit-archer-note');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i><span>Saving Note...</span>`;
+      }
+      try {
+        await saveParticipantPersonalNote(noteModalParticipantId, noteText);
+        closeArcherNoteModal();
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Save Personal Note</span>`;
+        }
+      }
     }
 
     async function saveScorecardModalNote() {
       if (!activeEventData || !activeEventData.event || !window.currentScorecardParticipantId) return;
       const noteText = (document.getElementById('sc-modal-note-input').value || '').trim();
-      await saveParticipantPersonalNote(window.currentScorecardParticipantId, noteText);
-      const noteStatus = document.getElementById('sc-modal-note-status');
-      if (noteStatus) {
-        noteStatus.classList.remove('hidden');
-        setTimeout(() => noteStatus.classList.add('hidden'), 2000);
+      const btn = document.getElementById('btn-save-sc-note');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i><span>Saving...</span>`;
+      }
+      try {
+        await saveParticipantPersonalNote(window.currentScorecardParticipantId, noteText);
+        const noteStatus = document.getElementById('sc-modal-note-status');
+        if (noteStatus) {
+          noteStatus.classList.remove('hidden');
+          setTimeout(() => noteStatus.classList.add('hidden'), 2000);
+        }
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Save Note</span>`;
+        }
       }
     }
 
@@ -5622,6 +5671,12 @@
         swap_top_bottom: document.getElementById('edit-ev-swap').checked
       };
 
+      const btn = document.getElementById('btn-save-event-format');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i><span>Saving Settings...</span>`;
+      }
+
       try {
         if (appMode === 'private' && activePrivateHub) {
           if (String(activeEventData.event.id).startsWith('league:')) {
@@ -5649,6 +5704,11 @@
       } catch (err) {
         console.error(err);
         alert('Network error updating event settings.');
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<span>Update Event Format Settings</span>`;
+        }
       }
     }
 
@@ -5659,6 +5719,11 @@
         return;
       }
       if (!confirm(`Delete "${activeEventData.event.name}" and all its recorded scores?`)) return;
+      const btn = document.getElementById('btn-delete-event');
+      if (btn) {
+        btn.disabled = true;
+        btn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1"></i><span>Deleting...</span>`;
+      }
       try {
         if (appMode === 'private') {
           await deletePrivateScoringEvent(activeEventData.event.id);
@@ -5669,6 +5734,11 @@
       } catch (err) {
         console.error(err);
         alert('Error deleting event: ' + (err.message || err));
+      } finally {
+        if (btn) {
+          btn.disabled = false;
+          btn.innerHTML = `<i class="fa-solid fa-trash-can mr-1"></i><span>Delete Event</span>`;
+        }
       }
     }
 
