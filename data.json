@@ -11,9 +11,9 @@
       "email": "long.ma.mtl@gmail.com",
       "remindMe": true,
       "createdAt": "2026-10-16T12:00:00.000Z",
-      "avatarId": "bengal_cat",
-      "bowCategory": "BAREBOW",
-      "customTitle": null
+      "avatarId": null,
+      "customAvatar": null,
+      "bowCategory": "BAREBOW"
     },
     {
       "id": "1792214258014",
@@ -21,9 +21,9 @@
       "email": "",
       "remindMe": false,
       "createdAt": "2026-10-17T05:17:38.014Z",
-      "avatarId": "devon_rex_cat",
-      "bowCategory": "BAREBOW",
-      "customTitle": null
+      "avatarId": null,
+      "customAvatar": null,
+      "bowCategory": "BAREBOW"
     },
     {
       "id": "1792215018187",
@@ -31,9 +31,9 @@
       "email": "",
       "remindMe": false,
       "createdAt": "2026-10-17T05:30:18.187Z",
-      "avatarId": "maine_coon_cat",
-      "bowCategory": "OLYMPIC_RECURVE",
-      "customTitle": null
+      "avatarId": null,
+      "customAvatar": null,
+      "bowCategory": "OLYMPIC_RECURVE"
     },
     {
       "id": "1792217008304",
@@ -41,9 +41,9 @@
       "email": "",
       "remindMe": false,
       "createdAt": "2026-10-17T06:03:28.304Z",
-      "avatarId": "shadow_cat",
-      "bowCategory": "BAREBOW",
-      "customTitle": null
+      "avatarId": null,
+      "customAvatar": null,
+      "bowCategory": "BAREBOW"
     },
     {
       "id": "1792218180555",
@@ -51,9 +51,9 @@
       "email": "",
       "remindMe": false,
       "createdAt": "2026-10-17T06:23:00.555Z",
-      "avatarId": "golden_dog",
-      "bowCategory": "OLYMPIC_RECURVE",
-      "customTitle": null
+      "avatarId": null,
+      "customAvatar": null,
+      "bowCategory": "OLYMPIC_RECURVE"
     },
     {
       "id": "1792222949057",
@@ -61,9 +61,9 @@
       "email": "",
       "remindMe": false,
       "createdAt": "2026-10-17T07:42:29.057Z",
-      "avatarId": "corgi_dog",
-      "bowCategory": "OLYMPIC_RECURVE",
-      "customTitle": null
+      "avatarId": null,
+      "customAvatar": null,
+      "bowCategory": "OLYMPIC_RECURVE"
     },
     {
       "id": "1792287470526",
@@ -71,16 +71,16 @@
       "email": "",
       "remindMe": true,
       "createdAt": "2026-10-18T01:37:50.526Z",
-      "avatarId": "corgi_dog",
-      "bowCategory": "BAREBOW",
-      "customTitle": null
+      "avatarId": null,
+      "customAvatar": null,
+      "bowCategory": "BAREBOW"
     },
     {
       "id": "1792368706077",
       "name": "Max",
-      "avatarId": "husky_dog",
+      "avatarId": null,
+      "customAvatar": null,
       "bowCategory": "OLYMPIC_RECURVE",
-      "customTitle": null,
       "email": "",
       "remindMe": true,
       "createdAt": "2026-10-19T00:11:46.077Z"
@@ -88,9 +88,9 @@
     {
       "id": "1792882276943",
       "name": "Joyce",
-      "avatarId": "shadow_cat",
+      "avatarId": null,
+      "customAvatar": null,
       "bowCategory": "BAREBOW",
-      "customTitle": null,
       "email": "",
       "remindMe": true,
       "createdAt": "2026-10-24T22:51:16.943Z"
@@ -124,72 +124,72 @@
     "2026-10-18": [
       {
         "archerName": "Long",
-        "avatarId": "bengal_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-18T02:24:38.309Z"
       },
       {
         "archerName": "Weijia",
-        "avatarId": "devon_rex_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-18T02:25:34.527Z"
       },
       {
         "archerName": "Ling",
-        "avatarId": "maine_coon_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-17T05:30:18.187Z"
       },
       {
         "archerName": "Xianchu",
-        "avatarId": "shadow_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-18T03:30:38.186Z"
       },
       {
         "archerName": "Alex",
-        "avatarId": "golden_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-17T06:23:00.555Z"
       },
       {
         "archerName": "TZ",
-        "avatarId": "corgi_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "NO",
         "note": "",
         "updatedAt": "2026-10-17T07:42:29.057Z"
       },
       {
         "archerName": "Val",
-        "avatarId": "corgi_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-18T01:37:50.526Z"
       },
       {
         "archerName": "Max",
-        "avatarId": "husky_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-19T00:11:46.078Z"
@@ -198,85 +198,87 @@
     "2026-10-25": [
       {
         "archerName": "Weijia",
-        "avatarId": "devon_rex_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-24T04:16:06.796Z"
       },
       {
         "archerName": "Long",
-        "avatarId": "bengal_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-24T04:16:29.117Z"
       },
       {
         "archerName": "Val",
-        "avatarId": "corgi_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-24T04:31:24.591Z"
       },
       {
         "archerName": "Xianchu",
-        "avatarId": "shadow_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-24T19:49:15.123Z"
       },
       {
         "archerName": "Alex",
-        "avatarId": "golden_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-24T22:10:56.866Z"
       },
       {
         "archerName": "tz",
-        "avatarId": "corgi_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-24T22:47:29.537Z"
       },
       {
         "archerName": "Joyce",
-        "avatarId": "shadow_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "BAREBOW",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-24T22:51:16.943Z"
       },
       {
         "archerName": "Ling",
-        "avatarId": "maine_coon_cat",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-25T15:02:58.613Z"
       },
       {
         "archerName": "Max",
-        "avatarId": "husky_dog",
+        "avatarId": null,
+        "customAvatar": null,
         "bowCategory": "OLYMPIC_RECURVE",
-        "customTitle": null,
         "status": "YES",
         "note": "",
         "updatedAt": "2026-10-26T00:47:24.459Z"
       }
-    ]
-  }
+    ],
+    "2026-11-08": []
+  },
+  "customAvatars": {}
 }

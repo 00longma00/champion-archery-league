@@ -2292,25 +2292,30 @@
       }
     };
 
-    const NAME_TO_DEFAULT_AVATAR = {
-      'long': 'bengal_cat',
-      'long ma': 'bengal_cat',
-      'weijia': 'devon_rex_cat',
-      'weijia li': 'devon_rex_cat',
-      'ling': 'maine_coon_cat',
-      'ling fang': 'maine_coon_cat',
-      'ling fangng': 'maine_coon_cat',
-      'xianchu': 'shadow_cat',
-      'xianchu chen': 'shadow_cat',
-      'xianchuu': 'shadow_cat',
-      'alex': 'golden_dog',
-      'alex grossman': 'golden_dog',
-      'alex grossmanx': 'golden_dog',
-      'tz': 'corgi_dog',
-      'val': 'corgi_dog',
-      'max': 'husky_dog',
-      'maxwell shepherd': 'husky_dog',
-      'joyce': 'shadow_cat'
+    const NAME_TO_DEFAULT_AVATAR = {};
+
+    const DEFAULT_NEUTRAL_AVATAR = {
+      id: 'default_target',
+      name: 'Archer Badge',
+      species: 'New Archer',
+      title: 'Target Archer',
+      emoji: '🎯',
+      traits: 'Custom AI or pick mascot • Ready for Sunday',
+      borderClass: 'border-slate-300',
+      bgClass: 'bg-amber-50',
+      badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
+      textClass: 'text-amber-800',
+      svg: `<svg viewBox="0 0 100 100" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+        <circle cx="50" cy="50" r="38" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+        <circle cx="50" cy="50" r="28" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="18" fill="#e11d48" stroke="#be123c" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="9" fill="#facc15" stroke="#d97706" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="3" fill="#92400e"/>
+        <line x1="16" y1="84" x2="84" y2="16" stroke="#334155" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="88,12 80,14 86,20" fill="#d97706"/>
+        <polygon points="12,88 18,82 14,80" fill="#ef4444"/>
+      </svg>`
     };
 
     const NAME_TO_DEFAULT_CATEGORY = {
@@ -2344,12 +2349,33 @@
     const AVATAR_KEYS = Object.keys(PET_AVATARS);
 
     function getAvatarForArcher(name, explicitAvatarId) {
+      const clean = (name || '').trim().toLowerCase();
+
+      // Check custom avatars from server hub data or localStorage
+      if (clean) {
+        if (window.customAvatars && window.customAvatars[clean]) {
+          return window.customAvatars[clean];
+        }
+        if (typeof hubData !== 'undefined' && hubData && hubData.customAvatars && hubData.customAvatars[clean]) {
+          return hubData.customAvatars[clean];
+        }
+        try {
+          const cached = localStorage.getItem('archery_avatar_' + clean);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.svg) return parsed;
+          }
+        } catch(e) {}
+      }
+
       if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
         return PET_AVATARS[explicitAvatarId];
       }
-      const clean = (name || '').trim().toLowerCase();
-      if (clean && hubData && hubData.rsvpImport && hubData.rsvpImport.allArchers) {
+      if (clean && typeof hubData !== 'undefined' && hubData && hubData.rsvpImport && hubData.rsvpImport.allArchers) {
         const found = hubData.rsvpImport.allArchers.find(a => a.name.toLowerCase() === clean);
+        if (found && found.custom_avatar && found.custom_avatar.svg) {
+          return found.custom_avatar;
+        }
         if (found && found.avatar_id && PET_AVATARS[found.avatar_id]) {
           return PET_AVATARS[found.avatar_id];
         }
@@ -2357,18 +2383,13 @@
       if (NAME_TO_DEFAULT_AVATAR[clean] && PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]]) {
         return PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]];
       }
-      if (!clean) return PET_AVATARS.tabby_cat;
-      let hash = 0;
-      for (let i = 0; i < clean.length; i++) {
-        hash = (hash * 31 + clean.charCodeAt(i)) % AVATAR_KEYS.length;
-      }
-      return PET_AVATARS[AVATAR_KEYS[hash]];
+      return DEFAULT_NEUTRAL_AVATAR;
     }
 
     function renderArcherAvatarCircle(name, explicitAvatarId, sizeClass = 'w-11 h-11') {
       const av = getAvatarForArcher(name, explicitAvatarId);
       return `
-        <div class="${sizeClass} rounded-full ${av.bgClass} border-2 ${av.borderClass} flex items-center justify-center shrink-0 p-0.5 shadow-inner" title="${escapeHtml(av.title)}">
+        <div class="${sizeClass} rounded-full ${av.bgClass} border-2 ${av.borderClass} flex items-center justify-center shrink-0 p-0.5 shadow-inner">
           ${av.svg}
         </div>
       `;
@@ -3198,7 +3219,6 @@
               ${renderArcherAvatarCircle(a.name, a.avatar_id, 'w-8 h-8')}
               <div>
                 <div class="text-xs font-bold text-white">${escapeHtml(a.name)}</div>
-                <div class="text-[10px] text-slate-400">${escapeHtml(a.custom_title || '')}</div>
               </div>
             </div>
             <div class="flex items-center gap-1.5 shrink-0">
@@ -3244,8 +3264,7 @@
               createEventParticipantsDraft.push({
                 name: known.name,
                 bow_category: known.bow_category,
-                avatar_id: known.avatar_id,
-                custom_title: known.custom_title
+                avatar_id: known.avatar_id
               });
             }
           }
@@ -3264,7 +3283,6 @@
                 name: known.name,
                 bow_category: known.bow_category,
                 avatar_id: known.avatar_id,
-                custom_title: known.custom_title,
                 bale_number: 1,
                 position: 'A',
                 shooting_line: 'AB',
@@ -3396,8 +3414,7 @@
           createEventParticipantsDraft.push({
             name: a.name,
             bow_category: resolvedBowCat,
-            avatar_id: a.avatar_id || (resolvedAv && resolvedAv.id) || null,
-            custom_title: a.custom_title || null
+            avatar_id: a.avatar_id || (resolvedAv && resolvedAv.id) || null
           });
         }
       }
@@ -3629,7 +3646,6 @@
           p.name = known.name;
           if (known.avatar_id) p.avatar_id = known.avatar_id;
           if (known.bow_category) p.bow_category = known.bow_category;
-          if (known.custom_title) p.custom_title = known.custom_title;
         }
       }
       renderCreateEventParticipantsList();
@@ -3651,8 +3667,7 @@
           map.set(key, {
             name: clean,
             bow_category: getBowCategoryForArcher(clean, a.bow_category),
-            avatar_id: a.avatar_id || NAME_TO_DEFAULT_AVATAR[key] || null,
-            custom_title: a.custom_title || null
+            avatar_id: a.avatar_id || NAME_TO_DEFAULT_AVATAR[key] || null
           });
         }
       });
@@ -3663,8 +3678,7 @@
           map.set(key, {
             name: displayName,
             bow_category: NAME_TO_DEFAULT_CATEGORY[key],
-            avatar_id: NAME_TO_DEFAULT_AVATAR[key] || null,
-            custom_title: null
+            avatar_id: NAME_TO_DEFAULT_AVATAR[key] || null
           });
         }
       });
@@ -3885,7 +3899,6 @@
       const finalName = known ? known.name : rawName;
       const finalCategory = addArcherSelectedDiscipline || (known ? known.bow_category : 'BAREBOW');
       const finalAvatarId = (known && known.avatar_id) || NAME_TO_DEFAULT_AVATAR[cleanKey] || null;
-      const finalCustomTitle = known ? known.custom_title : null;
 
       // Remember in session hubData so subsequent autofills immediately reflect this archer & discipline
       if (hubData && hubData.rsvpImport) {
@@ -3897,8 +3910,7 @@
           hubData.rsvpImport.allArchers.push({
             name: finalName,
             bow_category: finalCategory,
-            avatar_id: finalAvatarId,
-            custom_title: finalCustomTitle
+            avatar_id: finalAvatarId
           });
         }
       }
@@ -3911,8 +3923,7 @@
           createEventParticipantsDraft.push({
             name: finalName,
             bow_category: finalCategory,
-            avatar_id: finalAvatarId,
-            custom_title: finalCustomTitle
+            avatar_id: finalAvatarId
           });
         }
         renderCreateEventParticipantsList();
@@ -3941,7 +3952,6 @@
             name: finalName,
             bow_category: finalCategory,
             avatar_id: finalAvatarId,
-            custom_title: finalCustomTitle,
             bale_number: chosenBale,
             position: chosenPos,
             shooting_line: chosenLine,
@@ -3996,7 +4006,6 @@
             name: p.name.trim(),
             bow_category: p.bow_category || 'BAREBOW',
             avatar_id: p.avatar_id || null,
-            custom_title: p.custom_title || null,
             bale_number: b
           });
         });
@@ -4904,7 +4913,6 @@
           if (rank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-black flex items-center justify-center">🥉</span>`;
 
           const av = getAvatarForArcher(p.name, p.avatar_id);
-          const archerTitle = (p.custom_title && String(p.custom_title).trim()) || av.title;
           return `
             <div onclick="openArcherScorecard('${p.id}')" class="cursor-pointer py-3 px-3 sm:px-3.5 flex items-center justify-between gap-2 hover:bg-slate-900/70 active:bg-slate-900 transition group">
               <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -4922,7 +4930,7 @@
                   </div>
                   <div class="mt-0.5">
                     <span class="inline-block text-[10px] font-semibold border px-2 py-0.2 rounded-full leading-tight ${av.badgeClass}">
-                      ${av.emoji} ${escapeHtml(archerTitle)}
+                      ${av.emoji} ${escapeHtml(av.species || 'Archer')}
                     </span>
                   </div>
                   <div class="text-[10px] text-slate-400 mt-1 leading-tight flex items-center gap-2 flex-wrap">
@@ -4973,7 +4981,6 @@
                 if (catRank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-black flex items-center justify-center">🥉</span>`;
 
                 const av = getAvatarForArcher(p.name, p.avatar_id);
-                const archerTitle = (p.custom_title && String(p.custom_title).trim()) || av.title;
                 return `
                   <div onclick="openArcherScorecard('${p.id}')" class="cursor-pointer py-3 px-3 sm:px-3.5 flex items-center justify-between gap-2 hover:bg-slate-900/70 active:bg-slate-900 transition group">
                     <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -4991,7 +4998,7 @@
                         </div>
                         <div class="mt-0.5">
                           <span class="inline-block text-[10px] font-semibold border px-2 py-0.2 rounded-full leading-tight ${av.badgeClass}">
-                            ${av.emoji} ${escapeHtml(archerTitle)}
+                            ${av.emoji} ${escapeHtml(av.species || 'Archer')}
                           </span>
                         </div>
                         <div class="text-[10px] text-slate-400 mt-1 leading-tight">
@@ -5133,7 +5140,7 @@
       document.getElementById('sc-modal-bale').textContent = p.designation || `${p.bale_number}${p.position}`;
       document.getElementById('sc-modal-name').textContent = p.name;
       document.getElementById('sc-modal-meta').innerHTML =
-        `${renderBowCategoryBadge(p.bow_category, 'sm')} <span class="ml-1">${p.category_rank ? '• Division Rank #' + p.category_rank : ''} • ${av.emoji} ${escapeHtml(p.custom_title || av.title)}</span>`;
+        `${renderBowCategoryBadge(p.bow_category, 'sm')} <span class="ml-1">${p.category_rank ? '• Division Rank #' + p.category_rank : ''} • ${av.emoji} ${escapeHtml(av.species || 'Archer')}</span>`;
 
       document.getElementById('sc-modal-total').textContent = p.running_total;
       document.getElementById('sc-modal-xs').textContent = `${p.x_count}X`;
@@ -5317,7 +5324,6 @@
         name: p.name,
         bow_category: p.bow_category || 'BAREBOW',
         avatar_id: p.avatar_id,
-        custom_title: p.custom_title,
         bale_number: Number(p.bale_number) || 1,
         position: p.position || 'A',
         shooting_line: p.shooting_line || 'AB',
@@ -5503,7 +5509,6 @@
             name: a.name,
             bow_category: resolvedBowCat,
             avatar_id: a.avatar_id || (resolvedAv && resolvedAv.id) || null,
-            custom_title: a.custom_title,
             bale_number: 1,
             position: 'A',
             shooting_line: 'AB',
@@ -5520,7 +5525,7 @@
       if (!p) return;
       p[field] = val;
 
-      // If name changed to a known archer, update their saved avatar, bow_category, and custom_title
+      // If name changed to a known archer, update their saved avatar and bow_category
       if (field === 'name') {
         const clean = String(val || '').trim().toLowerCase();
         const allKnown = (hubData.rsvpImport && hubData.rsvpImport.allArchers) || [];
@@ -5529,7 +5534,6 @@
           p.name = known.name;
           if (known.avatar_id) p.avatar_id = known.avatar_id;
           if (known.bow_category) p.bow_category = known.bow_category;
-          if (known.custom_title) p.custom_title = known.custom_title;
         } else {
           if (NAME_TO_DEFAULT_AVATAR[clean]) p.avatar_id = NAME_TO_DEFAULT_AVATAR[clean];
           if (NAME_TO_DEFAULT_CATEGORY[clean]) p.bow_category = NAME_TO_DEFAULT_CATEGORY[clean];

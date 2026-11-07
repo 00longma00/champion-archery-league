@@ -6,8 +6,9 @@
   "scripts": {
     "dev": "node server.js",
     "start": "node server.js",
-    "build": "node --check server.js db.js scoring-db.js ai-insights.js",
-    "lint": "node --check server.js db.js scoring-db.js ai-insights.js"
+    "build": "node --check server.js db.js scoring-db.js ai-insights.js ai-avatar.js",
+    "lint": "node --check server.js db.js scoring-db.js ai-insights.js ai-avatar.js",
+    "test": "node --test test/*.test.js"
   },
   "dependencies": {
     "@google/genai": "^2.32.0",

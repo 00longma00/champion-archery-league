@@ -1,5 +1,13 @@
 const { GoogleGenAI, Type } = require('@google/genai');
 
+function getValidGeminiApiKey() {
+  const key = (process.env.GEMINI_API_KEY || '').trim();
+  if (!key || key.length < 15 || key.includes('YOUR_') || key.includes('placeholder') || key.includes('example')) {
+    return null;
+  }
+  return key;
+}
+
 /**
  * Generate AI-powered Archery Coaching Insights comparing 14-day form to 3-month baseline.
  * Uses Gemini 3.8 Flash via @google/genai with fallback analytics.
@@ -46,11 +54,13 @@ async function generateArcheryInsights(payload) {
   const deltaGold = Number((s14.goldPct - s3m.goldPct).toFixed(1));
   const deltaStdDev = Number((s14.avgStdDev - s3m.avgStdDev).toFixed(2));
 
-  // If Gemini API Key is available, invoke gemini-3.8-flash
-  if (process.env.GEMINI_API_KEY) {
+  const apiKey = getValidGeminiApiKey();
+
+  // If valid Gemini API Key is available, invoke gemini-3.8-flash
+  if (apiKey) {
     try {
       const ai = new GoogleGenAI({
-        apiKey: process.env.GEMINI_API_KEY,
+        apiKey,
         httpOptions: {
           headers: {
             'User-Agent': 'aistudio-build'
@@ -155,9 +165,8 @@ Provide an Olympic-level coaching breakdown structured exactly according to the 
           insights: parsed
         };
       }
-    } catch (apiError) {
-      console.warn('Gemini API call encountered an issue, falling back to analytical engine:', apiError.message);
-      // Fall through to deterministic analytics engine
+    } catch (_apiError) {
+      // Seamlessly fall through to deterministic analytics engine
     }
   }
 
@@ -192,8 +201,8 @@ Provide an Olympic-level coaching breakdown structured exactly according to the 
 
   return {
     success: true,
-    source: process.env.GEMINI_API_KEY ? 'gemini' : 'analytics',
-    model: process.env.GEMINI_API_KEY ? 'gemini-3.8-flash' : 'archery-analytics-engine',
+    source: apiKey ? 'gemini-fallback' : 'analytics',
+    model: apiKey ? 'gemini-3.8-flash' : 'archery-analytics-engine',
     insights: {
       headline: s14.sessionCount > 0
         ? `${archerName} is showing ${trajectory.toLowerCase()} with ${s14.avgScorePerArrow.toFixed(2)} pts/arrow over the last 14 days (${deltaAvg >= 0 ? '+' : ''}${deltaAvg} vs 3-month baseline).`

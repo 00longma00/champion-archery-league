@@ -65,7 +65,7 @@ export async function getAppState() {
 }
 
 // 2. Submit / Update RSVP
-export async function submitRsvp({ name, status, avatarId, bowCategory, customTitle, email, remindMe }) {
+export async function submitRsvp({ name, status, avatarId, bowCategory, email, remindMe, customAvatar }) {
   const currentSunday = getUpcomingSundayStr();
   const cleanName = name.trim();
   const cleanLower = cleanName.toLowerCase();
@@ -92,24 +92,27 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, customTi
   }
 
   // Save/update RSVP
-  await setDoc(doc(db, "rsvps", id), {
+  const rsvpPayload = {
     date: currentSunday,
     archerName: cleanName,
     status,
-    avatarId: avatarId || null,
+    avatarId: avatarId || (customAvatar && customAvatar.id) || null,
     bowCategory: bowCategory || 'BAREBOW',
-    customTitle: customTitle || null,
     note: '',
     updatedAt: now
-  }, { merge: true });
+  };
+  if (customAvatar && typeof customAvatar === 'object') {
+    rsvpPayload.customAvatar = customAvatar;
+  }
+  await setDoc(doc(db, "rsvps", id), rsvpPayload, { merge: true });
 
   // Update Roster profile so chosen avatar/bow persist
   const updateData = {
     name: cleanName,
-    avatarId: avatarId || null,
-    bowCategory: bowCategory || 'BAREBOW',
-    customTitle: customTitle || null
+    avatarId: avatarId || (customAvatar && customAvatar.id) || null,
+    bowCategory: bowCategory || 'BAREBOW'
   };
+  if (customAvatar !== undefined) updateData.customAvatar = customAvatar || null;
   if (email !== undefined) updateData.email = email;
   if (remindMe !== undefined) updateData.remindMe = remindMe;
 
@@ -198,8 +201,7 @@ export async function getScoringEventsHub() {
         yesArchers.push({
           name: r.archerName,
           bow_category: r.bowCategory || 'BAREBOW',
-          avatar_id: r.avatarId,
-          custom_title: r.customTitle
+          avatar_id: r.avatarId
         });
       }
     });
@@ -214,8 +216,7 @@ export async function getScoringEventsHub() {
       allArchersMap.set(key, {
         name: clean,
         bow_category: r.bowCategory || 'BAREBOW',
-        avatar_id: r.avatarId || null,
-        custom_title: r.customTitle || null
+        avatar_id: r.avatarId || null
       });
     }
   });
@@ -232,8 +233,7 @@ export async function getScoringEventsHub() {
       allArchersMap.set(key, {
         name: clean,
         bow_category: p.bow_category || 'BAREBOW',
-        avatar_id: p.avatar_id || null,
-        custom_title: p.custom_title || null
+        avatar_id: p.avatar_id || null
       });
     }
   });
@@ -531,7 +531,6 @@ export async function createScoringEvent({ event, participants, groups }) {
         name: cleanName,
         bow_category: bowCat,
         avatar_id: p.avatar_id || null,
-        custom_title: p.custom_title || null,
         bale_number: bNum,
         position: p.position || 'A',
         shooting_line: p.shooting_line || 'AB',
@@ -549,7 +548,6 @@ export async function createScoringEvent({ event, participants, groups }) {
             bowCategory: bowCat
           };
           if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
-          if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
           await setDoc(doc(db, "roster", rKey), rosterUpdate, { merge: true });
           if (!knownRosterIds.has(rKey)) {
             knownRosterIds.add(rKey);
@@ -659,7 +657,6 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
             bowCategory: bowCat
           };
           if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
-          if (p.custom_title) rosterUpdate.customTitle = p.custom_title;
           await setDoc(doc(db, "roster", rKey), rosterUpdate, { merge: true });
           if (!knownRosterIds.has(rKey)) {
             knownRosterIds.add(rKey);
@@ -1158,7 +1155,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
         participantSummaries.push({
           id: p.id,
           name: p.canonicalName,
-          avatar_id: p.avatar_id || (aKey === "long" ? "bengal_cat" : aKey === "weijia" ? "devon_rex_cat" : null),
+          avatar_id: p.avatar_id || null,
           score: st.score,
           arrows: st.arrows,
           avg: st.arrows > 0 ? (st.score / st.arrows).toFixed(2) : null,
@@ -1204,8 +1201,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
       rosterMap.set(r.name.trim().toLowerCase(), {
         name: r.name.trim(),
         bow_category: r.bowCategory || "BAREBOW",
-        avatar_id: r.avatarId || null,
-        custom_title: r.customTitle || null
+        avatar_id: r.avatarId || null
       });
     }
   });
@@ -1216,8 +1212,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
       rosterMap.get(key) || {
         name,
         bow_category: "BAREBOW",
-        avatar_id: key === "long" ? "bengal_cat" : key === "weijia" ? "devon_rex_cat" : null,
-        custom_title: null
+        avatar_id: null
       }
     );
   });
@@ -1512,7 +1507,6 @@ export async function createPrivateScoringEvent(hubId = "long_weijia", { event, 
         name: String(p.name || "Archer").trim(),
         bow_category: p.bow_category || "BAREBOW",
         avatar_id: p.avatar_id || null,
-        custom_title: p.custom_title || null,
         archer_notes: p.archer_notes || "",
         bale_number: bNum,
         position: p.position || "A",

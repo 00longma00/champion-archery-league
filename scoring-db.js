@@ -662,21 +662,12 @@ function saveParticipantsAndGroups(eventId, { participants, groups, autoAssign =
       (rosterProfile && rosterProfile.avatarId) ||
       (histProfile && histProfile.avatar_id) ||
       null;
-    const resolvedCustomTitle =
-      p.custom_title !== undefined
-        ? p.custom_title
-        : ((matched && matched.custom_title !== undefined)
-            ? matched.custom_title
-            : ((rosterProfile && rosterProfile.customTitle !== undefined)
-                ? rosterProfile.customTitle
-                : (histProfile ? histProfile.custom_title : null)));
 
     return {
       id: matched ? matched.id : ('p_' + Date.now() + '_' + idx + '_' + Math.random().toString(36).slice(2, 5)),
       name: rosterProfile ? rosterProfile.name : cleanName,
       bow_category: resolvedBowCategory,
       avatar_id: resolvedAvatarId,
-      custom_title: resolvedCustomTitle,
       bale_number: Number(p.bale_number) || (matched ? matched.bale_number : 1),
       position: String(p.position || (matched ? matched.position : 'A')).toUpperCase(),
       shooting_line: p.shooting_line || (matched ? matched.shooting_line : 'AB'),
@@ -793,7 +784,7 @@ function saveParticipantsAndGroups(eventId, { participants, groups, autoAssign =
     db.prepare(`UPDATE scoring_events SET updated_at = ? WHERE id = ?`).run(now, eventId);
     db.exec('COMMIT');
 
-    // Sync each participant's bow_category, avatar_id, and custom_title back to global data.json roster
+    // Sync each participant's bow_category and avatar_id back to global data.json roster
     let rosterChanged = false;
     if (!rosterDb.archers) rosterDb.archers = [];
     for (const p of preparedList) {
@@ -806,7 +797,6 @@ function saveParticipantsAndGroups(eventId, { participants, groups, autoAssign =
           name: p.name,
           avatarId: p.avatar_id || null,
           bowCategory: normCat,
-          customTitle: p.custom_title || null,
           email: '',
           remindMe: false,
           createdAt: now
@@ -821,10 +811,6 @@ function saveParticipantsAndGroups(eventId, { participants, groups, autoAssign =
         }
         if (p.avatar_id && archer.avatarId !== p.avatar_id) {
           archer.avatarId = p.avatar_id;
-          rosterChanged = true;
-        }
-        if (p.custom_title !== undefined && p.custom_title !== null && archer.customTitle !== p.custom_title) {
-          archer.customTitle = p.custom_title;
           rosterChanged = true;
         }
       }

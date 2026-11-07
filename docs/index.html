@@ -253,55 +253,125 @@
           </div>
         </div>
 
-        <!-- Live Cat / Dog Archer Avatar Preview & Interactive Picker -->
-        <div id="avatar-preview-card" class="rounded-xl bg-slate-950/90 border border-slate-800 p-3 space-y-2.5">
+        <!-- Live Archer Avatar Preview & Interactive AI / Preset Studio -->
+        <div id="avatar-preview-card" class="rounded-xl bg-white border border-slate-200 p-3.5 space-y-3 shadow-sm">
           <div class="flex items-center justify-between gap-3">
             <div class="flex items-center gap-3">
-              <div id="live-avatar-circle" class="w-14 h-14 rounded-full bg-amber-500/15 border-2 border-amber-400 flex items-center justify-center shrink-0 shadow-inner">
+              <div id="live-avatar-circle" class="w-14 h-14 rounded-full bg-amber-50 border-2 border-amber-300 flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-0.5">
                 <!-- SVG populated by JS -->
               </div>
               <div>
                 <div class="flex items-center gap-1.5 flex-wrap">
-                  <span id="live-avatar-name" class="text-xs font-extrabold text-white">Your Archer Mascot</span>
-                  <span id="live-avatar-species" class="text-[10px] font-bold bg-amber-500/20 text-amber-300 border border-amber-500/30 px-2 py-0.5 rounded-full">Cat Archer</span>
+                  <span id="live-avatar-name" class="text-xs font-extrabold text-slate-900">Your Archer Mascot</span>
+                  <span id="live-avatar-species" class="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">New Archer</span>
+                  <span id="live-avatar-ai-badge" class="hidden text-[9px] font-extrabold bg-purple-100 text-purple-900 border border-purple-300 px-1.5 py-0.5 rounded-full flex items-center gap-1">
+                    <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i> AI Generated
+                  </span>
                 </div>
-                <p id="live-avatar-title" class="text-xs font-semibold text-amber-400 mt-0.5">Orange Tabby Recurve</p>
-                <p id="live-avatar-traits" class="hidden text-[10px] text-slate-400">Red headband • Aiming wink</p>
+                <p id="live-avatar-traits" class="text-[10px] text-slate-500 mt-1">Custom AI or pick mascot</p>
               </div>
             </div>
-            <button type="button" onclick="toggleAvatarPicker()" class="text-[11px] font-bold text-amber-300 hover:text-amber-200 bg-amber-500/10 hover:bg-amber-500/20 border border-amber-500/30 px-2.5 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1">
-              <span>🐾 Swap Badge</span>
+            <button type="button" id="btn-toggle-avatar-picker" onclick="toggleAvatarPicker()"
+              class="text-[11px] font-bold text-amber-900 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 border border-amber-300 px-2.5 py-1.5 rounded-lg transition shrink-0 flex items-center gap-1.5 cursor-pointer">
+              <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
+              <span id="avatar-toggle-btn-text">Customize Badge</span>
             </button>
           </div>
 
-          <!-- Custom Archer Title & Archery Style Inputs -->
-          <div class="pt-2 border-t border-slate-800/70 grid grid-cols-1 sm:grid-cols-12 gap-2 items-center">
-            <div class="sm:col-span-5 flex items-center gap-2">
-              <label for="archer-bow-category" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Style:</label>
-              <select id="archer-bow-category" onchange="onBowCategoryChange()"
-                class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-2.5 py-1.5 text-xs text-amber-300 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500">
-                <option value="BAREBOW">🏹 Barebow</option>
-                <option value="OLYMPIC_RECURVE">🎯 Olympic Recurve</option>
-                <option value="TRADITIONAL">🪶 Traditional</option>
-              </select>
-            </div>
-            <div class="sm:col-span-7 flex items-center gap-2">
-              <label for="custom-archer-title" class="text-[10px] font-bold uppercase tracking-wider text-slate-400 shrink-0">Title:</label>
-              <input type="text" id="custom-archer-title" maxlength="45"
-                placeholder="Default breed title (or custom)..."
-                oninput="onCustomTitleInput()"
-                class="w-full bg-slate-900 border border-slate-700/80 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500">
-            </div>
+          <!-- Archery Style Input -->
+          <div class="pt-2 border-t border-slate-200 flex items-center gap-2">
+            <label for="archer-bow-category" class="text-[10px] font-bold uppercase tracking-wider text-slate-500 shrink-0">Archery Style:</label>
+            <select id="archer-bow-category" onchange="onBowCategoryChange()"
+              class="w-full bg-white border border-slate-300 rounded-lg px-2.5 py-1.5 text-xs text-amber-900 font-bold focus:outline-none focus:ring-1 focus:ring-amber-500 shadow-sm">
+              <option value="BAREBOW">🏹 Barebow</option>
+              <option value="OLYMPIC_RECURVE">🎯 Olympic Recurve</option>
+              <option value="TRADITIONAL">🪶 Traditional</option>
+            </select>
           </div>
 
-          <!-- Collapsible 18-Breed Cat/Dog Picker Grid -->
-          <div id="avatar-picker-grid" class="hidden pt-2.5 border-t border-slate-800/80">
-            <div class="flex items-center justify-between mb-2">
-              <span class="text-[10px] font-bold uppercase tracking-wider text-slate-400">Choose Your Cat or Dog Archer Badge (18 Breeds):</span>
-              <span class="text-[10px] text-slate-500">Saved with your RSVP</span>
+          <!-- Collapsible Avatar Studio (AI Generator by Default & 18 Presets) -->
+          <div id="avatar-picker-grid" class="pt-3 border-t border-slate-200 space-y-3">
+            <!-- Studio Tabs: AI Generator (Default) vs Presets -->
+            <div class="flex items-center justify-between gap-2 border-b border-slate-200 pb-2">
+              <div class="flex items-center gap-1.5">
+                <button type="button" id="tab-avatar-ai" onclick="switchAvatarTab('ai')"
+                  class="text-[11px] font-extrabold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 transition">
+                  <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i>
+                  <span>AI Generator</span>
+                  <span class="text-[9px] bg-amber-500 text-slate-950 px-1 py-0.2 rounded font-black uppercase">Default</span>
+                </button>
+                <button type="button" id="tab-avatar-presets" onclick="switchAvatarTab('presets')"
+                  class="text-[11px] font-bold px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 flex items-center gap-1.5 transition">
+                  <span>🐾 Preset Badges (18)</span>
+                </button>
+              </div>
+              <span id="avatar-saved-indicator" class="hidden text-[10px] font-bold text-emerald-700 flex items-center gap-1">
+                <i class="fa-solid fa-circle-check"></i>
+                <span id="avatar-saved-name">Saved for you</span>
+              </span>
             </div>
-            <div id="avatar-picker-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
-              <!-- Populated by JS -->
+
+            <!-- Tab 1: AI Avatar Generator (Default) -->
+            <div id="avatar-panel-ai" class="space-y-3">
+              <div class="bg-gradient-to-br from-amber-50/70 via-white to-amber-50/30 border border-amber-200 rounded-xl p-3.5 space-y-2.5 shadow-sm">
+                <div class="flex items-center justify-between gap-2 flex-wrap">
+                  <div class="flex items-center gap-1.5">
+                    <span class="text-xs font-black text-slate-900 flex items-center gap-1">
+                      <i class="fa-solid fa-sparkles text-amber-600"></i>
+                      Generate Custom Mascot with Gemini
+                    </span>
+                    <span class="text-[9px] font-bold bg-emerald-100 text-emerald-800 border border-emerald-300 px-1.5 py-0.5 rounded-full">
+                      Free Tier
+                    </span>
+                  </div>
+                  <button type="button" onclick="rollRandomAvatarPrompt(false)"
+                    class="text-[10px] font-bold text-amber-900 hover:text-amber-950 bg-amber-100 hover:bg-amber-200 px-2 py-1 rounded border border-amber-300 transition flex items-center gap-1">
+                    <span>🎲 Surprise Idea</span>
+                  </button>
+                </div>
+
+                <p class="text-[11px] text-slate-600">
+                  Describe any animal, creature, or concept to generate your mascot.
+                </p>
+
+                <!-- Prompt Input -->
+                <div class="space-y-1.5">
+                  <div class="relative">
+                    <input type="text" id="ai-avatar-prompt-input"
+                      placeholder="e.g. Peregrine Falcon in leather bracers with golden recurve..."
+                      class="w-full bg-white border border-slate-300 rounded-lg pl-3 pr-8 py-2 text-xs text-slate-800 placeholder-slate-400 focus:outline-none focus:ring-2 focus:ring-amber-500/30 focus:border-amber-500 shadow-sm">
+                    <button type="button" onclick="clearAvatarPrompt()" class="absolute right-2.5 top-2.5 text-slate-400 hover:text-slate-600 text-xs" title="Clear">
+                      <i class="fa-solid fa-times"></i>
+                    </button>
+                  </div>
+                </div>
+
+                <!-- Action Button & Status -->
+                <div class="pt-1 flex flex-col sm:flex-row items-stretch sm:items-center gap-2">
+                  <button type="button" id="btn-generate-ai-avatar" onclick="generateCustomAvatar()"
+                    class="flex-1 bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 active:from-amber-600 text-slate-950 font-black text-xs py-2 px-3.5 rounded-lg shadow-sm transition flex items-center justify-center gap-1.5 cursor-pointer">
+                    <i class="fa-solid fa-wand-magic-sparkles"></i>
+                    <span id="btn-generate-text">Generate Avatar with Gemini</span>
+                  </button>
+                  <button type="button" onclick="rollRandomAvatarPrompt(true)"
+                    class="bg-white hover:bg-slate-100 active:bg-slate-200 text-slate-800 font-bold text-xs py-2 px-3 rounded-lg border border-slate-300 shadow-sm transition flex items-center justify-center gap-1 cursor-pointer">
+                    <span>🎲 Roll & Generate</span>
+                  </button>
+                </div>
+
+                <!-- Generation Feedback Alert -->
+                <div id="ai-avatar-status" class="hidden text-[11px] p-2.5 rounded-lg border flex items-center gap-2"></div>
+              </div>
+            </div>
+
+            <!-- Tab 2: Preset Badges (18 Breeds) -->
+            <div id="avatar-panel-presets" class="hidden space-y-2">
+              <div class="flex items-center justify-between mb-1">
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Or choose from 18 Classic Cat & Dog Archer Badges:</span>
+              </div>
+              <div id="avatar-picker-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
+                <!-- Populated by JS -->
+              </div>
             </div>
           </div>
           <input type="hidden" id="selected-avatar-id" value="">
@@ -437,7 +507,6 @@
     let appState = null;
     let currentTab = 'yes';
     let manualAvatarOverride = false;
-    let manualTitleOverride = false;
     let manualBowCategoryOverride = false;
     let lastSelectedArcherName = '';
 
@@ -1097,25 +1166,30 @@
       }
     };
 
-    const NAME_TO_DEFAULT_AVATAR = {
-      'long': 'bengal_cat',
-      'long ma': 'bengal_cat',
-      'weijia': 'devon_rex_cat',
-      'weijia li': 'devon_rex_cat',
-      'ling': 'maine_coon_cat',
-      'ling fang': 'maine_coon_cat',
-      'ling fangng': 'maine_coon_cat',
-      'xianchu': 'shadow_cat',
-      'xianchu chen': 'shadow_cat',
-      'xianchuu': 'shadow_cat',
-      'alex': 'golden_dog',
-      'alex grossman': 'golden_dog',
-      'alex grossmanx': 'golden_dog',
-      'tz': 'corgi_dog',
-      'val': 'corgi_dog',
-      'max': 'husky_dog',
-      'maxwell shepherd': 'husky_dog',
-      'joyce': 'shadow_cat'
+    const NAME_TO_DEFAULT_AVATAR = {};
+
+    const DEFAULT_NEUTRAL_AVATAR = {
+      id: 'default_target',
+      name: 'Archer Badge',
+      species: 'New Archer',
+      title: 'Target Archer',
+      emoji: '🎯',
+      traits: 'Custom AI or pick mascot • Ready for Sunday',
+      borderClass: 'border-slate-300',
+      bgClass: 'bg-amber-50',
+      badgeClass: 'bg-amber-100 text-amber-900 border-amber-300',
+      textClass: 'text-amber-800',
+      svg: `<svg viewBox="0 0 100 100" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+        <circle cx="50" cy="50" r="46" fill="#ffffff" stroke="#cbd5e1" stroke-width="1.8"/>
+        <circle cx="50" cy="50" r="38" fill="#f8fafc" stroke="#cbd5e1" stroke-width="1.2"/>
+        <circle cx="50" cy="50" r="28" fill="#0284c7" stroke="#0369a1" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="18" fill="#e11d48" stroke="#be123c" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="9" fill="#facc15" stroke="#d97706" stroke-width="1.5"/>
+        <circle cx="50" cy="50" r="3" fill="#92400e"/>
+        <line x1="16" y1="84" x2="84" y2="16" stroke="#334155" stroke-width="2.2" stroke-linecap="round"/>
+        <polygon points="88,12 80,14 86,20" fill="#d97706"/>
+        <polygon points="12,88 18,82 14,80" fill="#ef4444"/>
+      </svg>`
     };
 
     const NAME_TO_DEFAULT_CATEGORY = {
@@ -1156,71 +1230,260 @@
       manualBowCategoryOverride = true;
     }
 
+    window.customAvatars = {};
+    window.currentCustomAvatar = null;
+    let activeAvatarTab = 'ai';
+
+    const AVATAR_PROMPT_SUGGESTIONS = [
+      'Peregrine Falcon in leather bracers with golden recurve bow',
+      'Snowy Owl archer with silver quiver and glowing moon bow',
+      'Cyberpunk neon fox archer with glowing visor and compound bow',
+      'Celtic Wolf wearing woven forest cloak and runic quiver',
+      'Emerald Dragon whelp archer with flaming arrows and golden crest',
+      'Stealth Black Panther archer with night-vision visor and matte recurve',
+      'Royal Golden Retriever in medieval hunter tunic holding longbow',
+      'Zen Red Panda archer with custom bamboo recurve'
+    ];
+
+    function rollRandomAvatarPrompt(autoGenerate = false) {
+      const randomText = AVATAR_PROMPT_SUGGESTIONS[Math.floor(Math.random() * AVATAR_PROMPT_SUGGESTIONS.length)];
+      const input = document.getElementById('ai-avatar-prompt-input');
+      if (input) {
+        input.value = randomText;
+        input.focus();
+      }
+      if (autoGenerate) {
+        generateCustomAvatar();
+      }
+    }
+
+    function clearAvatarPrompt() {
+      const input = document.getElementById('ai-avatar-prompt-input');
+      if (input) {
+        input.value = '';
+        input.focus();
+      }
+    }
+
+    function switchAvatarTab(mode) {
+      activeAvatarTab = mode;
+      const btnAi = document.getElementById('tab-avatar-ai');
+      const btnPresets = document.getElementById('tab-avatar-presets');
+      const panelAi = document.getElementById('avatar-panel-ai');
+      const panelPresets = document.getElementById('avatar-panel-presets');
+
+      if (mode === 'ai') {
+        if (btnAi) btnAi.className = 'text-[11px] font-extrabold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 transition';
+        if (btnPresets) btnPresets.className = 'text-[11px] font-bold px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 flex items-center gap-1.5 transition';
+        if (panelAi) panelAi.classList.remove('hidden');
+        if (panelPresets) panelPresets.classList.add('hidden');
+      } else {
+        if (btnAi) btnAi.className = 'text-[11px] font-bold px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 bg-white border border-slate-200 hover:border-slate-300 flex items-center gap-1.5 transition';
+        if (btnPresets) btnPresets.className = 'text-[11px] font-extrabold px-3 py-1.5 rounded-lg bg-amber-100 text-amber-900 border border-amber-300 flex items-center gap-1.5 transition';
+        if (panelAi) panelAi.classList.add('hidden');
+        if (panelPresets) panelPresets.classList.remove('hidden');
+        renderAvatarPickerButtons();
+      }
+    }
+
+    async function generateCustomAvatar() {
+      const promptInput = document.getElementById('ai-avatar-prompt-input');
+      const nameInput = document.getElementById('archer-name');
+      const prompt = promptInput ? promptInput.value.trim() : '';
+      const name = nameInput ? nameInput.value.trim() : '';
+      const statusEl = document.getElementById('ai-avatar-status');
+      const btn = document.getElementById('btn-generate-ai-avatar');
+      const btnText = document.getElementById('btn-generate-text');
+
+      if (!prompt) {
+        if (statusEl) {
+          statusEl.className = 'text-[11px] p-2.5 rounded-lg border border-amber-300 bg-amber-50 text-amber-900 flex items-center gap-2';
+          statusEl.innerHTML = '<i class="fa-solid fa-circle-info text-amber-600"></i> Please enter an avatar concept or click "Surprise Idea" above!';
+          statusEl.classList.remove('hidden');
+        }
+        if (promptInput) promptInput.focus();
+        return;
+      }
+
+      if (btn) btn.disabled = true;
+      if (btnText) btnText.innerHTML = '<i class="fa-solid fa-spinner fa-spin mr-1"></i> Gemini is designing vector avatar...';
+      if (statusEl) {
+        statusEl.className = 'text-[11px] p-2.5 rounded-lg border border-sky-300 bg-sky-50 text-sky-800 flex items-center gap-2';
+        statusEl.innerHTML = '<i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i> Generating custom vector archer mascot with Gemini 3.8 Flash free tier...';
+        statusEl.classList.remove('hidden');
+      }
+
+      try {
+        const resp = await fetch('/api/avatar/generate', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ prompt, name: name || 'Archer' })
+        });
+        const data = await resp.json();
+
+        if (!data.success || !data.avatar) {
+          throw new Error(data.error || 'Avatar generation failed');
+        }
+
+        const av = data.avatar;
+        av.isCustomAi = true;
+        window.currentCustomAvatar = av;
+        const cleanName = (name || 'archer').toLowerCase();
+        window.customAvatars[cleanName] = av;
+
+        try {
+          localStorage.setItem('archery_avatar_' + cleanName, JSON.stringify(av));
+        } catch (e) {}
+
+        selectCustomAvatar(av, true);
+
+        // Immediate background persistence
+        if (name) {
+          fetch('/api/avatar/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ name, avatar: av })
+          }).catch(err => console.warn('Background avatar save note:', err));
+        }
+
+        if (statusEl) {
+          statusEl.className = 'text-[11px] p-2.5 rounded-lg border border-emerald-300 bg-emerald-50 text-emerald-900 flex items-center justify-between gap-2';
+          statusEl.innerHTML = `
+            <div class="flex items-center gap-1.5 min-w-0">
+              <i class="fa-solid fa-circle-check text-emerald-600 shrink-0"></i>
+              <span class="truncate">Generated & equipped for <strong>${escapeHtml(name || 'Archer')}</strong>! Stored for future use.</span>
+            </div>
+            <button type="button" onclick="rollRandomAvatarPrompt(false)" class="text-[10px] underline font-bold text-emerald-800 hover:text-emerald-950 shrink-0">Try another</button>
+          `;
+          statusEl.classList.remove('hidden');
+        }
+
+        const savedInd = document.getElementById('avatar-saved-indicator');
+        const savedName = document.getElementById('avatar-saved-name');
+        if (savedInd && savedName && name) {
+          savedName.textContent = `Stored for ${name}`;
+          savedInd.classList.remove('hidden');
+        }
+      } catch (err) {
+        console.error('Error generating avatar:', err);
+        if (statusEl) {
+          statusEl.className = 'text-[11px] p-2.5 rounded-lg border border-rose-300 bg-rose-50 text-rose-900 flex items-center gap-2';
+          statusEl.innerHTML = `<i class="fa-solid fa-circle-exclamation text-rose-600"></i> ${escapeHtml(err.message || 'Error creating avatar. Please try again.')}`;
+          statusEl.classList.remove('hidden');
+        }
+      } finally {
+        if (btn) btn.disabled = false;
+        if (btnText) btnText.innerHTML = '<span>Generate Avatar with Gemini</span>';
+      }
+    }
+
+    function selectCustomAvatar(av, isManual = false) {
+      if (!av) return;
+      if (isManual) manualAvatarOverride = true;
+      window.currentCustomAvatar = av;
+      document.getElementById('selected-avatar-id').value = av.id;
+
+      const circle = document.getElementById('live-avatar-circle');
+      if (circle) {
+        circle.className = `w-14 h-14 rounded-full ${av.bgClass || 'bg-amber-50'} border-2 ${av.borderClass || 'border-amber-300'} flex items-center justify-center shrink-0 shadow-sm overflow-hidden p-0.5`;
+        circle.innerHTML = av.svg;
+      }
+
+      const nameInput = document.getElementById('archer-name').value.trim();
+      const liveName = document.getElementById('live-avatar-name');
+      if (liveName) {
+        liveName.textContent = nameInput ? `${nameInput}'s Archer Badge` : 'Your Archer Mascot';
+      }
+
+      const speciesEl = document.getElementById('live-avatar-species');
+      if (speciesEl) {
+        speciesEl.className = `text-[10px] font-bold border px-2 py-0.5 rounded-full ${av.badgeClass || 'bg-amber-100 text-amber-900 border-amber-300'}`;
+        speciesEl.textContent = `${av.emoji || '🏹'} ${av.species || 'Custom Archer'}`;
+      }
+
+      const aiBadge = document.getElementById('live-avatar-ai-badge');
+      if (aiBadge) aiBadge.classList.remove('hidden');
+
+      const traitsEl = document.getElementById('live-avatar-traits');
+      if (traitsEl) {
+        traitsEl.textContent = av.traits || 'Custom Gemini vector badge';
+      }
+
+      renderAvatarPickerButtons();
+    }
+
     const AVATAR_KEYS = Object.keys(PET_AVATARS);
 
     function getAvatarForArcher(name, explicitAvatarId) {
       const clean = (name || '').trim().toLowerCase();
+
+      // 1. Current active custom avatar if matching id
+      if (window.currentCustomAvatar && explicitAvatarId && window.currentCustomAvatar.id === explicitAvatarId) {
+        return window.currentCustomAvatar;
+      }
+
+      // 2. Custom avatar in memory cache
+      if (clean && window.customAvatars && window.customAvatars[clean]) {
+        return window.customAvatars[clean];
+      }
+
+      // 3. Custom avatar in localStorage for instant recall
+      if (clean) {
+        try {
+          const cached = localStorage.getItem('archery_avatar_' + clean);
+          if (cached) {
+            const parsed = JSON.parse(cached);
+            if (parsed && parsed.svg) {
+              window.customAvatars[clean] = parsed;
+              return parsed;
+            }
+          }
+        } catch (e) {}
+      }
+
+      // 4. Custom avatar from appState archers
       if (clean && appState && appState.archers) {
         const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+        if (found && found.customAvatar && found.customAvatar.svg) {
+          window.customAvatars[clean] = found.customAvatar;
+          return found.customAvatar;
+        }
         if (found && found.avatarId && PET_AVATARS[found.avatarId]) {
           return PET_AVATARS[found.avatarId];
         }
       }
+
+      // 5. Explicit preset avatar id
       if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
         return PET_AVATARS[explicitAvatarId];
       }
-      if (NAME_TO_DEFAULT_AVATAR[clean]) {
-        return PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]];
-      }
-      if (!clean) return PET_AVATARS.tabby_cat;
-      let hash = 0;
-      for (let i = 0; i < clean.length; i++) {
-        hash = (hash * 31 + clean.charCodeAt(i)) % AVATAR_KEYS.length;
-      }
-      return PET_AVATARS[AVATAR_KEYS[hash]];
-    }
 
-    function getCustomTitleForArcher(name, explicitCustomTitle) {
-      if (explicitCustomTitle && String(explicitCustomTitle).trim()) {
-        return String(explicitCustomTitle).trim();
+      // 6. Explicit custom avatar id search in appState.customAvatars
+      if (appState && appState.customAvatars && clean && appState.customAvatars[clean]) {
+        return appState.customAvatars[clean];
       }
-      const clean = (name || '').trim().toLowerCase();
-      if (clean && appState && appState.archers) {
-        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
-        if (found && found.customTitle && String(found.customTitle).trim()) {
-          return String(found.customTitle).trim();
-        }
-      }
-      return '';
-    }
 
-    function onCustomTitleInput() {
-      manualTitleOverride = true;
-      const currentId = document.getElementById('selected-avatar-id').value || 'tabby_cat';
-      const av = PET_AVATARS[currentId] || PET_AVATARS.tabby_cat;
-      const customVal = document.getElementById('custom-archer-title').value.trim();
-      const titleEl = document.getElementById('live-avatar-title');
-      titleEl.className = `text-xs font-semibold mt-0.5 ${av.textClass}`;
-      titleEl.textContent = customVal || av.title;
+      // 7. Neutral default for all archers starting fresh
+      return DEFAULT_NEUTRAL_AVATAR;
     }
 
     function renderAvatarPickerButtons() {
-      const currentId = document.getElementById('selected-avatar-id').value || 'tabby_cat';
+      const currentId = document.getElementById('selected-avatar-id').value || 'default_target';
       const pickerContainer = document.getElementById('avatar-picker-buttons');
       if (pickerContainer) {
         pickerContainer.innerHTML = AVATAR_KEYS.map(key => {
           const av = PET_AVATARS[key];
-          const isSelected = key === currentId;
+          const isSelected = key === currentId && !window.currentCustomAvatar;
           const shortLabel = av.shortLabel || (av.id === 'devon_rex_cat' ? 'Devon Rex' : av.title.split(' ')[0]);
           return `
             <button type="button" onclick="selectAvatar('${av.id}', true)"
-              class="flex items-center gap-2 p-2 rounded-xl border text-left transition ${isSelected ? 'bg-slate-900 border-amber-400 ring-1 ring-amber-400/40' : 'bg-slate-900/50 border-slate-800 hover:border-slate-700'}">
-              <div class="w-8 h-8 rounded-full ${av.bgClass} border ${av.borderClass} flex items-center justify-center shrink-0 p-0.5">
+              class="flex items-center gap-2 p-2 rounded-xl border text-left transition ${isSelected ? 'bg-amber-50 border-amber-400 ring-1 ring-amber-400 shadow-sm' : 'bg-white border-slate-200 hover:border-slate-300 hover:bg-slate-50'}">
+              <div class="w-8 h-8 rounded-full ${av.bgClass} border ${av.borderClass} flex items-center justify-center shrink-0 p-0.5 overflow-hidden">
                 ${av.svg}
               </div>
               <div class="min-w-0">
-                <div class="text-[11px] font-bold text-white truncate">${av.emoji} ${shortLabel}</div>
-                <div class="text-[9px] text-slate-400 truncate">${av.species}</div>
+                <div class="text-[11px] font-bold text-slate-900 truncate">${av.emoji} ${shortLabel}</div>
+                <div class="text-[9px] text-slate-500 truncate">${av.species}</div>
               </div>
             </button>
           `;
@@ -1229,12 +1492,25 @@
     }
 
     function selectAvatar(avatarId, isManual = false) {
-      const av = PET_AVATARS[avatarId] || PET_AVATARS.tabby_cat;
+      if (avatarId && (avatarId.startsWith('ai_') || avatarId.startsWith('custom_'))) {
+        const cleanName = (document.getElementById('archer-name')?.value || '').trim().toLowerCase();
+        const custom = (cleanName && window.customAvatars[cleanName]) || window.currentCustomAvatar;
+        if (custom) {
+          selectCustomAvatar(custom, isManual);
+          return;
+        }
+      }
+
+      window.currentCustomAvatar = null;
+      const aiBadge = document.getElementById('live-avatar-ai-badge');
+      if (aiBadge) aiBadge.classList.add('hidden');
+
+      const av = (avatarId === 'default_target' || !avatarId) ? DEFAULT_NEUTRAL_AVATAR : (PET_AVATARS[avatarId] || DEFAULT_NEUTRAL_AVATAR);
       if (isManual) manualAvatarOverride = true;
       document.getElementById('selected-avatar-id').value = av.id;
 
       const circle = document.getElementById('live-avatar-circle');
-      circle.className = `w-14 h-14 rounded-full ${av.bgClass} border-2 ${av.borderClass} flex items-center justify-center shrink-0 shadow-inner p-0.5`;
+      circle.className = `w-14 h-14 rounded-full ${av.bgClass} border-2 ${av.borderClass} flex items-center justify-center shrink-0 shadow-sm p-0.5 overflow-hidden`;
       circle.innerHTML = av.svg;
 
       const nameInput = document.getElementById('archer-name').value.trim();
@@ -1244,24 +1520,20 @@
       speciesEl.className = `text-[10px] font-bold border px-2 py-0.5 rounded-full ${av.badgeClass}`;
       speciesEl.textContent = `${av.emoji} ${av.species}`;
 
-      const customTitleInput = document.getElementById('custom-archer-title');
-      if (customTitleInput) {
-        customTitleInput.placeholder = `${av.title} (or type custom title...)`;
-      }
-      const customVal = customTitleInput ? customTitleInput.value.trim() : '';
-
-      const titleEl = document.getElementById('live-avatar-title');
-      titleEl.className = `text-xs font-semibold mt-0.5 ${av.textClass}`;
-      titleEl.textContent = customVal || av.title;
-
       document.getElementById('live-avatar-traits').textContent = av.traits;
       renderAvatarPickerButtons();
     }
 
     function toggleAvatarPicker() {
       const grid = document.getElementById('avatar-picker-grid');
-      grid.classList.toggle('hidden');
-      renderAvatarPickerButtons();
+      const isHidden = grid.classList.toggle('hidden');
+      const toggleText = document.getElementById('avatar-toggle-btn-text');
+      if (toggleText) {
+        toggleText.textContent = isHidden ? 'Customize Badge' : 'Hide Studio';
+      }
+      if (!isHidden && activeAvatarTab === 'presets') {
+        renderAvatarPickerButtons();
+      }
     }
 
     function equipFromGallery(avatarId) {
@@ -1364,7 +1636,6 @@
       // Whenever the user switches to a different name, reset manual overrides so the person's saved/consistent avatar & style load
       if (name !== lastSelectedArcherName) {
         manualAvatarOverride = false;
-        manualTitleOverride = false;
         manualBowCategoryOverride = false;
         lastSelectedArcherName = name;
         try {
@@ -1372,10 +1643,59 @@
         } catch (e) {}
       }
 
-      if (appState && rawName && !manualTitleOverride) {
-        const savedTitle = getCustomTitleForArcher(rawName);
-        const titleInput = document.getElementById('custom-archer-title');
-        if (titleInput) titleInput.value = savedTitle;
+      // Check if this archer has a saved custom avatar
+      let savedCustom = null;
+      if (name) {
+        if (window.customAvatars && window.customAvatars[name]) {
+          savedCustom = window.customAvatars[name];
+        } else {
+          try {
+            const cached = localStorage.getItem('archery_avatar_' + name);
+            if (cached) {
+              savedCustom = JSON.parse(cached);
+              window.customAvatars[name] = savedCustom;
+            }
+          } catch (e) {}
+        }
+        if (!savedCustom && appState && appState.archers) {
+          const matched = appState.archers.find(a => a.name.toLowerCase() === name);
+          if (matched && matched.customAvatar && matched.customAvatar.svg) {
+            savedCustom = matched.customAvatar;
+            window.customAvatars[name] = savedCustom;
+          }
+        }
+      }
+
+      const savedIndicator = document.getElementById('avatar-saved-indicator');
+      const savedName = document.getElementById('avatar-saved-name');
+
+      if (savedCustom) {
+        // Archer has a saved custom avatar: automatically load and equip it!
+        if (!manualAvatarOverride) {
+          selectCustomAvatar(savedCustom, false);
+        }
+        if (savedIndicator && savedName) {
+          savedName.textContent = `Stored for ${rawName}`;
+          savedIndicator.classList.remove('hidden');
+        }
+      } else {
+        if (savedIndicator) savedIndicator.classList.add('hidden');
+        // New archer: prepare AI generator with personalized prompt idea
+        const promptInput = document.getElementById('ai-avatar-prompt-input');
+        if (promptInput && (!promptInput.value || promptInput.dataset.autoGenerated === 'true')) {
+          if (rawName) {
+            promptInput.placeholder = `e.g. ${rawName} the Peregrine Falcon in leather bracers with golden recurve...`;
+          } else {
+            promptInput.placeholder = "e.g. Peregrine Falcon in leather bracers with golden recurve...";
+          }
+        }
+
+        if (!manualAvatarOverride || !rawName) {
+          const av = getAvatarForArcher(rawName);
+          selectAvatar(av.id, false);
+        } else {
+          document.getElementById('live-avatar-name').textContent = rawName ? `${rawName}'s Archer Badge` : 'Your Archer Mascot';
+        }
       }
 
       if (!manualBowCategoryOverride || !rawName) {
@@ -1384,19 +1704,9 @@
         if (catSelect) catSelect.value = savedCat;
       }
 
-      if (!manualAvatarOverride || !rawName) {
-        const av = getAvatarForArcher(rawName);
-        selectAvatar(av.id, false);
-      } else {
-        document.getElementById('live-avatar-name').textContent = rawName ? `${rawName}'s Archer Badge` : 'Your Archer Mascot';
-      }
-
       if (!name || !appState) return;
 
       const matchedArcher = (appState.archers || []).find(a => a.name.toLowerCase() === name);
-      if (matchedArcher && matchedArcher.avatarId && !manualAvatarOverride) {
-        selectAvatar(matchedArcher.avatarId, false);
-      }
       if (matchedArcher && matchedArcher.bowCategory && !manualBowCategoryOverride) {
         const catSelect = document.getElementById('archer-bow-category');
         if (catSelect) catSelect.value = matchedArcher.bowCategory;
@@ -1458,8 +1768,6 @@
       const avatarId = document.getElementById('selected-avatar-id').value;
       const bowCategoryEl = document.getElementById('archer-bow-category');
       const bowCategory = bowCategoryEl ? bowCategoryEl.value : 'BAREBOW';
-      const customTitleEl = document.getElementById('custom-archer-title');
-      const customTitle = customTitleEl ? customTitleEl.value.trim() : '';
 
       const emailContainer = document.getElementById('email-optin-container');
       const isEmailVisible = emailContainer && !emailContainer.classList.contains('hidden');
@@ -1484,20 +1792,38 @@
       }
 
       try {
+        const cleanName = name.toLowerCase();
+        const activeCustom = window.currentCustomAvatar || (window.customAvatars && window.customAvatars[cleanName]) || null;
+
         await submitRsvp({
           name,
           status,
-          avatarId: avatarId || undefined,
+          avatarId: avatarId || (activeCustom ? activeCustom.id : undefined),
+          customAvatar: activeCustom || undefined,
           bowCategory: bowCategory || undefined,
-          customTitle: customTitle,
           email: email ? email : undefined,
           remindMe: optin
         });
+
+        // Also ensure server persistence in parallel
+        fetch('/api/rsvp', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            name,
+            status,
+            avatarId: avatarId || (activeCustom ? activeCustom.id : undefined),
+            customAvatar: activeCustom || undefined,
+            bowCategory: bowCategory || undefined,
+            email: email ? email : undefined,
+            remindMe: optin
+          })
+        }).catch(err => console.warn('Server sync note:', err));
+
         manualAvatarOverride = false;
-        manualTitleOverride = false;
         manualBowCategoryOverride = false;
         await loadState();
-        alert(`Thanks ${name}! Your RSVP & archer badge have been saved.`);
+        alert(`Thanks ${name}! Your RSVP & archer avatar have been saved.`);
         onArcherNameChange();
       } catch (err) {
         console.error(err);
@@ -1545,7 +1871,6 @@
         const av = getAvatarForArcher(r.archerName, r.avatarId);
         const bowCat = getBowCategoryForArcher(r.archerName, r.bowCategory);
         const bowLabel = BOW_STYLE_LABELS[bowCat] || BOW_STYLE_LABELS.BAREBOW;
-        const displayTitle = getCustomTitleForArcher(r.archerName, r.customTitle) || av.title;
         return `
           <div class="py-2.5 flex items-center justify-between gap-2">
             <div class="flex items-center space-x-3 min-w-0">
@@ -1559,7 +1884,7 @@
                     ${bowLabel}
                   </span>
                   <span class="text-[10px] font-semibold border px-2 py-0.2 rounded-full ${av.badgeClass}">
-                    ${av.emoji} ${escapeHtml(displayTitle)}
+                    ${av.emoji} ${escapeHtml(av.species || 'Archer')}
                   </span>
                 </div>
               </div>
@@ -1684,8 +2009,12 @@
     window.toggleAvatarPicker = toggleAvatarPicker;
     window.equipFromGallery = equipFromGallery;
     window.selectAvatar = selectAvatar;
+    window.selectCustomAvatar = selectCustomAvatar;
+    window.switchAvatarTab = switchAvatarTab;
+    window.generateCustomAvatar = generateCustomAvatar;
+    window.clearAvatarPrompt = clearAvatarPrompt;
+    window.rollRandomAvatarPrompt = rollRandomAvatarPrompt;
     window.onBowCategoryChange = onBowCategoryChange;
-    window.onCustomTitleInput = onCustomTitleInput;
     window.selectStatus = selectStatus;
     window.onArcherNameChange = onArcherNameChange;
     window.switchTab = switchTab;
