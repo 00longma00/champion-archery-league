@@ -11,7 +11,7 @@
       "email": "long.ma.mtl@gmail.com",
       "remindMe": true,
       "createdAt": "2026-10-16T12:00:00.000Z",
-      "avatarId": null,
+      "avatarId": "bengal_cat",
       "customAvatar": null,
       "bowCategory": "BAREBOW"
     },
@@ -124,7 +124,7 @@
     "2026-10-18": [
       {
         "archerName": "Long",
-        "avatarId": null,
+        "avatarId": "bengal_cat",
         "customAvatar": null,
         "bowCategory": "BAREBOW",
         "status": "YES",
@@ -207,7 +207,7 @@
       },
       {
         "archerName": "Long",
-        "avatarId": null,
+        "avatarId": "bengal_cat",
         "customAvatar": null,
         "bowCategory": "BAREBOW",
         "status": "YES",
@@ -278,7 +278,17 @@
         "updatedAt": "2026-10-26T00:47:24.459Z"
       }
     ],
-    "2026-11-08": []
+    "2026-11-08": [
+      {
+        "archerName": "Long",
+        "avatarId": "bengal_cat",
+        "customAvatar": null,
+        "bowCategory": "BAREBOW",
+        "status": "YES",
+        "note": "",
+        "updatedAt": "2026-11-08T17:32:56.343Z"
+      }
+    ]
   },
   "customAvatars": {}
 }

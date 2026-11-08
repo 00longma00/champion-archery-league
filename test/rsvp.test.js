@@ -49,3 +49,44 @@ test('readDB loads database and provides expected schema structure', () => {
   assert.ok(typeof db.events === 'object' && db.events !== null, 'events should be an object');
   assert.ok(typeof db.rsvps === 'object' && db.rsvps !== null, 'rsvps should be an object');
 });
+
+test('preset avatar selection correctly persists and clears custom avatar state', () => {
+  const PET_AVATARS = {
+    bengal_cat: { id: 'bengal_cat', title: 'Bengal Leopard Bowhunter' },
+    golden_dog: { id: 'golden_dog', title: 'Golden Retriever Ranger' }
+  };
+
+  function resolveAvatar(name, explicitAvatarId, appState, customAvatars = {}) {
+    const clean = (name || '').trim().toLowerCase();
+    if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
+      return PET_AVATARS[explicitAvatarId];
+    }
+    if (clean && appState && appState.archers) {
+      const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+      if (found) {
+        if (found.avatarId && PET_AVATARS[found.avatarId] && (!found.customAvatar || found.avatarId !== (found.customAvatar && found.customAvatar.id))) {
+          return PET_AVATARS[found.avatarId];
+        }
+        if (found.customAvatar && found.customAvatar.svg) return found.customAvatar;
+        if (found.avatarId && PET_AVATARS[found.avatarId]) return PET_AVATARS[found.avatarId];
+      }
+    }
+    if (clean && customAvatars[clean]) return customAvatars[clean];
+    return { id: 'default_target', title: 'Default Target' };
+  }
+
+  // 1. Archer with preset avatar Bengal Cat should resolve to bengal_cat even if stale customAvatars exists
+  const appState = {
+    archers: [
+      { name: 'Long', avatarId: 'bengal_cat', customAvatar: null }
+    ]
+  };
+  const staleCustom = { long: { id: 'ai_long_123', species: 'Snowy Owl Archer', svg: '<svg></svg>' } };
+
+  const resolved = resolveAvatar('Long', 'bengal_cat', appState, staleCustom);
+  assert.equal(resolved.id, 'bengal_cat', 'Explicit preset avatar must take precedence over stale custom avatar');
+
+  const resolvedByName = resolveAvatar('Long', null, appState, staleCustom);
+  assert.equal(resolvedByName.id, 'bengal_cat', 'Saved preset avatar in roster must take precedence over stale custom avatar');
+});
+

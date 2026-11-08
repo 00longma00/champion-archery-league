@@ -55,7 +55,8 @@ app.get('/api/state', (req, res) => {
 
   // Public archers list: expose names, hide emails for security/privacy
   const archers = (db.archers || []).map(a => {
-    const custom = a.customAvatar || customAvatars[a.name.toLowerCase()] || null;
+    const isCustom = a.avatarId && (a.avatarId.startsWith('ai_') || a.avatarId.startsWith('custom_'));
+    const custom = (isCustom || !a.avatarId) ? (a.customAvatar || customAvatars[a.name.toLowerCase()] || null) : null;
     return {
       name: a.name,
       avatarId: a.avatarId || (custom ? custom.id : null),
@@ -98,9 +99,16 @@ app.post('/api/rsvp', (req, res) => {
   const db = readDB();
   if (!db.customAvatars) db.customAvatars = {};
 
-  if (customAvatar && typeof customAvatar === 'object' && customAvatar.svg) {
-    db.customAvatars[cleanName.toLowerCase()] = customAvatar;
-    cleanAvatarId = customAvatar.id || `custom_${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  const isCustomId = cleanAvatarId && (cleanAvatarId.startsWith('ai_') || cleanAvatarId.startsWith('custom_'));
+  let finalCustom = (isCustomId || (!cleanAvatarId && customAvatar)) && customAvatar && typeof customAvatar === 'object' && customAvatar.svg
+    ? customAvatar
+    : null;
+
+  if (finalCustom) {
+    db.customAvatars[cleanName.toLowerCase()] = finalCustom;
+    cleanAvatarId = finalCustom.id || `custom_${cleanName.toLowerCase().replace(/[^a-z0-9]/g, '_')}`;
+  } else {
+    delete db.customAvatars[cleanName.toLowerCase()];
   }
 
   const nextSunday = getUpcomingSunday();
@@ -116,7 +124,7 @@ app.post('/api/rsvp', (req, res) => {
       id: Date.now().toString(),
       name: cleanName,
       avatarId: cleanAvatarId || null,
-      customAvatar: customAvatar || db.customAvatars[cleanName.toLowerCase()] || null,
+      customAvatar: finalCustom,
       bowCategory: cleanBowCategory || 'BAREBOW',
       email: email ? String(email).trim().toLowerCase() : '',
       remindMe: remindMe !== false,
@@ -129,10 +137,8 @@ app.post('/api/rsvp', (req, res) => {
       archer.email = String(email).trim().toLowerCase();
     }
     if (remindMe !== undefined) archer.remindMe = !!remindMe;
-    if (cleanAvatarId) archer.avatarId = cleanAvatarId;
-    if (customAvatar && typeof customAvatar === 'object' && customAvatar.svg) {
-      archer.customAvatar = customAvatar;
-    }
+    if (cleanAvatarId !== undefined) archer.avatarId = cleanAvatarId;
+    archer.customAvatar = finalCustom;
     if (cleanBowCategory) archer.bowCategory = cleanBowCategory;
     else if (!archer.bowCategory) archer.bowCategory = 'BAREBOW';
   }
@@ -149,7 +155,7 @@ app.post('/api/rsvp', (req, res) => {
   const rsvpObj = {
     archerName: cleanName,
     avatarId: archer.avatarId || null,
-    customAvatar: archer.customAvatar || db.customAvatars[cleanName.toLowerCase()] || null,
+    customAvatar: archer.customAvatar || null,
     bowCategory: archer.bowCategory || 'BAREBOW',
     status: validStatus,
     note: cleanNote,
@@ -167,7 +173,7 @@ app.post('/api/rsvp', (req, res) => {
     (db.rsvps[dateKey] || []).forEach(r => {
       if (r.archerName && r.archerName.toLowerCase() === cleanName.toLowerCase()) {
         r.avatarId = archer.avatarId || null;
-        r.customAvatar = archer.customAvatar || db.customAvatars[cleanName.toLowerCase()] || null;
+        r.customAvatar = archer.customAvatar || null;
         r.bowCategory = archer.bowCategory || 'BAREBOW';
       }
     });
@@ -181,7 +187,7 @@ app.post('/api/rsvp', (req, res) => {
     archer: {
       name: archer.name,
       avatarId: archer.avatarId || null,
-      customAvatar: archer.customAvatar || db.customAvatars[cleanName.toLowerCase()] || null,
+      customAvatar: archer.customAvatar || null,
       bowCategory: archer.bowCategory || 'BAREBOW',
       hasEmail: !!archer.email,
       remindMe: !!archer.remindMe

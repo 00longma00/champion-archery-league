@@ -263,7 +263,7 @@
               <div>
                 <div class="flex items-center gap-1.5 flex-wrap">
                   <span id="live-avatar-name" class="text-xs font-extrabold text-slate-900">Your Archer Mascot</span>
-                  <span id="live-avatar-species" class="text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full">New Archer</span>
+                  <span id="live-avatar-species" class="hidden text-[10px] font-bold bg-amber-100 text-amber-900 border border-amber-300 px-2 py-0.5 rounded-full"></span>
                   <span id="live-avatar-ai-badge" class="hidden text-[9px] font-extrabold bg-purple-100 text-purple-900 border border-purple-300 px-1.5 py-0.5 rounded-full flex items-center gap-1">
                     <i class="fa-solid fa-wand-magic-sparkles text-amber-600"></i> AI Generated
                   </span>
@@ -367,7 +367,7 @@
             <!-- Tab 2: Preset Badges (18 Breeds) -->
             <div id="avatar-panel-presets" class="hidden space-y-2">
               <div class="flex items-center justify-between mb-1">
-                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Or choose from 18 Classic Cat & Dog Archer Badges:</span>
+                <span class="text-[10px] font-bold uppercase tracking-wider text-slate-500">Or choose from 18 Classic Badges:</span>
               </div>
               <div id="avatar-picker-buttons" class="grid grid-cols-2 sm:grid-cols-3 gap-2">
                 <!-- Populated by JS -->
@@ -510,11 +510,10 @@
     let manualBowCategoryOverride = false;
     let lastSelectedArcherName = '';
 
-    // Option 2 Custom Illustrated Cat & Dog Archer Badges
+    // Option 2 Custom Illustrated Archer Badges
     const PET_AVATARS = {
       tabby_cat: {
         id: 'tabby_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Orange Tabby Recurve',
         traits: 'Red headband • Aiming wink',
@@ -552,7 +551,6 @@
       },
       calico_cat: {
         id: 'calico_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Calico Cat Sharp-Shooter',
         traits: 'Pink recurve • Gold arrow',
@@ -589,7 +587,6 @@
       },
       shiba_dog: {
         id: 'shiba_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Shiba Inu Bowhunter',
         traits: 'Shiba eyebrows • Gold bow',
@@ -624,7 +621,6 @@
       },
       husky_dog: {
         id: 'husky_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Husky Compound Pro',
         traits: 'Ice-blue eyes • Cam pulleys',
@@ -658,7 +654,6 @@
       },
       golden_dog: {
         id: 'golden_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Golden Retriever Ranger',
         traits: 'Range visor cap • Emerald bow',
@@ -687,7 +682,6 @@
       },
       shadow_cat: {
         id: 'shadow_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Shadow Cat Night-Archer',
         traits: 'Golden cat eyes • Bell collar',
@@ -714,7 +708,6 @@
       },
       corgi_dog: {
         id: 'corgi_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Welsh Corgi Marksman',
         traits: 'Big corgi ears • Bullseye arrow',
@@ -743,7 +736,6 @@
       },
       bengal_cat: {
         id: 'bengal_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Bengal Leopard Bowhunter',
         traits: 'Leopard rosettes • Jade eyes',
@@ -798,7 +790,6 @@
       },
       devon_rex_cat: {
         id: 'devon_rex_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Devon Rex Pixie Marksman',
         traits: 'Yellow-white wavy coat • Giant elf ears',
@@ -850,7 +841,6 @@
       siamese_cat: {
         id: 'siamese_cat',
         shortLabel: 'Siamese',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Siamese Sapphire Sniper',
         traits: 'Seal-point mask • Sapphire eyes',
@@ -887,7 +877,6 @@
       maine_coon_cat: {
         id: 'maine_coon_cat',
         shortLabel: 'Maine Coon',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Maine Coon Longbowman',
         traits: 'Lynx ear tufts • Fluffy mane',
@@ -921,7 +910,6 @@
       tuxedo_cat: {
         id: 'tuxedo_cat',
         shortLabel: 'Tuxedo Cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Tuxedo Cat Deadeye',
         traits: 'Crimson bow-tie • White bib',
@@ -958,7 +946,6 @@
       scottish_fold_cat: {
         id: 'scottish_fold_cat',
         shortLabel: 'Scottish Fold',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Scottish Fold Bullseye',
         traits: 'Folded ears • Round owl eyes',
@@ -994,7 +981,6 @@
       german_shepherd_dog: {
         id: 'german_shepherd_dog',
         shortLabel: 'Shepherd',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'German Shepherd Scout',
         traits: 'Pointed radar ears • Tactical bow',
@@ -1029,7 +1015,6 @@
       border_collie_dog: {
         id: 'border_collie_dog',
         shortLabel: 'Border Collie',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Border Collie Ace',
         traits: 'Blaze mask • Agile olympic recurve',
@@ -1064,7 +1049,6 @@
       samoyed_dog: {
         id: 'samoyed_dog',
         shortLabel: 'Samoyed',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Samoyed Cloud Archer',
         traits: 'Fluffy Sammy smile • Ice-blue bow',
@@ -1099,7 +1083,6 @@
       dachshund_dog: {
         id: 'dachshund_dog',
         shortLabel: 'Dachshund',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Dachshund Longbow',
         traits: 'Floppy velvet ears • Longbow pro',
@@ -1132,7 +1115,6 @@
       poodle_dog: {
         id: 'poodle_dog',
         shortLabel: 'Poodle',
-        species: 'Dog Archer',
         emoji: '🐩',
         title: 'Apricot Poodle Olympian',
         traits: 'Curly crown • Precision sight',
@@ -1171,7 +1153,7 @@
     const DEFAULT_NEUTRAL_AVATAR = {
       id: 'default_target',
       name: 'Archer Badge',
-      species: 'New Archer',
+      species: '',
       title: 'Target Archer',
       emoji: '🎯',
       traits: 'Custom AI or pick mascot • Ready for Sunday',
@@ -1397,8 +1379,13 @@
 
       const speciesEl = document.getElementById('live-avatar-species');
       if (speciesEl) {
-        speciesEl.className = `text-[10px] font-bold border px-2 py-0.5 rounded-full ${av.badgeClass || 'bg-amber-100 text-amber-900 border-amber-300'}`;
-        speciesEl.textContent = `${av.emoji || '🏹'} ${av.species || 'Custom Archer'}`;
+        if (av.species && av.species !== 'Cat Archer' && av.species !== 'Dog Archer' && av.species !== 'New Archer') {
+          speciesEl.className = `text-[10px] font-bold border px-2 py-0.5 rounded-full ${av.badgeClass || 'bg-amber-100 text-amber-900 border-amber-300'}`;
+          speciesEl.textContent = `${av.emoji || '🏹'} ${av.species}`;
+          speciesEl.classList.remove('hidden');
+        } else {
+          speciesEl.classList.add('hidden');
+        }
       }
 
       const aiBadge = document.getElementById('live-avatar-ai-badge');
@@ -1417,17 +1404,39 @@
     function getAvatarForArcher(name, explicitAvatarId) {
       const clean = (name || '').trim().toLowerCase();
 
-      // 1. Current active custom avatar if matching id
+      // 1. Explicit preset avatar id always takes precedence!
+      if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
+        return PET_AVATARS[explicitAvatarId];
+      }
+
+      // 2. Current active custom avatar if matching id
       if (window.currentCustomAvatar && explicitAvatarId && window.currentCustomAvatar.id === explicitAvatarId) {
         return window.currentCustomAvatar;
       }
 
-      // 2. Custom avatar in memory cache
+      // 3. Match from appState archers roster
+      if (clean && appState && appState.archers) {
+        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+        if (found) {
+          if (found.avatarId && PET_AVATARS[found.avatarId] && (!found.customAvatar || found.avatarId !== (found.customAvatar && found.customAvatar.id))) {
+            return PET_AVATARS[found.avatarId];
+          }
+          if (found.customAvatar && found.customAvatar.svg) {
+            window.customAvatars[clean] = found.customAvatar;
+            return found.customAvatar;
+          }
+          if (found.avatarId && PET_AVATARS[found.avatarId]) {
+            return PET_AVATARS[found.avatarId];
+          }
+        }
+      }
+
+      // 4. Custom avatar in memory cache
       if (clean && window.customAvatars && window.customAvatars[clean]) {
         return window.customAvatars[clean];
       }
 
-      // 3. Custom avatar in localStorage for instant recall
+      // 5. Custom avatar in localStorage for instant recall
       if (clean) {
         try {
           const cached = localStorage.getItem('archery_avatar_' + clean);
@@ -1439,23 +1448,6 @@
             }
           }
         } catch (e) {}
-      }
-
-      // 4. Custom avatar from appState archers
-      if (clean && appState && appState.archers) {
-        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
-        if (found && found.customAvatar && found.customAvatar.svg) {
-          window.customAvatars[clean] = found.customAvatar;
-          return found.customAvatar;
-        }
-        if (found && found.avatarId && PET_AVATARS[found.avatarId]) {
-          return PET_AVATARS[found.avatarId];
-        }
-      }
-
-      // 5. Explicit preset avatar id
-      if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
-        return PET_AVATARS[explicitAvatarId];
       }
 
       // 6. Explicit custom avatar id search in appState.customAvatars
@@ -1483,7 +1475,7 @@
               </div>
               <div class="min-w-0">
                 <div class="text-[11px] font-bold text-slate-900 truncate">${av.emoji} ${shortLabel}</div>
-                <div class="text-[9px] text-slate-500 truncate">${av.species}</div>
+                ${(av.species && av.species !== "Cat Archer" && av.species !== "Dog Archer" && av.species !== "New Archer") ? `<div class="text-[9px] text-slate-500 truncate">${av.species}</div>` : ""}
               </div>
             </button>
           `;
@@ -1502,6 +1494,14 @@
       }
 
       window.currentCustomAvatar = null;
+      const cleanName = (document.getElementById('archer-name')?.value || '').trim().toLowerCase();
+      if (cleanName && isManual) {
+        delete window.customAvatars[cleanName];
+        try { localStorage.removeItem('archery_avatar_' + cleanName); } catch (e) {}
+        const savedIndicator = document.getElementById('avatar-saved-indicator');
+        if (savedIndicator) savedIndicator.classList.add('hidden');
+      }
+
       const aiBadge = document.getElementById('live-avatar-ai-badge');
       if (aiBadge) aiBadge.classList.add('hidden');
 
@@ -1517,8 +1517,13 @@
       document.getElementById('live-avatar-name').textContent = nameInput ? `${nameInput}'s Archer Badge` : 'Your Archer Mascot';
 
       const speciesEl = document.getElementById('live-avatar-species');
-      speciesEl.className = `text-[10px] font-bold border px-2 py-0.5 rounded-full ${av.badgeClass}`;
-      speciesEl.textContent = `${av.emoji} ${av.species}`;
+      if (av.species && av.species !== 'Cat Archer' && av.species !== 'Dog Archer' && av.species !== 'New Archer') {
+        speciesEl.className = `text-[10px] font-bold border px-2 py-0.5 rounded-full ${av.badgeClass}`;
+        speciesEl.textContent = `${av.emoji} ${av.species}`;
+        speciesEl.classList.remove('hidden');
+      } else {
+        speciesEl.classList.add('hidden');
+      }
 
       document.getElementById('live-avatar-traits').textContent = av.traits;
       renderAvatarPickerButtons();
@@ -1643,10 +1648,21 @@
         } catch (e) {}
       }
 
-      // Check if this archer has a saved custom avatar
+      // Check if this archer has a saved custom avatar or preset avatar
       let savedCustom = null;
-      if (name) {
-        if (window.customAvatars && window.customAvatars[name]) {
+      const matched = (name && appState && appState.archers)
+        ? appState.archers.find(a => a.name.toLowerCase() === name)
+        : null;
+
+      const savedPresetId = (matched && matched.avatarId && PET_AVATARS[matched.avatarId] && (!matched.customAvatar || matched.avatarId !== (matched.customAvatar && matched.customAvatar.id)))
+        ? matched.avatarId
+        : null;
+
+      if (!savedPresetId && name) {
+        if (matched && matched.customAvatar && matched.customAvatar.svg) {
+          savedCustom = matched.customAvatar;
+          window.customAvatars[name] = savedCustom;
+        } else if (window.customAvatars && window.customAvatars[name]) {
           savedCustom = window.customAvatars[name];
         } else {
           try {
@@ -1657,13 +1673,9 @@
             }
           } catch (e) {}
         }
-        if (!savedCustom && appState && appState.archers) {
-          const matched = appState.archers.find(a => a.name.toLowerCase() === name);
-          if (matched && matched.customAvatar && matched.customAvatar.svg) {
-            savedCustom = matched.customAvatar;
-            window.customAvatars[name] = savedCustom;
-          }
-        }
+      } else if (savedPresetId && name) {
+        delete window.customAvatars[name];
+        try { localStorage.removeItem('archery_avatar_' + name); } catch (e) {}
       }
 
       const savedIndicator = document.getElementById('avatar-saved-indicator');
@@ -1691,7 +1703,8 @@
         }
 
         if (!manualAvatarOverride || !rawName) {
-          const av = getAvatarForArcher(rawName);
+          const targetAvId = savedPresetId || (matched && matched.avatarId) || null;
+          const av = getAvatarForArcher(rawName, targetAvId);
           selectAvatar(av.id, false);
         } else {
           document.getElementById('live-avatar-name').textContent = rawName ? `${rawName}'s Archer Badge` : 'Your Archer Mascot';
@@ -1793,36 +1806,54 @@
 
       try {
         const cleanName = name.toLowerCase();
-        const activeCustom = window.currentCustomAvatar || (window.customAvatars && window.customAvatars[cleanName]) || null;
+        const isPreset = !!(avatarId && PET_AVATARS[avatarId]);
+        const activeCustom = (!isPreset && (avatarId?.startsWith('ai_') || avatarId?.startsWith('custom_') || window.currentCustomAvatar))
+          ? (window.currentCustomAvatar || (window.customAvatars && window.customAvatars[cleanName]) || null)
+          : null;
 
-        await submitRsvp({
+        if (isPreset) {
+          delete window.customAvatars[cleanName];
+          try { localStorage.removeItem('archery_avatar_' + cleanName); } catch (e) {}
+        }
+
+        const payload = {
           name,
           status,
           avatarId: avatarId || (activeCustom ? activeCustom.id : undefined),
-          customAvatar: activeCustom || undefined,
+          customAvatar: activeCustom || null,
           bowCategory: bowCategory || undefined,
           email: email ? email : undefined,
           remindMe: optin
-        });
+        };
+
+        await submitRsvp(payload);
 
         // Also ensure server persistence in parallel
         fetch('/api/rsvp', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            name,
-            status,
-            avatarId: avatarId || (activeCustom ? activeCustom.id : undefined),
-            customAvatar: activeCustom || undefined,
-            bowCategory: bowCategory || undefined,
-            email: email ? email : undefined,
-            remindMe: optin
-          })
+          body: JSON.stringify(payload)
         }).catch(err => console.warn('Server sync note:', err));
 
         manualAvatarOverride = false;
         manualBowCategoryOverride = false;
         await loadState();
+
+        if (appState && appState.archers) {
+          const archerInState = appState.archers.find(a => a.name.toLowerCase() === cleanName);
+          if (archerInState) {
+            archerInState.avatarId = avatarId || (activeCustom ? activeCustom.id : null);
+            archerInState.customAvatar = activeCustom || null;
+          }
+        }
+        if (appState && appState.rsvps) {
+          const rsvpInState = appState.rsvps.find(r => (r.archerName || '').toLowerCase() === cleanName);
+          if (rsvpInState) {
+            rsvpInState.avatarId = avatarId || (activeCustom ? activeCustom.id : null);
+            rsvpInState.customAvatar = activeCustom || null;
+          }
+        }
+
         alert(`Thanks ${name}! Your RSVP & archer avatar have been saved.`);
         onArcherNameChange();
       } catch (err) {
@@ -1883,9 +1914,10 @@
                   <span class="text-[10px] font-bold bg-slate-800 text-amber-300 border border-slate-700 px-2 py-0.2 rounded-full">
                     ${bowLabel}
                   </span>
+                  ${(av.species && av.species !== 'Cat Archer' && av.species !== 'Dog Archer') ? `
                   <span class="text-[10px] font-semibold border px-2 py-0.2 rounded-full ${av.badgeClass}">
-                    ${av.emoji} ${escapeHtml(av.species || 'Archer')}
-                  </span>
+                    ${av.emoji} ${escapeHtml(av.species)}
+                  </span>` : ''}
                 </div>
               </div>
             </div>

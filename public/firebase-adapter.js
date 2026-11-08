@@ -91,28 +91,32 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, email, r
     }
   }
 
+  const isCustomId = avatarId && (avatarId.startsWith('ai_') || avatarId.startsWith('custom_'));
+  const finalCustom = (isCustomId || (!avatarId && customAvatar)) && customAvatar && typeof customAvatar === 'object' && customAvatar.svg
+    ? customAvatar
+    : null;
+  const finalAvatarId = avatarId || (finalCustom && finalCustom.id) || null;
+
   // Save/update RSVP
   const rsvpPayload = {
     date: currentSunday,
     archerName: cleanName,
     status,
-    avatarId: avatarId || (customAvatar && customAvatar.id) || null,
+    avatarId: finalAvatarId,
+    customAvatar: finalCustom,
     bowCategory: bowCategory || 'BAREBOW',
     note: '',
     updatedAt: now
   };
-  if (customAvatar && typeof customAvatar === 'object') {
-    rsvpPayload.customAvatar = customAvatar;
-  }
   await setDoc(doc(db, "rsvps", id), rsvpPayload, { merge: true });
 
   // Update Roster profile so chosen avatar/bow persist
   const updateData = {
     name: cleanName,
-    avatarId: avatarId || (customAvatar && customAvatar.id) || null,
+    avatarId: finalAvatarId,
+    customAvatar: finalCustom,
     bowCategory: bowCategory || 'BAREBOW'
   };
-  if (customAvatar !== undefined) updateData.customAvatar = customAvatar || null;
   if (email !== undefined) updateData.email = email;
   if (remindMe !== undefined) updateData.remindMe = remindMe;
 

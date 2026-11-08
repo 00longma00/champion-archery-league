@@ -1666,12 +1666,11 @@
     let showAllGroupsPicker = false;
 
     // ========================================================================
-    // 18-BREED CAT & DOG ARCHER AVATARS (Propagated from Main RSVP App)
+    // 18-BREED ARCHER AVATARS (Propagated from Main RSVP App)
     // ========================================================================
     const PET_AVATARS = {
       tabby_cat: {
         id: 'tabby_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Orange Tabby Recurve',
         traits: 'Red headband • Aiming wink',
@@ -1709,7 +1708,6 @@
       },
       calico_cat: {
         id: 'calico_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Calico Cat Sharp-Shooter',
         traits: 'Pink recurve • Gold arrow',
@@ -1746,7 +1744,6 @@
       },
       shiba_dog: {
         id: 'shiba_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Shiba Inu Bowhunter',
         traits: 'Shiba eyebrows • Gold bow',
@@ -1781,7 +1778,6 @@
       },
       husky_dog: {
         id: 'husky_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Husky Compound Pro',
         traits: 'Ice-blue eyes • Cam pulleys',
@@ -1815,7 +1811,6 @@
       },
       golden_dog: {
         id: 'golden_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Golden Retriever Ranger',
         traits: 'Range visor cap • Emerald bow',
@@ -1844,7 +1839,6 @@
       },
       shadow_cat: {
         id: 'shadow_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Shadow Cat Night-Archer',
         traits: 'Golden cat eyes • Bell collar',
@@ -1871,7 +1865,6 @@
       },
       corgi_dog: {
         id: 'corgi_dog',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Welsh Corgi Marksman',
         traits: 'Big corgi ears • Bullseye arrow',
@@ -1900,7 +1893,6 @@
       },
       bengal_cat: {
         id: 'bengal_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Bengal Leopard Bowhunter',
         traits: 'Leopard rosettes • Jade eyes',
@@ -1946,7 +1938,6 @@
       },
       devon_rex_cat: {
         id: 'devon_rex_cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Devon Rex Pixie Marksman',
         traits: 'Yellow-white wavy coat • Giant elf ears',
@@ -1989,7 +1980,6 @@
       siamese_cat: {
         id: 'siamese_cat',
         shortLabel: 'Siamese',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Siamese Sapphire Sniper',
         traits: 'Seal-point mask • Sapphire eyes',
@@ -2026,7 +2016,6 @@
       maine_coon_cat: {
         id: 'maine_coon_cat',
         shortLabel: 'Maine Coon',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Maine Coon Longbowman',
         traits: 'Lynx ear tufts • Fluffy mane',
@@ -2060,7 +2049,6 @@
       tuxedo_cat: {
         id: 'tuxedo_cat',
         shortLabel: 'Tuxedo Cat',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Tuxedo Cat Deadeye',
         traits: 'Crimson bow-tie • White bib',
@@ -2096,7 +2084,6 @@
       scottish_fold_cat: {
         id: 'scottish_fold_cat',
         shortLabel: 'Scottish Fold',
-        species: 'Cat Archer',
         emoji: '🐱',
         title: 'Scottish Fold Bullseye',
         traits: 'Folded ears • Round owl eyes',
@@ -2129,7 +2116,6 @@
       german_shepherd_dog: {
         id: 'german_shepherd_dog',
         shortLabel: 'Shepherd',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'German Shepherd Scout',
         traits: 'Pointed radar ears • Tactical bow',
@@ -2162,7 +2148,6 @@
       border_collie_dog: {
         id: 'border_collie_dog',
         shortLabel: 'Border Collie',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Border Collie Ace',
         traits: 'Blaze mask • Agile olympic recurve',
@@ -2195,7 +2180,6 @@
       samoyed_dog: {
         id: 'samoyed_dog',
         shortLabel: 'Samoyed',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Samoyed Cloud Archer',
         traits: 'Fluffy Sammy smile • Ice-blue bow',
@@ -2228,7 +2212,6 @@
       dachshund_dog: {
         id: 'dachshund_dog',
         shortLabel: 'Dachshund',
-        species: 'Dog Archer',
         emoji: '🐶',
         title: 'Dachshund Longbow',
         traits: 'Floppy velvet ears • Longbow pro',
@@ -2260,7 +2243,6 @@
       poodle_dog: {
         id: 'poodle_dog',
         shortLabel: 'Poodle',
-        species: 'Dog Archer',
         emoji: '🐩',
         title: 'Apricot Poodle Olympian',
         traits: 'Curly crown • Precision sight',
@@ -2297,7 +2279,7 @@
     const DEFAULT_NEUTRAL_AVATAR = {
       id: 'default_target',
       name: 'Archer Badge',
-      species: 'New Archer',
+      species: '',
       title: 'Target Archer',
       emoji: '🎯',
       traits: 'Custom AI or pick mascot • Ready for Sunday',
@@ -2351,7 +2333,33 @@
     function getAvatarForArcher(name, explicitAvatarId) {
       const clean = (name || '').trim().toLowerCase();
 
-      // Check custom avatars from server hub data or localStorage
+      // 1. Explicit preset avatar id always takes precedence!
+      if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
+        return PET_AVATARS[explicitAvatarId];
+      }
+
+      // 2. Active custom avatar if matching explicit id
+      if (window.currentCustomAvatar && explicitAvatarId && window.currentCustomAvatar.id === explicitAvatarId) {
+        return window.currentCustomAvatar;
+      }
+
+      // 3. Known archer from hubData.rsvpImport.allArchers
+      if (clean && typeof hubData !== 'undefined' && hubData && hubData.rsvpImport && hubData.rsvpImport.allArchers) {
+        const found = hubData.rsvpImport.allArchers.find(a => a.name.toLowerCase() === clean);
+        if (found) {
+          if (found.avatar_id && PET_AVATARS[found.avatar_id] && (!found.custom_avatar || found.avatar_id !== (found.custom_avatar && found.custom_avatar.id))) {
+            return PET_AVATARS[found.avatar_id];
+          }
+          if (found.custom_avatar && found.custom_avatar.svg) {
+            return found.custom_avatar;
+          }
+          if (found.avatar_id && PET_AVATARS[found.avatar_id]) {
+            return PET_AVATARS[found.avatar_id];
+          }
+        }
+      }
+
+      // 4. Check custom avatars from server hub data or localStorage
       if (clean) {
         if (window.customAvatars && window.customAvatars[clean]) {
           return window.customAvatars[clean];
@@ -2368,18 +2376,6 @@
         } catch(e) {}
       }
 
-      if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
-        return PET_AVATARS[explicitAvatarId];
-      }
-      if (clean && typeof hubData !== 'undefined' && hubData && hubData.rsvpImport && hubData.rsvpImport.allArchers) {
-        const found = hubData.rsvpImport.allArchers.find(a => a.name.toLowerCase() === clean);
-        if (found && found.custom_avatar && found.custom_avatar.svg) {
-          return found.custom_avatar;
-        }
-        if (found && found.avatar_id && PET_AVATARS[found.avatar_id]) {
-          return PET_AVATARS[found.avatar_id];
-        }
-      }
       if (NAME_TO_DEFAULT_AVATAR[clean] && PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]]) {
         return PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]];
       }
@@ -4928,11 +4924,12 @@
                     <span>${escapeHtml(p.name)}</span>
                     <i class="fa-solid fa-table-list text-[10px] text-slate-500 group-hover:text-amber-400"></i>
                   </div>
+                  ${(av.species && av.species !== 'Cat Archer' && av.species !== 'Dog Archer' && av.species !== 'New Archer') ? `
                   <div class="mt-0.5">
                     <span class="inline-block text-[10px] font-semibold border px-2 py-0.2 rounded-full leading-tight ${av.badgeClass}">
-                      ${av.emoji} ${escapeHtml(av.species || 'Archer')}
+                      ${av.emoji} ${escapeHtml(av.species)}
                     </span>
-                  </div>
+                  </div>` : ''}
                   <div class="text-[10px] text-slate-400 mt-1 leading-tight flex items-center gap-2 flex-wrap">
                     <span>${p.ends_completed}/${ev.ends_per_round * ev.rounds} Ends • Avg ${p.avg_per_arrow} • <span class="text-amber-400/80 underline">Scorecard</span></span>
                     <button type="button" onclick="event.stopPropagation(); openArcherNoteModal('${p.id}')" class="text-[10px] font-bold text-amber-300 hover:underline">
@@ -4996,11 +4993,12 @@
                           <span>${escapeHtml(p.name)}</span>
                           <i class="fa-solid fa-table-list text-[10px] text-slate-500 group-hover:text-amber-400"></i>
                         </div>
+                        ${(av.species && av.species !== 'Cat Archer' && av.species !== 'Dog Archer' && av.species !== 'New Archer') ? `
                         <div class="mt-0.5">
                           <span class="inline-block text-[10px] font-semibold border px-2 py-0.2 rounded-full leading-tight ${av.badgeClass}">
-                            ${av.emoji} ${escapeHtml(av.species || 'Archer')}
+                            ${av.emoji} ${escapeHtml(av.species)}
                           </span>
-                        </div>
+                        </div>` : ''}
                         <div class="text-[10px] text-slate-400 mt-1 leading-tight">
                           ${p.ends_completed}/${ev.ends_per_round * ev.rounds} Ends • Avg ${p.avg_per_arrow} • <span class="text-amber-400/80 underline">Ends</span>
                         </div>
@@ -5140,7 +5138,7 @@
       document.getElementById('sc-modal-bale').textContent = p.designation || `${p.bale_number}${p.position}`;
       document.getElementById('sc-modal-name').textContent = p.name;
       document.getElementById('sc-modal-meta').innerHTML =
-        `${renderBowCategoryBadge(p.bow_category, 'sm')} <span class="ml-1">${p.category_rank ? '• Division Rank #' + p.category_rank : ''} • ${av.emoji} ${escapeHtml(av.species || 'Archer')}</span>`;
+        `${renderBowCategoryBadge(p.bow_category, 'sm')} <span class="ml-1">${p.category_rank ? '• Division Rank #' + p.category_rank : ''}${av.species && av.species !== 'Cat Archer' && av.species !== 'Dog Archer' && av.species !== 'New Archer' ? ' • ' + av.emoji + ' ' + escapeHtml(av.species) : ''}</span>`;
 
       document.getElementById('sc-modal-total').textContent = p.running_total;
       document.getElementById('sc-modal-xs').textContent = `${p.x_count}X`;
