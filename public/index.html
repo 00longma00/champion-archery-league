@@ -143,7 +143,7 @@
 </head>
 <body class="min-h-screen flex flex-col items-center justify-start p-4 sm:p-6 md:p-8">
   <div class="w-full max-w-xl mx-auto space-y-6">
-    
+
     <!-- Top Header & Custom Bow Crest Logo -->
     <header class="flex flex-wrap items-center justify-between border-b border-slate-800 pb-4 gap-3">
       <div class="flex items-center space-x-3">
@@ -170,17 +170,36 @@
         </div>
       </div>
       <div class="flex flex-wrap items-center gap-2">
+        <!-- Archery Tool Destinations: Scoring, Private Hub, Group wise -->
         <a href="scoring.html" 
-           class="text-xs text-amber-300 hover:text-amber-200 transition bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold">
+           class="text-xs text-amber-300 hover:text-amber-200 transition bg-amber-500/15 hover:bg-amber-500/25 border border-amber-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold"
+           title="Tournament & League Live Scoring">
           <i class="fa-solid fa-bullseye text-amber-400"></i>
-          <span>Live Scoring</span>
+          <span>Scoring</span>
         </a>
         <a href="scoring.html?mode=private" 
-           class="text-xs text-sky-300 hover:text-sky-200 transition bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold">
+           class="text-xs text-sky-300 hover:text-sky-200 transition bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold"
+           title="Personal practice scorecards & analytics">
           <i class="fa-solid fa-user-shield text-sky-400"></i>
-          <span>My Private Hub</span>
+          <span>Private Hub</span>
         </a>
-        <button onclick="openAdminModal()" class="text-xs text-slate-300 hover:text-white transition bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm">
+        <a href="https://archery.mshep.com/" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           title="Group wise: Target photo analysis & arrow grouping (archery.mshep.com)" 
+           class="text-xs text-teal-300 hover:text-teal-200 transition bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold">
+          <i class="fa-solid fa-circle-dot text-teal-400"></i>
+          <span>Group wise</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-75"></i>
+        </a>
+
+        <!-- Separator for RSVP-Only Admin Action -->
+        <span class="h-4 w-px bg-slate-800 hidden sm:inline-block mx-0.5" aria-hidden="true"></span>
+
+        <!-- RSVP Only Admin Functionality: Update Status -->
+        <button onclick="openAdminModal()" 
+                class="text-xs text-slate-300 hover:text-white transition bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-medium"
+                title="RSVP Admin: Update Sunday status (On/Off/Pending)">
           <i class="fa-solid fa-pen-to-square text-amber-400"></i>
           <span>Update Status</span>
         </button>

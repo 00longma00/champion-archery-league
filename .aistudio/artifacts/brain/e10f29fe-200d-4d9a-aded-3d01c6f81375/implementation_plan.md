@@ -1,107 +1,153 @@
-# Unit & Regression Testing Suite for Archery League Tracker
+# Archery Tools Top Banner & Groupwise Scoring Integration
 
-A native, zero-dependency unit and regression testing suite to validate archery scoring computations, arrow sorting/tallying, bale assignments, and RSVP/attendance scheduling.
+A dedicated, slim utility banner bar positioned above the main header across both the League RSVP and Tournament/Practice Scoring pages, providing archers with 1-click access to the league's archery tool ecosystem: the League RSVP Tracker, Live Tournament Scoring, My Private Hub, and the external Groupwise AI target photo scoring tool.
 
-### User Review & Critical Decisions
+## User Review & Critical Decisions
 
 > [!IMPORTANT]
-> The following technical choices were confirmed during interactive clarification:
-> - **Test Framework**: Node.js native test runner (`node:test` + `node:assert/strict`) — zero extra dependencies, instant execution, and native TAP/spec reporting.
-> - **Core Coverage Scope**: Archery scoring and round calculation logic (`scoring-db.js`) + RSVP and attendance scheduling logic (`db.js`), joining the existing avatar test suite (`test/avatar.test.js`).
-> - **Script Execution**: Package script configured to execute all test files across the `test/` directory (`npm test`).
+> The following architectural and UX choices have been confirmed through Phase 1 clarification:
 
-- **Confirmed Decision 1**: Use `node:test` and `node:assert/strict` across all test suites for zero dependency footprint.
-- **Confirmed Decision 2**: Isolate test databases by using in-memory or isolated temp fixtures so testing never pollutes production/dev sqlite or data files.
-- **Confirmed Decision 3**: Upgrade `package.json` test script to `node --test 'test/**/*.test.js'` to discover all unit tests automatically.
+- **Dedicated Top Banner Bar**: Rather than a crowded drop-down menu inside the header, a sleek, compact utility bar sits directly at the very top of the page above the header on both mobile and desktop viewports, clearly establishing the "Archery Tools" suite without interfering with the existing title, logo, or action buttons.
+- **Full Site Consistency**: The banner will be integrated into both the main League RSVP page (`index.html`) and the Scoring & Practice Hub page (`scoring.html`), as well as their production mirrors in `public/` and `docs/`.
+- **External Link Handling**: The link to **Groupwise** (`https://archery.mshep.com/`) will open securely in a new tab (`target="_blank" rel="noopener noreferrer"`) and feature an arrow-up-right external indicator icon so archers know they are launching a companion tool.
+- **Active State Recognition**: The banner dynamically recognizes the current active tool (e.g. highlighting "RSVP Tracker" on `index.html` or "Live Scoring" / "My Private Hub" on `scoring.html`), giving shooters a clear sense of orientation across the entire toolset.
 
 ---
 
-### 1. Overview & Core Concept
+## 1. Overview & Core Concept
 
-- **What It Does**: Establishes a modular unit and regression test suite that runs with `npm test`, testing edge cases in arrow score aggregation, official USAA/NFAA descending sorts, X/10 counts, bale target assignments, RSVP upcoming Sunday date calculations, and JSON store integrity.
-- **Target Audience / Persona**: Developers, league managers, and contributors pushing updates or tuning scoring rules without fearing silent regressions in round totals, handicaps, or schedule dates.
-- **Key Value**: Provides sub-second feedback on code changes, guaranteeing that tournament scores and attendance records remain mathematically correct and resistant to regressions.
-
----
-
-### 2. User Experience & Developer Workflow
-
-- **Key Developer Flow**:
-  1. Contributor modifies scoring rules or calendar scheduling logic.
-  2. Runs `npm test` from root.
-  3. Node's test runner executes all test suites (`test/avatar.test.js`, `test/scoring.test.js`, `test/rsvp.test.js`).
-  4. Instant pass/fail report with clear assertion diffs if regressions occur.
-- **Failure Diagnostics**:
-  - Clear assertion failure messages detailing expected arrow totals, tie-breakers, or expected Sunday ISO format strings.
-  - Zero state pollution: each test suite cleans up any temporary state cleanly.
+- **What It Does**: Introduces a unified top utility strip across the application with curated links to essential archery tools:
+  1. **RSVP Tracker**: Sunday night attendance and roster lineup.
+  2. **Live Scoring**: Official bale scorecards, arrow keypad, and league leaderboards.
+  3. **My Private Hub**: Personal practice scorecards, arrow volume analytics, and performance insights.
+  4. **Groupwise (External)**: Maxwell Shepherd's AI target photo analyzer (`archery.mshep.com`) for automated arrow hole scoring, group size, and center drift calculations.
+- **Target Audience / Persona**: Archery league shooters, club members, and practice archers who want quick, effortless switching between attendance tracking, live competition scoring, personal training logs, and target face grouping analysis.
+- **Key Value**: Consolidates separate tools into a seamless archery portal. Archers no longer need to remember disparate URLs or navigate complex nested menus to log their groups or check into league night.
 
 ---
 
-### 3. Key Product Decisions & Trade-Offs
+## 2. User Experience & Visual Design
 
-- **Decision 1: Built-in `node:test` vs. External Runner (Vitest/Jest)**
-  - *Chosen Approach*: `node:test` with `node:assert/strict`.
-  - *Why*: Built directly into Node.js 18+, runs in ~200ms with zero extra `node_modules` overhead, and requires no transpiler configuration.
-  - *Alternatives Considered*: Vitest or Jest were considered, but would introduce 50+ MB of additional dependencies without added benefit for pure backend logic.
-- **Decision 2: Unit Test File Organization**
-  - *Chosen Approach*: Separate dedicated test files:
-    - `test/avatar.test.js`: Existing SVG avatar generator tests.
-    - `test/scoring.test.js`: Arrow normalization, sorting, X/10 tallying, bow category normalization, and bale auto-assignments.
-    - `test/rsvp.test.js`: `getUpcomingSunday` calendar logic, edge conditions (leap years, month rollovers, Sunday execution), and `readDB`/`writeDB` fallback resilience.
-  - *Why*: Granular modularity allows running individual suites (`npm test test/scoring.test.js`) or the full suite (`npm test`).
+### Key User Flows
+
+1. **Viewing Available Archery Tools**: When an archer lands on the RSVP page or the Scoring Hub, they immediately notice a slender top bar labeled "ARCHERY TOOLS" with distinct, tap-friendly tool pills/links.
+2. **Launching Groupwise**:
+   - The user clicks or taps **"Groupwise (Target AI)"** with an arrow-up-right icon.
+   - The browser opens `https://archery.mshep.com/` in a new tab without disturbing active scorecards or RSVP form state.
+   - Hovering over the link reveals a helpful tooltip: *"Analyze target photos, arrow grouping & automatic scoring"*.
+3. **Switching Between Internal Tools**:
+   - On the RSVP page, clicking **"My Private Hub"** takes the shooter straight into `scoring.html?mode=private`.
+   - On the Scoring page, clicking **"RSVP Tracker"** returns them to `index.html`.
+   - On mobile screens, the banner provides smooth horizontal scroll without wrapping awkwardly or breaking the 15% sticky height limit.
+
+### Visual Identity & Theme
+
+- **Aesthetic Direction**: Clean, athletic, precision-engineered utility styling inspired by modern sports timing and tournament scoring consoles. Matches the existing crisp daylight / light theme overrides and dark-mode foundation.
+- **Color Palette & Contrast**:
+  - *Utility Bar Canvas*: Subdued neutral slate surface (`bg-slate-100/90 dark:bg-slate-950/80` with a clean hairline border `border-b border-slate-200/80 dark:border-slate-800/80` and subtle backdrop blur).
+  - *Brand Tag*: Crisp micro-label with target insignia (`text-amber-600 dark:text-amber-400 font-extrabold uppercase tracking-wider`).
+  - *Active Link*: Bold high-contrast accent (`text-slate-900 bg-white dark:text-amber-300 dark:bg-slate-800/90 shadow-sm`).
+  - *Inactive Links*: Refined slate text (`text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors`).
+  - *External Groupwise Accent*: Distinctive cyan/teal target ring cue (`text-teal-600 dark:text-teal-400 font-semibold`) signaling external target grouping analysis.
+- **Typography & Hierarchy**:
+  - Font family: `Plus Jakarta Sans` for labels, maintaining consistency with existing headings.
+  - Sizing: Compact `text-[11px]` to `text-xs` single-line controls (`whitespace-nowrap shrink-0`) adhering to the Universal Frontend Design Constitution.
+- **Interactive Feedback**:
+  - Fast 150ms hover/tap color transitions (`cubic-bezier(0.16, 1, 0.3, 1)`).
+  - Minimum touch target height ($\ge 40\text{px}$ container with `py-1.5 px-3` interactive touch boundaries).
 
 ---
 
-### 4. Technical Architecture & Test Strategy
+## 3. Key Product Decisions & Trade-Offs
+
+- **Decision 1: Dedicated Top Utility Strip vs. Dropdown Menu**
+  - *Chosen Approach*: A dedicated horizontal top strip located above the primary header.
+  - *Why*: Archery shooters often operate smartphones with finger tabs or quivers on the shooting line; dropdown menus require an extra tap to open, are prone to accidental dismissal, and hide secondary tools. A top bar exposes tool availability at a glance.
+  - *Trade-off*: Takes ~36px of vertical height, which is kept ultra-compact to ensure it stays well within the 15% mobile viewport cap.
+- **Decision 2: Comprehensive Tool Representation**
+  - *Chosen Approach*: Include all four core destinations in the top strip: **RSVP Tracker**, **Live Scoring**, **My Private Hub**, and **Groupwise (Target AI)**.
+  - *Why*: Creates an intuitive, predictable mental model where shooters can navigate between all league and personal shooting workflows from any page.
+- **Decision 3: Multi-File Synchronous Deployment**
+  - *Chosen Approach*: Update the top bar uniformly in `index.html`, `scoring.html`, `public/index.html`, `public/scoring.html`, `docs/index.html`, and `docs/scoring.html`.
+  - *Why*: Express statically serves from `public/`, while GitHub Pages or standalone mirrors rely on root or `docs/`. Synchronizing all files prevents broken navigation across hosting configurations.
+
+---
+
+## 4. Technical Architecture & Data Strategy
+
+### System Component Layout
 
 ```
-┌─────────────────────────────────────────────────────────────┐
-│                       npm test                              │
-│             (node --test 'test/**/*.test.js')               │
-└──────────────┬──────────────────────────────┬───────────────┘
-               │                              │
-       ┌───────▼──────────────┐       ┌───────▼──────────────┐
-       │ test/scoring.test.js │       │   test/rsvp.test.js  │
-       └───────┬──────────────┘       └───────┬──────────────┘
-               │                              │
-       ┌───────▼──────────────┐       ┌───────▼──────────────┐
-       │    scoring-db.js     │       │        db.js         │
-       │ - normalizeAndSort   │       │ - getUpcomingSunday  │
-       │ - USAA_10, NFAA_5    │       │ - readDB / writeDB   │
-       │ - Bale auto-assign   │       │ - Default fallback   │
-       │ - Category mapping   │       │                      │
-       └──────────────────────┘       └──────────────────────┘
+┌────────────────────────────────────────────────────────────────────────┐
+│                        TOP UTILITY BANNER BAR                          │
+│ 🎯 ARCHERY TOOLS │ [RSVP] │ [Live Scoring] │ [Private Hub] │ [Groupwise ↗] │
+└────────────────────────────────────────────────────────────────────────┘
+                                    │
+                                    ▼
+┌────────────────────────────────────────────────────────────────────────┐
+│                       EXISTING MAIN HEADER                             │
+│ [Crest Logo] Champion Archery League          [Status / Header Action] │
+└────────────────────────────────────────────────────────────────────────┘
+            │                                               │
+            ▼                                               ▼
+┌───────────────────────────────┐               ┌────────────────────────┐
+│    LOCAL ARCHERY SUITE        │               │   EXTERNAL TOOL        │
+│ • index.html (RSVP / Roster)  │               │ • archery.mshep.com    │
+│ • scoring.html (Tournament)   │               │   (Photo Target &      │
+│ • scoring.html?mode=private   │               │    Arrow Group Drift)  │
+│   (Practice & Insights)       │               │   target="_blank"      │
+└───────────────────────────────┘               └────────────────────────┘
 ```
 
-#### Detailed Test Matrices
+### Banner Markup Specification
 
-1. **`test/scoring.test.js`**:
-   - **Arrow Normalization & Sorting**:
-     - Correct descending sort for USAA 10-Ring: `['9', 'X', 'M', '10', '7']` -> `['X', '10', '9', '7', 'M']`.
-     - Value aggregation: End totals matching expected points (`X` = 10, `10` = 10, `M` = 0).
-     - X-count and 10-count: `X` increments both `xCount` and `tenCount`; `10` increments `tenCount`.
-     - NFAA 5-Spot format: `X` = 5, `5` = 5, `4` = 4, `M` = 0; invalid keys stripped.
-     - Truncation to max arrows per end (e.g. max 3 arrows or 5 arrows).
-     - Edge cases: Empty array, malformed strings, lowercase strings ('x' -> 'X'), unknown characters ('Z', '?').
-   - **Bow Category Normalization**:
-     - Standard categories: Recurve, Compound, Barebow, Longbow, Traditional, Bowhunter.
-     - Case and space insensitivity (' compound ' -> 'COMPOUND').
-     - Unknown defaults to 'BAREBOW'.
-   - **Bale Auto-Assignments (`computeAutoAssignments`)**:
-     - 2 archers per bale distribution (Lines A & B, Left & Right).
-     - Target face assignment (Top vs Bottom swap logic).
-     - Exceeding bale capacity behavior.
+```html
+<!-- Archery Tools Utility Top Bar -->
+<nav id="archery-tools-bar" aria-label="Archery Tools Navigation" class="w-full bg-slate-100/95 dark:bg-slate-950/90 border-b border-slate-200/90 dark:border-slate-800/80 text-xs py-1.5 px-3 sm:px-6">
+  <div class="max-w-5xl mx-auto flex items-center justify-between gap-3 overflow-x-auto no-scrollbar">
+    <div class="flex items-center gap-2 shrink-0">
+      <span class="inline-flex items-center justify-center w-5 h-5 rounded-md bg-amber-500/15 text-amber-600 dark:text-amber-400 text-[11px] font-black">
+        <i class="fa-solid fa-crosshairs"></i>
+      </span>
+      <span class="font-extrabold tracking-wider uppercase text-[10px] text-slate-500 dark:text-slate-400">
+        Archery Tools
+      </span>
+    </div>
+    <div class="flex items-center gap-1.5 sm:gap-2 shrink-0">
+      <!-- RSVP Tracker -->
+      <a href="index.html" class="tool-link px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5">
+        <i class="fa-solid fa-calendar-check text-emerald-500 text-[11px]"></i>
+        <span>RSVP Tracker</span>
+      </a>
+      <!-- Live Scoring -->
+      <a href="scoring.html" class="tool-link px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5">
+        <i class="fa-solid fa-bullseye text-amber-500 text-[11px]"></i>
+        <span>Live Scoring</span>
+      </a>
+      <!-- My Private Hub -->
+      <a href="scoring.html?mode=private" class="tool-link px-2.5 py-1 rounded-md font-medium text-slate-600 dark:text-slate-300 hover:text-slate-900 dark:hover:text-white transition flex items-center gap-1.5">
+        <i class="fa-solid fa-user-shield text-sky-500 text-[11px]"></i>
+        <span>My Private Hub</span>
+      </a>
+      <!-- Divider -->
+      <span class="h-3.5 w-px bg-slate-300 dark:bg-slate-800 mx-0.5" aria-hidden="true"></span>
+      <!-- Groupwise External Link -->
+      <a href="https://archery.mshep.com/" target="_blank" rel="noopener noreferrer" title="Groupwise: AI photo target analysis & arrow grouping" class="tool-link px-2.5 py-1 rounded-md font-semibold text-teal-700 dark:text-teal-300 bg-teal-500/10 hover:bg-teal-500/20 border border-teal-500/30 transition flex items-center gap-1.5">
+        <i class="fa-solid fa-circle-dot text-teal-500 text-[11px]"></i>
+        <span>Group wise</span>
+        <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-75"></i>
+      </a>
+    </div>
+  </div>
+</nav>
+```
 
-2. **`test/rsvp.test.js`**:
-   - **Upcoming Sunday Calculation (`getUpcomingSunday`)**:
-     - When called on a Monday, returns the upcoming Sunday date `YYYY-MM-DD`.
-     - When called on a Saturday, returns the next day (Sunday).
-     - When called on a Sunday, returns the current Sunday date (idempotent for event day).
-     - Month transition: Last week of month rolling into the 1st week of next month.
-     - Year transition: Late December rolling into January.
-   - **DB Resilience (`readDB` / `writeDB`)**:
-     - Default data structure validation when reading non-existent file.
-     - Serialization and schema verification for config, archers, events, and rsvps.
+### Verification & Testing Plan
 
-3. **`package.json`**:
-   - Update script `"test": "node --test 'test/**/*.test.js'"` for comprehensive multi-suite execution.
+1. **Syntax & Server Build**: Run `npm run build` and `npm run lint` (`node --check server.js db.js scoring-db.js ai-insights.js ai-avatar.js`) to ensure zero errors.
+2. **Automated Test Suite**: Run `npm test` to verify existing RSVP, avatar, and scoring test suites pass cleanly without regression.
+3. **Responsive Visual Check**:
+   - Verify that the banner renders cleanly at the very top of both `index.html` and `scoring.html`.
+   - Test on mobile widths ($375\text{px}$) to confirm smooth horizontal touch scrolling without clipping or vertical layout breaks.
+   - Verify that clicking "Group wise" opens `https://archery.mshep.com/` in a new browser tab with proper security attributes (`rel="noopener noreferrer"`).
+   - Verify that navigating between "RSVP Tracker", "Live Scoring", and "My Private Hub" transitions properly without breaking state.

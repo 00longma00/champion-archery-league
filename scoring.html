@@ -215,19 +215,43 @@
         </div>
       </div>
 
-      <!-- League Navigation Bar -->
+      <!-- League Navigation Bar: Scoring, Private Hub, Group wise, then separated RSVP -->
       <div id="nav-group-league" class="flex flex-wrap items-center gap-2">
         <button id="btn-all-events" onclick="showEventsHub()" class="hidden text-xs text-slate-300 hover:text-white transition bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
           <i class="fa-solid fa-layer-group text-amber-400"></i>
           <span>All Events</span>
         </button>
-        <button onclick="enterPrivateHubMode()" class="text-xs text-sky-300 hover:text-sky-200 transition bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-bold shadow-sm">
-          <i class="fa-solid fa-user-shield text-sky-400"></i>
-          <span>My Private Hub</span>
+        <button onclick="switchToPublicLeagueMode()" 
+                class="text-xs text-amber-300 transition bg-amber-500/15 border border-amber-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold"
+                title="Tournament & League Live Scoring">
+          <i class="fa-solid fa-bullseye text-amber-400"></i>
+          <span>Scoring</span>
         </button>
-        <a href="index.html" class="text-xs text-slate-300 hover:text-white transition bg-slate-900 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5">
+        <button onclick="enterPrivateHubMode()" 
+                class="text-xs text-sky-300 hover:text-sky-200 transition bg-sky-500/15 hover:bg-sky-500/25 border border-sky-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 font-bold shadow-sm"
+                title="Personal practice scorecards & analytics">
+          <i class="fa-solid fa-user-shield text-sky-400"></i>
+          <span>Private Hub</span>
+        </button>
+        <a href="https://archery.mshep.com/" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           title="Group wise: Target photo analysis & arrow grouping (archery.mshep.com)" 
+           class="text-xs text-teal-300 hover:text-teal-200 transition bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/40 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-bold">
+          <i class="fa-solid fa-circle-dot text-teal-400"></i>
+          <span>Group wise</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-75"></i>
+        </a>
+
+        <!-- Separator -->
+        <span class="h-4 w-px bg-slate-800 hidden sm:inline-block mx-0.5" aria-hidden="true"></span>
+
+        <!-- Return to RSVP Tracker -->
+        <a href="index.html" 
+           class="text-xs text-slate-300 hover:text-white transition bg-slate-900 hover:bg-slate-800 border border-slate-800 px-3 py-1.5 rounded-lg flex items-center gap-1.5 shadow-sm font-medium"
+           title="Return to League RSVP & Lineup">
           <i class="fa-solid fa-calendar-check text-emerald-400"></i>
-          <span>RSVP Tracker</span>
+          <span>RSVP</span>
         </a>
       </div>
 
@@ -249,6 +273,15 @@
           <i class="fa-solid fa-trophy text-amber-400"></i>
           <span>League</span>
         </button>
+        <a href="https://archery.mshep.com/" 
+           target="_blank" 
+           rel="noopener noreferrer" 
+           title="Group wise: Target photo analysis & arrow grouping (archery.mshep.com)" 
+           class="text-xs font-bold px-2.5 py-1.5 rounded-lg transition flex items-center gap-1 text-teal-300 hover:text-teal-200 bg-teal-500/15 hover:bg-teal-500/25 border border-teal-500/30">
+          <i class="fa-solid fa-circle-dot text-teal-400 text-[11px]"></i>
+          <span>Group wise</span>
+          <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-75"></i>
+        </a>
         <button onclick="logoutPrivateHub()" title="Lock Private Hub" class="text-xs font-bold px-2 py-1.5 rounded-lg transition text-rose-400 hover:bg-rose-500/10">
           <i class="fa-solid fa-lock"></i>
         </button>
