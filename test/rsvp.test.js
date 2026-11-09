@@ -90,3 +90,37 @@ test('preset avatar selection correctly persists and clears custom avatar state'
   assert.equal(resolvedByName.id, 'bengal_cat', 'Saved preset avatar in roster must take precedence over stale custom avatar');
 });
 
+test('league status resolves to PENDING after previous session completes if nobody has checked in', () => {
+  function computeEffectiveLeagueStatus(event, rsvps = []) {
+    const yesCount = (rsvps || []).filter(r => r && r.status === 'YES').length;
+    let status = (event && event.status) || 'PENDING';
+    if (yesCount === 0) {
+      status = 'PENDING';
+    }
+    return { status, yesCount };
+  }
+
+  // Case 1: Previous league session ended with status 'ON', but next Sunday has 0 check-ins
+  const previousCompletedSession = { status: 'ON', date: '2026-11-08' };
+  const emptyRsvps = [];
+  const res1 = computeEffectiveLeagueStatus(previousCompletedSession, emptyRsvps);
+  assert.equal(res1.status, 'PENDING', 'Status must reset to PENDING when nobody has checked in for upcoming session');
+  assert.equal(res1.yesCount, 0);
+
+  // Case 2: Only 'NO' RSVPs exist (no check-in to shoot on line)
+  const onlyNoRsvps = [{ archerName: 'Alice', status: 'NO' }];
+  const res2 = computeEffectiveLeagueStatus(previousCompletedSession, onlyNoRsvps);
+  assert.equal(res2.status, 'PENDING', 'Status must remain PENDING if archers only RSVPed NO');
+  assert.equal(res2.yesCount, 0);
+
+  // Case 3: At least one archer checks in (status YES)
+  const checkedInRsvps = [
+    { archerName: 'Long', status: 'YES' },
+    { archerName: 'Alice', status: 'NO' }
+  ];
+  const activeEvent = { status: 'ON', date: '2026-11-15' };
+  const res3 = computeEffectiveLeagueStatus(activeEvent, checkedInRsvps);
+  assert.equal(res3.status, 'ON', 'Status retains active status once archers have checked in');
+  assert.equal(res3.yesCount, 1);
+});
+

@@ -51,6 +51,13 @@ app.get('/api/state', (req, res) => {
   const currentEvent = db.events[nextSunday];
   const rsvps = db.rsvps[nextSunday] || [];
   
+  // Set league status to pending after previous session completed if nobody has checked in (RSVP YES)
+  const yesCount = rsvps.filter(r => r.status === 'YES').length;
+  if (yesCount === 0 && currentEvent.status !== 'PENDING') {
+    currentEvent.status = 'PENDING';
+    writeDB(db);
+  }
+  
   const customAvatars = db.customAvatars || {};
 
   // Public archers list: expose names, hide emails for security/privacy

@@ -55,6 +55,24 @@ export async function getAppState() {
     rsvpSnap.forEach(d => rsvps.push(d.data()));
   }
 
+  // Count archers who have checked in (RSVP YES) for upcoming session
+  const checkedInCount = rsvps.filter(r => r.status === 'YES').length;
+
+  // After previous session completes / if nobody has checked in for this session, set status to PENDING
+  if (checkedInCount === 0) {
+    const previousStatus = event.status;
+    event.status = 'PENDING';
+    event.date = currentSunday;
+    // Auto-sync PENDING status to Firestore if it was previously set to ON or from a previous date
+    if (stateSnap && stateSnap.exists() && (previousStatus !== 'PENDING' || stateSnap.data().event?.date !== currentSunday)) {
+      updateDoc(doc(db, "app_state", "current"), {
+        "event.status": "PENDING",
+        "event.date": currentSunday,
+        "event.updatedAt": new Date().toISOString()
+      }).catch(err => console.warn("Auto-sync pending status to Firestore:", err));
+    }
+  }
+
   return {
     upcomingSunday: currentSunday,
     config,
@@ -133,6 +151,7 @@ export async function updateAdminStatus({ status, leagueTime }) {
   const update = {
     "config.leagueTime": leagueTime || "6:00 PM",
     "event.status": status || "PENDING",
+    "event.date": currentSunday,
     "event.updatedAt": now
   };
   await updateDoc(doc(db, "app_state", "current"), update);

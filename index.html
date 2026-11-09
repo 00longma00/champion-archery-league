@@ -1588,9 +1588,21 @@
       document.getElementById('event-date').textContent = formattedDate;
       document.getElementById('event-time').innerHTML = `<i class="fa-regular fa-clock text-amber-400"></i> Starts ${appState.config.leagueTime || '6:00 PM'}`;
 
-      // Status Badge
+      // Tally Counts
+      const rsvps = appState.rsvps || [];
+      const yesCount = rsvps.filter(r => r.status === 'YES').length;
+      const noCount = rsvps.filter(r => r.status === 'NO').length;
+
+      // Status Badge: Set league status to pending if nobody has checked in (yesCount === 0)
+      let status = (appState.event && appState.event.status) || 'PENDING';
+      if (yesCount === 0) {
+        status = 'PENDING';
+        if (appState.event) {
+          appState.event.status = 'PENDING';
+        }
+      }
+
       const statusBadge = document.getElementById('status-badge');
-      const status = appState.event.status;
 
       if (status === 'ON') {
         statusBadge.className = 'px-3.5 py-1.5 rounded-full font-bold text-xs flex items-center gap-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/40 shadow-emerald-500/10 shadow-lg';
@@ -1602,11 +1614,6 @@
         statusBadge.className = 'px-3.5 py-1.5 rounded-full font-bold text-xs flex items-center gap-2 bg-amber-500/20 text-amber-400 border border-amber-500/40 shadow-amber-500/10 shadow-lg';
         statusBadge.innerHTML = `<span class="w-2 h-2 rounded-full bg-amber-400 animate-pulse"></span><span>STATUS PENDING</span>`;
       }
-
-      // Tally Counts
-      const rsvps = appState.rsvps || [];
-      const yesCount = rsvps.filter(r => r.status === 'YES').length;
-      const noCount = rsvps.filter(r => r.status === 'NO').length;
 
       document.getElementById('count-yes').textContent = yesCount;
       document.getElementById('count-no').textContent = noCount;
@@ -1987,7 +1994,9 @@
     function openAdminModal() {
       document.getElementById('admin-modal').classList.remove('hidden');
       if (appState && appState.event) {
-        document.getElementById('admin-status').value = appState.event.status || 'PENDING';
+        const yesCount = (appState.rsvps || []).filter(r => r.status === 'YES').length;
+        const currentStatus = yesCount === 0 ? 'PENDING' : (appState.event.status || 'PENDING');
+        document.getElementById('admin-status').value = currentStatus;
         document.getElementById('admin-time').value = appState.config.leagueTime || '6:00 PM';
       }
     }
