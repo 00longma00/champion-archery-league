@@ -1,6 +1,6 @@
 {
-  "summary":  "Implementation plan for adding the dedicated Archery Tools top banner bar across the RSVP Tracker and Live Scoring Hub, including direct navigation to My Private Hub and the Groupwise external target scoring web tool (https://archery.mshep.com/).",
-  "updatedAt":  "2026-11-09T04:21:29.158489172Z",
+  "summary":  "Updated implementation plan with execution completed: simplified the Private Hub session setup to default to 1 bale, automatically pre-select logged-in hub archers on Bale 1 with shooting toggles, and hid extraneous league bale grids, scorer ratios, and RSVP import controls.",
+  "updatedAt":  "2026-11-10T05:30:30.100816556Z",
   "requestFeedback":  true,
   "userFacing":  true
 }

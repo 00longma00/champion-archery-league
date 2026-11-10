@@ -1148,8 +1148,8 @@
           <input type="checkbox" id="new-ev-swap" checked class="w-4 h-4 accent-amber-500 rounded cursor-pointer">
         </div>
 
-        <!-- Available Bales & Scorer Grouping Setup -->
-        <div class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2.5">
+        <!-- Available Bales & Scorer Grouping Setup (League Mode) -->
+        <div id="create-ev-bales-setup-section" class="rounded-xl bg-slate-950 border border-slate-800 p-3 space-y-2.5">
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <span class="text-xs font-bold text-white flex items-center gap-1.5">
@@ -1190,7 +1190,24 @@
           </div>
         </div>
 
-        <div class="rounded-xl bg-slate-950 border border-slate-800 p-2.5">
+        <!-- Streamlined Private Bale Notice (Shown in Private Hub Mode) -->
+        <div id="create-ev-private-bale-notice" class="hidden rounded-xl bg-slate-950/90 border border-slate-800 p-3 flex items-center justify-between">
+          <div class="flex items-center gap-2.5">
+            <div class="w-8 h-8 rounded-lg bg-amber-500/10 border border-amber-500/30 text-amber-400 flex items-center justify-center text-xs">
+              <i class="fa-solid fa-bullseye"></i>
+            </div>
+            <div>
+              <div class="text-xs font-bold text-white flex items-center gap-1.5">
+                <span>Bale 1 Assignment</span>
+                <span class="text-[10px] text-emerald-400 font-semibold bg-emerald-500/10 border border-emerald-500/20 px-1.5 py-0.2 rounded">Single Bale</span>
+              </div>
+              <p class="text-[10px] text-slate-400 mt-0.5">Selected hub archers automatically assigned to positions 1A &amp; 1B</p>
+            </div>
+          </div>
+          <span class="text-[11px] font-mono font-black text-amber-300 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg">Bale 1</span>
+        </div>
+
+        <div id="create-ev-randomize-section" class="rounded-xl bg-slate-950 border border-slate-800 p-2.5">
           <div class="flex items-center justify-between">
             <div>
               <div class="font-bold text-white text-xs">Randomize Assignment</div>
@@ -1205,22 +1222,22 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <label class="block text-slate-300 font-semibold">Participants (<span id="modal-participant-count">0</span> Archers)</label>
-              <p class="text-[10px] text-slate-400">Drag archers between bales or use the bale selector. Max 4 per bale.</p>
+              <p id="modal-participant-subtitle" class="text-[10px] text-slate-400">Drag archers between bales or use the bale selector. Max 4 per bale.</p>
             </div>
             <div class="flex items-center gap-1.5 flex-wrap">
-              <button type="button" onclick="autoDistributeCreateDraft()" class="text-[11px] font-bold text-amber-300 hover:text-amber-200 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+              <button type="button" id="btn-create-auto-assign" onclick="autoDistributeCreateDraft()" class="text-[11px] font-bold text-amber-300 hover:text-amber-200 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
                 <i class="fa-solid fa-shuffle"></i>
                 <span>Auto-Assign</span>
               </button>
-              <button type="button" onclick="openBulkRosterSelectModal('create')" class="text-[11px] font-bold text-sky-300 hover:text-sky-200 bg-sky-500/15 border border-sky-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
+              <button type="button" id="btn-create-bulk-select" onclick="openBulkRosterSelectModal('create')" class="text-[11px] font-bold text-sky-300 hover:text-sky-200 bg-sky-500/15 border border-sky-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
                 <i class="fa-solid fa-users-viewfinder"></i>
                 <span>Bulk Select</span>
               </button>
-              <button type="button" onclick="openAddArcherMenu('create')" class="text-[11px] font-extrabold text-slate-950 bg-amber-500 hover:bg-amber-400 px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1">
+              <button type="button" id="btn-create-add-archer" onclick="openAddArcherMenu('create')" class="text-[11px] font-extrabold text-slate-950 bg-amber-500 hover:bg-amber-400 px-2.5 py-1 rounded-lg shadow transition flex items-center gap-1">
                 <i class="fa-solid fa-user-plus"></i>
-                <span>+ Archer</span>
+                <span id="btn-create-add-archer-label">+ Archer</span>
               </button>
-              <button type="button" onclick="fillNewEventWithYesRsvps()" class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
+              <button type="button" id="btn-create-rsvps" onclick="fillNewEventWithYesRsvps()" class="text-[11px] font-bold text-emerald-400 hover:text-emerald-300 bg-emerald-500/10 border border-emerald-500/30 px-2.5 py-1 rounded-lg">
                 <i class="fa-solid fa-bolt mr-1"></i>RSVPs (<span id="modal-yes-count">0</span>)
               </button>
             </div>
@@ -1236,9 +1253,9 @@
             <!-- Populated by JS: Grouped by Bale containers for drag-and-drop -->
           </div>
 
-          <button type="button" onclick="openAddArcherMenu('create')" class="w-full py-2 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-300 hover:text-amber-300 transition flex items-center justify-center gap-1.5">
+          <button type="button" id="btn-create-bottom-add" onclick="openAddArcherMenu('create')" class="w-full py-2 px-3 rounded-xl border border-dashed border-slate-700 hover:border-amber-500 bg-slate-950/60 hover:bg-slate-900 text-[11px] font-bold text-slate-300 hover:text-amber-300 transition flex items-center justify-center gap-1.5">
             <i class="fa-solid fa-circle-plus text-amber-400"></i>
-            <span>Add Archer (Discipline &amp; Previous Archers Autofill)</span>
+            <span id="btn-create-bottom-add-label">Add Archer (Discipline &amp; Previous Archers Autofill)</span>
           </button>
         </div>
 
@@ -2562,6 +2579,16 @@
       const listHeading = document.getElementById('hub-events-list-heading');
       const createHeading = document.getElementById('create-modal-heading');
       const createPresets = document.getElementById('create-private-presets');
+      const balesSection = document.getElementById('create-ev-bales-setup-section');
+      const privateNotice = document.getElementById('create-ev-private-bale-notice');
+      const randomizeSection = document.getElementById('create-ev-randomize-section');
+      const btnAutoAssign = document.getElementById('btn-create-auto-assign');
+      const btnBulkSelect = document.getElementById('btn-create-bulk-select');
+      const btnRsvps = document.getElementById('btn-create-rsvps');
+      const createSubmitBtn = document.getElementById('btn-create-event-submit');
+      const participantSubtitle = document.getElementById('modal-participant-subtitle');
+      const btnAddArcherLabel = document.getElementById('btn-create-add-archer-label');
+      const btnBottomAdd = document.getElementById('btn-create-bottom-add');
 
       if (appMode === 'private') {
         if (container) container.className = 'w-full max-w-4xl mx-auto space-y-5';
@@ -2582,6 +2609,16 @@
         if (listHeading) listHeading.textContent = 'Sessions';
         if (createHeading) createHeading.textContent = 'New Practice Session';
         if (createPresets) createPresets.classList.remove('hidden');
+        if (balesSection) balesSection.classList.add('hidden');
+        if (privateNotice) privateNotice.classList.remove('hidden');
+        if (randomizeSection) randomizeSection.classList.add('hidden');
+        if (btnAutoAssign) btnAutoAssign.classList.add('hidden');
+        if (btnBulkSelect) btnBulkSelect.classList.add('hidden');
+        if (btnRsvps) btnRsvps.classList.add('hidden');
+        if (btnAddArcherLabel) btnAddArcherLabel.textContent = '+ Guest Archer';
+        if (btnBottomAdd) btnBottomAdd.classList.add('hidden');
+        if (participantSubtitle) participantSubtitle.textContent = 'Hub archers on Bale 1. Check or uncheck to select who is shooting today.';
+        if (createSubmitBtn) createSubmitBtn.innerHTML = `<i class="fa-solid fa-play mr-1.5"></i><span>Start Practice Session</span>`;
       } else {
         if (container) container.className = 'w-full max-w-2xl mx-auto space-y-5';
         if (titleEl) titleEl.textContent = 'League Scoring';
@@ -2600,6 +2637,16 @@
         if (listHeading) listHeading.textContent = 'League Events';
         if (createHeading) createHeading.textContent = 'Create League Scoring Event';
         if (createPresets) createPresets.classList.add('hidden');
+        if (balesSection) balesSection.classList.remove('hidden');
+        if (privateNotice) privateNotice.classList.add('hidden');
+        if (randomizeSection) randomizeSection.classList.remove('hidden');
+        if (btnAutoAssign) btnAutoAssign.classList.remove('hidden');
+        if (btnBulkSelect) btnBulkSelect.classList.remove('hidden');
+        if (btnRsvps) btnRsvps.classList.remove('hidden');
+        if (btnAddArcherLabel) btnAddArcherLabel.textContent = '+ Archer';
+        if (btnBottomAdd) btnBottomAdd.classList.remove('hidden');
+        if (participantSubtitle) participantSubtitle.textContent = 'Drag archers between bales or use the bale selector. Max 4 per bale.';
+        if (createSubmitBtn) createSubmitBtn.innerHTML = `<span>Create Event &amp; Save Bales</span>`;
       }
     }
 
@@ -3388,6 +3435,7 @@
     // CREATE EVENT MODAL & ADD ARCHER MENU (WITH DISCIPLINE & AUTOFILL POPUP)
     // ========================================================================
     function openCreateEventModal() {
+      applyModeUIChrome();
       const now = new Date();
       const yyyy = now.getFullYear();
       const mm = String(now.getMonth() + 1).padStart(2, '0');
@@ -3401,17 +3449,50 @@
       if (nameInput) {
         nameInput.value = appMode === 'private' ? `Practice ${todayIso}` : 'Sunday Night League';
       }
-      const maxBalesInput = document.getElementById('new-ev-max-bales');
-      const maxBales = maxBalesInput ? (parseInt(maxBalesInput.value, 10) || 6) : 6;
-      renderBaleCheckboxes(maxBales);
 
-      // Pre-fill with YES RSVPs if draft is empty
-      if (createEventParticipantsDraft.length === 0 && hubData.rsvpImport && hubData.rsvpImport.yesArchers && hubData.rsvpImport.yesArchers.length > 0) {
-        fillNewEventWithYesRsvps(true);
-      } else {
+      if (appMode === 'private') {
+        const maxBalesInput = document.getElementById('new-ev-max-bales');
+        if (maxBalesInput) maxBalesInput.value = 1;
+        const balesPerGroupEl = document.getElementById('new-ev-bales-per-group');
+        if (balesPerGroupEl) balesPerGroupEl.value = '1';
+
+        // Automatically default to the archers linked in the currently logged-in private hub
+        const linkedArchers = (activePrivateHub && Array.isArray(activePrivateHub.linked_archers) && activePrivateHub.linked_archers.length > 0)
+          ? activePrivateHub.linked_archers
+          : ['Long', 'Weijia'];
+
+        createEventParticipantsDraft = linkedArchers.map(archName => {
+          const clean = String(archName || '').trim();
+          const resolvedBowCat = getBowCategoryForArcher(clean);
+          const resolvedAv = getAvatarForArcher(clean);
+          return {
+            name: clean,
+            bow_category: resolvedBowCat || 'BAREBOW',
+            avatar_id: (resolvedAv && resolvedAv.id) || null,
+            bale_number: 1,
+            is_selected: true
+          };
+        });
         renderCreateEventParticipantsList();
+      } else {
+        const maxBalesInput = document.getElementById('new-ev-max-bales');
+        const maxBales = maxBalesInput ? (parseInt(maxBalesInput.value, 10) || 6) : 6;
+        renderBaleCheckboxes(maxBales);
+
+        // Pre-fill with YES RSVPs if draft is empty
+        if (createEventParticipantsDraft.length === 0 && hubData.rsvpImport && hubData.rsvpImport.yesArchers && hubData.rsvpImport.yesArchers.length > 0) {
+          fillNewEventWithYesRsvps(true);
+        } else {
+          renderCreateEventParticipantsList();
+        }
       }
       document.getElementById('create-event-modal').classList.remove('hidden');
+    }
+
+    function togglePrivateArcherSelection(idx) {
+      if (!createEventParticipantsDraft[idx]) return;
+      createEventParticipantsDraft[idx].is_selected = !createEventParticipantsDraft[idx].is_selected;
+      renderCreateEventParticipantsList();
     }
 
     function onNewEventDateChange(newDateVal) {
@@ -3476,11 +3557,87 @@
       const listEl = document.getElementById('new-ev-participants-list');
       if (!listEl) return;
       const countEl = document.getElementById('modal-participant-count');
+      const warningBanner = document.getElementById('create-event-capacity-warning');
+      const submitBtn = document.getElementById('btn-create-event-submit');
+
+      // STREAMLINED PRIVATE HUB MODE (Single Bale, pre-selected logged-in archers)
+      if (appMode === 'private') {
+        if (warningBanner) warningBanner.classList.add('hidden');
+        const activeArchers = createEventParticipantsDraft.filter(p => p.is_selected !== false && p.name && p.name.trim().length > 0);
+        if (countEl) {
+          countEl.textContent = `${activeArchers.length} of ${createEventParticipantsDraft.length}`;
+        }
+        if (submitBtn) {
+          submitBtn.disabled = activeArchers.length === 0;
+        }
+
+        if (createEventParticipantsDraft.length === 0) {
+          listEl.innerHTML = `
+            <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-4 text-center text-xs text-slate-500">
+              No archers linked to this hub. Click <strong>+ Guest Archer</strong> above to add one.
+            </div>
+          `;
+          return;
+        }
+
+        const targetPositions = ['1A (Top)', '1B (Bottom)', '1C (Top)', '1D (Bottom)'];
+        let activePosIdx = 0;
+
+        listEl.innerHTML = `
+          <div class="rounded-xl bg-slate-950/80 border border-slate-800 p-2.5 space-y-2">
+            <div class="flex items-center justify-between text-[11px] font-semibold text-slate-400 px-1 border-b border-slate-800/80 pb-1.5">
+              <span class="flex items-center gap-1.5 text-white font-bold">
+                <i class="fa-solid fa-bullseye text-amber-400 text-xs"></i>
+                <span>Bale 1 Archer Roster</span>
+              </span>
+              <span class="text-[10px] text-slate-400">Toggle checkbox for who is shooting</span>
+            </div>
+            <div class="space-y-1.5">
+              ${createEventParticipantsDraft.map((p, idx) => {
+                const isSelected = p.is_selected !== false;
+                const posLabel = isSelected ? (targetPositions[activePosIdx++] || `1${String.fromCharCode(65 + activePosIdx - 1)}`) : 'Sitting Out';
+                const catMeta = getBowCategoryMeta(p.bow_category);
+                return `
+                  <div class="rounded-xl border transition-all p-2.5 flex items-center justify-between gap-2.5 text-xs ${isSelected ? 'bg-slate-900 border-slate-700/80 hover:border-amber-500/50 shadow-sm' : 'bg-slate-950/40 border-slate-800/50 opacity-50'}">
+                    <label class="flex items-center gap-2.5 min-w-0 flex-1 cursor-pointer select-none">
+                      <input type="checkbox" ${isSelected ? 'checked' : ''} onchange="togglePrivateArcherSelection(${idx})" class="w-4 h-4 accent-amber-500 rounded cursor-pointer shrink-0">
+                      ${renderArcherAvatarCircle(p.name, p.avatar_id, 'w-8 h-8')}
+                      <div class="min-w-0 flex-1">
+                        <div class="flex items-center gap-2 flex-wrap">
+                          <span class="text-white font-bold truncate ${!isSelected ? 'line-through text-slate-500' : ''}">${escapeHtml(p.name)}</span>
+                          <span class="text-[10px] font-mono font-bold px-1.5 py-0.2 rounded border ${isSelected ? 'bg-amber-500/15 border-amber-500/40 text-amber-300' : 'bg-slate-800 border-slate-700 text-slate-500'}">
+                            ${posLabel}
+                          </span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 flex items-center gap-1.5 mt-0.5">
+                          <span class="w-3.5 h-3.5 inline-block shrink-0">${catMeta.svg}</span>
+                          <span class="${catMeta.textClass}">${catMeta.label}</span>
+                        </div>
+                      </div>
+                    </label>
+                    <div class="flex items-center gap-1.5 shrink-0">
+                      <select onchange="updateCreateEventParticipant(${idx}, 'bow_category', this.value)"
+                        class="bg-slate-950 border border-slate-700 rounded-lg px-2 py-1 text-[11px] font-bold ${catMeta.textClass}">
+                        <option value="BAREBOW" ${p.bow_category === 'BAREBOW' ? 'selected' : ''}>🏹 Barebow</option>
+                        <option value="OLYMPIC_RECURVE" ${p.bow_category === 'OLYMPIC_RECURVE' ? 'selected' : ''}>🎯 Olympic</option>
+                        <option value="TRADITIONAL" ${p.bow_category === 'TRADITIONAL' ? 'selected' : ''}>🪶 Trad</option>
+                      </select>
+                      <button type="button" onclick="removeCreateEventParticipant(${idx})" class="text-slate-500 hover:text-rose-400 p-1 rounded transition" title="Remove archer">
+                        <i class="fa-solid fa-xmark text-sm"></i>
+                      </button>
+                    </div>
+                  </div>
+                `;
+              }).join('')}
+            </div>
+          </div>
+        `;
+        return;
+      }
+
       if (countEl) countEl.textContent = createEventParticipantsDraft.length;
 
       const activeBales = getSelectedCreateBalesList();
-      const warningBanner = document.getElementById('create-event-capacity-warning');
-      const submitBtn = document.getElementById('btn-create-event-submit');
 
       if (createEventParticipantsDraft.length === 0) {
         if (warningBanner) warningBanner.classList.add('hidden');
@@ -3948,11 +4105,17 @@
         const existingIdx = createEventParticipantsDraft.findIndex(p => (p.name || '').trim().toLowerCase() === cleanKey);
         if (existingIdx >= 0) {
           createEventParticipantsDraft[existingIdx].bow_category = finalCategory;
+          if (appMode === 'private') {
+            createEventParticipantsDraft[existingIdx].is_selected = true;
+            createEventParticipantsDraft[existingIdx].bale_number = 1;
+          }
         } else {
           createEventParticipantsDraft.push({
             name: finalName,
             bow_category: finalCategory,
-            avatar_id: finalAvatarId
+            avatar_id: finalAvatarId,
+            bale_number: (appMode === 'private') ? 1 : (getSelectedCreateBalesList()[0] || 1),
+            is_selected: true
           });
         }
         renderCreateEventParticipantsList();
@@ -4019,6 +4182,80 @@
           return false;
         }
       }
+
+      // STREAMLINED PRIVATE HUB PRACTICE SESSION (1 Bale, selected logged-in hub archers)
+      if (appMode === 'private') {
+        const selectedArchers = createEventParticipantsDraft.filter(p => p.is_selected !== false && p.name && p.name.trim().length > 0);
+        if (selectedArchers.length === 0) {
+          alert('Please select at least one archer for this practice session.');
+          return false;
+        }
+
+        const posConfigs = [
+          { position: 'A', shooting_line: 'AB', lane: 'Left', initial_target: 'Top' },
+          { position: 'B', shooting_line: 'AB', lane: 'Right', initial_target: 'Bottom' },
+          { position: 'C', shooting_line: 'CD', lane: 'Left', initial_target: 'Top' },
+          { position: 'D', shooting_line: 'CD', lane: 'Right', initial_target: 'Bottom' }
+        ];
+
+        const assignedParticipants = selectedArchers.map((p, idx) => {
+          const cfg = posConfigs[idx] || { position: String.fromCharCode(65 + idx), shooting_line: 'AB', lane: 'Left', initial_target: 'Top' };
+          return {
+            name: p.name.trim(),
+            bow_category: p.bow_category || 'BAREBOW',
+            avatar_id: p.avatar_id || null,
+            bale_number: 1,
+            position: cfg.position,
+            shooting_line: cfg.shooting_line,
+            lane: cfg.lane,
+            initial_target: cfg.initial_target
+          };
+        });
+
+        const payload = {
+          name: document.getElementById('new-ev-name').value.trim() || `Practice ${targetDateVal}`,
+          date: targetDateVal,
+          start_time: (document.getElementById('new-ev-time') && document.getElementById('new-ev-time').value) || '18:00',
+          max_bales: 1,
+          bales_per_group: 1,
+          rounds: parseInt(document.getElementById('new-ev-rounds').value, 10) || 1,
+          ends_per_round: parseInt(document.getElementById('new-ev-ends').value, 10) || 10,
+          arrows_per_end: parseInt(document.getElementById('new-ev-arrows').value, 10) || 3,
+          scoring_type: document.getElementById('new-ev-scoring-type').value,
+          swap_top_bottom: document.getElementById('new-ev-swap').checked,
+          participants: assignedParticipants
+        };
+
+        const submitBtn = document.getElementById('btn-create-event-submit');
+        if (submitBtn) {
+          submitBtn.disabled = true;
+          submitBtn.innerHTML = `<i class="fa-solid fa-spinner fa-spin mr-1.5"></i><span>Starting Session...</span>`;
+        }
+
+        try {
+          const hubId = (activePrivateHub && activePrivateHub.id) ? activePrivateHub.id : 'long_weijia';
+          const json = await createPrivateScoringEvent(hubId, {
+            event: payload,
+            participants: payload.participants
+          });
+          closeCreateEventModal();
+          try {
+            await loadEventsHub();
+          } catch (e) {}
+          await openEventWorkspace(json.eventId, 'scoring', true);
+        } catch (err) {
+          console.error('Error creating private session:', err);
+          alert('Failed to create practice session: ' + (err.message || err));
+        } finally {
+          if (submitBtn) {
+            submitBtn.disabled = false;
+            submitBtn.innerHTML = `<i class="fa-solid fa-play mr-1.5"></i><span>Start Practice Session</span>`;
+          }
+        }
+        return true;
+      }
+
+      // PUBLIC LEAGUE EVENT CREATION
       const activeBales = getSelectedCreateBalesList();
       const shouldRandomize = document.getElementById('new-ev-randomize') ? document.getElementById('new-ev-randomize').checked : true;
 
@@ -7290,6 +7527,7 @@
       exportAllPrivateSessionsCSV,
       showEventsHub,
       openCreateEventModal,
+      togglePrivateArcherSelection,
       onNewEventDateChange,
       closeCreateEventModal,
       openBulkRosterSelectModal,
