@@ -5355,6 +5355,30 @@
       }).join('');
     }
 
+    // Builds a CSV from rows and downloads it via a Blob. Every cell is quoted
+    // and escaped here, so callers pass raw values. (A data: URI built with
+    // encodeURI() leaves '#' unescaped, so the browser cut the file off at the
+    // first '#' in any value, e.g. an event name like "... #2".)
+    function csvCell(v) {
+      if (v === null || v === undefined) return '';
+      const s = String(v);
+      return /[",\r\n]/.test(s) || /^\s|\s$/.test(s) ? `"${s.replace(/"/g, '""')}"` : s;
+    }
+
+    function downloadCSV(rows, filename) {
+      const csv = rows.map(r => r.map(csvCell).join(',')).join('\r\n');
+      // BOM so Excel reads UTF-8 (e.g. the '×' in event names) correctly.
+      const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = filename;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      setTimeout(() => URL.revokeObjectURL(url), 1000);
+    }
+
     function exportLeaderboardCSV() {
       if (!activeEventData || !activeEventData.leaderboard) return;
       const ev = activeEventData.event;
@@ -5364,11 +5388,11 @@
       activeEventData.leaderboard.forEach(p => {
         const meta = getBowCategoryMeta(p.bow_category);
         rows.push([
-          `"${meta.label}"`,
+          meta.label,
           p.category_rank || p.rank,
           p.rank,
           p.designation,
-          `"${String(p.name).replace(/"/g, '""')}"`,
+          p.name,
           p.shooting_line,
           p.lane,
           p.initial_target,
@@ -5380,14 +5404,7 @@
           p.avg_per_arrow
         ]);
       });
-      const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(r => r.join(',')).join('\n');
-      const encodedUri = encodeURI(csvContent);
-      const link = document.createElement('a');
-      link.setAttribute('href', encodedUri);
-      link.setAttribute('download', `${ev.date}_${ev.name.replace(/\s+/g, '_')}_scores.csv`);
-      document.body.appendChild(link);
-      link.click();
-      document.body.removeChild(link);
+      downloadCSV(rows, `${ev.date}_${ev.name.replace(/\s+/g, '_')}_scores.csv`);
     }
 
     // ========================================================================
@@ -6917,12 +6934,12 @@
         Object.values(data.archers || {}).forEach(arch => {
           (arch.sessions || []).forEach(s => {
             rows.push([
-              `"${String(arch.name).replace(/"/g, '""')}"`,
+              arch.name,
               s.date,
               s.session_category || 'Practice',
-              `"${String(s.event_name || '').replace(/"/g, '""')}"`,
+              s.event_name || '',
               s.distance || '18m',
-              `"${String(s.target_face || 'Multi-color face').replace(/"/g, '""')}"`,
+              s.target_face || 'Multi-color face',
               s.ends_shot,
               s.arrows_shot,
               s.total_score,
@@ -6932,18 +6949,11 @@
               s.x_count,
               s.gold_pct,
               s.arrow_std_dev,
-              `"${String(s.notes || '').replace(/"/g, '""')}"`
+              s.notes || ''
             ]);
           });
         });
-        const csvContent = 'data:text/csv;charset=utf-8,' + rows.map(r => r.join(',')).join('\n');
-        const encodedUri = encodeURI(csvContent);
-        const link = document.createElement('a');
-        link.setAttribute('href', encodedUri);
-        link.setAttribute('download', `${activePrivateHub.id}_all_sessions_export.csv`);
-        document.body.appendChild(link);
-        link.click();
-        document.body.removeChild(link);
+        downloadCSV(rows, `${activePrivateHub.id}_all_sessions_export.csv`);
       } catch (err) {
         alert('Error exporting CSV: ' + (err.message || err));
       }
