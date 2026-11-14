@@ -60,7 +60,7 @@ app.get('/api/state', (req, res) => {
   
   const customAvatars = db.customAvatars || {};
 
-  // Public archers list: expose names, hide emails for security/privacy
+  // Public archers list
   const archers = (db.archers || []).map(a => {
     const isCustom = a.avatarId && (a.avatarId.startsWith('ai_') || a.avatarId.startsWith('custom_'));
     const custom = (isCustom || !a.avatarId) ? (a.customAvatar || customAvatars[a.name.toLowerCase()] || null) : null;
@@ -68,9 +68,7 @@ app.get('/api/state', (req, res) => {
       name: a.name,
       avatarId: a.avatarId || (custom ? custom.id : null),
       customAvatar: custom,
-      bowCategory: scoringDB.normalizeBowCategory(a.bowCategory || 'BAREBOW'),
-      hasEmail: !!a.email,
-      remindMe: !!a.remindMe
+      bowCategory: scoringDB.normalizeBowCategory(a.bowCategory || 'BAREBOW')
     };
   });
 
@@ -88,7 +86,7 @@ app.get('/api/state', (req, res) => {
 
 // POST /api/rsvp - Submit or update RSVP
 app.post('/api/rsvp', (req, res) => {
-  const { name, status, note, email, remindMe, avatarId, bowCategory, customAvatar } = req.body;
+  const { name, status, note, avatarId, bowCategory, customAvatar } = req.body;
   if (!name || !status) {
     return res.status(400).json({ error: 'Name and status (YES or NO) are required.' });
   }
@@ -133,17 +131,11 @@ app.post('/api/rsvp', (req, res) => {
       avatarId: cleanAvatarId || null,
       customAvatar: finalCustom,
       bowCategory: cleanBowCategory || 'BAREBOW',
-      email: email ? String(email).trim().toLowerCase() : '',
-      remindMe: remindMe !== false,
       createdAt: new Date().toISOString()
     };
     if (!db.archers) db.archers = [];
     db.archers.push(archer);
   } else {
-    if (email !== undefined && String(email).trim() !== '') {
-      archer.email = String(email).trim().toLowerCase();
-    }
-    if (remindMe !== undefined) archer.remindMe = !!remindMe;
     if (cleanAvatarId !== undefined) archer.avatarId = cleanAvatarId;
     archer.customAvatar = finalCustom;
     if (cleanBowCategory) archer.bowCategory = cleanBowCategory;
@@ -195,9 +187,7 @@ app.post('/api/rsvp', (req, res) => {
       name: archer.name,
       avatarId: archer.avatarId || null,
       customAvatar: archer.customAvatar || null,
-      bowCategory: archer.bowCategory || 'BAREBOW',
-      hasEmail: !!archer.email,
-      remindMe: !!archer.remindMe
+      bowCategory: archer.bowCategory || 'BAREBOW'
     }
   });
 });

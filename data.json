@@ -8,8 +8,6 @@
     {
       "id": "1",
       "name": "Long",
-      "email": "long.ma.mtl@gmail.com",
-      "remindMe": true,
       "createdAt": "2026-10-16T12:00:00.000Z",
       "avatarId": "bengal_cat",
       "customAvatar": null,
@@ -18,8 +16,6 @@
     {
       "id": "1792214258014",
       "name": "Weijia",
-      "email": "",
-      "remindMe": false,
       "createdAt": "2026-10-17T05:17:38.014Z",
       "avatarId": null,
       "customAvatar": null,
@@ -28,8 +24,6 @@
     {
       "id": "1792215018187",
       "name": "Ling",
-      "email": "",
-      "remindMe": false,
       "createdAt": "2026-10-17T05:30:18.187Z",
       "avatarId": null,
       "customAvatar": null,
@@ -38,8 +32,6 @@
     {
       "id": "1792217008304",
       "name": "Xianchu",
-      "email": "",
-      "remindMe": false,
       "createdAt": "2026-10-17T06:03:28.304Z",
       "avatarId": null,
       "customAvatar": null,
@@ -48,8 +40,6 @@
     {
       "id": "1792218180555",
       "name": "Alex",
-      "email": "",
-      "remindMe": false,
       "createdAt": "2026-10-17T06:23:00.555Z",
       "avatarId": null,
       "customAvatar": null,
@@ -58,8 +48,6 @@
     {
       "id": "1792222949057",
       "name": "TZ",
-      "email": "",
-      "remindMe": false,
       "createdAt": "2026-10-17T07:42:29.057Z",
       "avatarId": null,
       "customAvatar": null,
@@ -68,8 +56,6 @@
     {
       "id": "1792287470526",
       "name": "Val",
-      "email": "",
-      "remindMe": true,
       "createdAt": "2026-10-18T01:37:50.526Z",
       "avatarId": null,
       "customAvatar": null,
@@ -81,8 +67,6 @@
       "avatarId": null,
       "customAvatar": null,
       "bowCategory": "OLYMPIC_RECURVE",
-      "email": "",
-      "remindMe": true,
       "createdAt": "2026-10-19T00:11:46.077Z"
     },
     {
@@ -91,8 +75,6 @@
       "avatarId": null,
       "customAvatar": null,
       "bowCategory": "BAREBOW",
-      "email": "",
-      "remindMe": true,
       "createdAt": "2026-10-24T22:51:16.943Z"
     }
   ],

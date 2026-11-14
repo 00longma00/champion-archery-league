@@ -13,6 +13,7 @@ import {
   orderBy,
   onSnapshot 
 } from "./firebase-config.js";
+import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
 
 // Helper: Calculate next upcoming Sunday
 export function getUpcomingSundayStr() {
@@ -83,7 +84,7 @@ export async function getAppState() {
 }
 
 // 2. Submit / Update RSVP
-export async function submitRsvp({ name, status, avatarId, bowCategory, email, remindMe, customAvatar }) {
+export async function submitRsvp({ name, status, avatarId, bowCategory, customAvatar }) {
   const currentSunday = getUpcomingSundayStr();
   const cleanName = name.trim();
   const cleanLower = cleanName.toLowerCase();
@@ -135,8 +136,6 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, email, r
     customAvatar: finalCustom,
     bowCategory: bowCategory || 'BAREBOW'
   };
-  if (email !== undefined) updateData.email = email;
-  if (remindMe !== undefined) updateData.remindMe = remindMe;
 
   await setDoc(rosterRef, updateData, { merge: true });
 
@@ -201,7 +200,7 @@ export async function getScoringEventsHub() {
       ...ev,
       participant_count: pList.length,
       group_count: groupCount,
-      is_locked: ev.status === 'COMPLETED'
+      ...leagueEventLockFields(ev)
     });
   });
   // Sort by date descending; if same date, sort by created_at / id descending
@@ -287,7 +286,7 @@ export async function getEventData(eventId) {
   const ev = evSnap.data();
 
   ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-  ev.is_locked = ev.status === 'COMPLETED';
+  Object.assign(ev, leagueEventLockFields(ev));
 
   // Participants
   const participants = [];
@@ -432,6 +431,12 @@ export async function getEventData(eventId) {
 
 // 6. Scoring: Submit End Score
 export async function submitEndScore({ eventId, participantId, roundNumber, endNumber, arrows, endTotal, xCount, tenCount, scoredBy }) {
+  const evSnap = await getDoc(doc(db, "scoring_events", eventId));
+  if (!evSnap.exists()) throw new Error("Event not found");
+  const lockInfo = leagueEventLockFields(evSnap.data());
+  if (lockInfo.is_locked) {
+    throw new Error(`Scoring is locked! Scores cannot be changed more than 8 hours after the scheduled event start time (${lockInfo.lock_deadline_display}).`);
+  }
   const id = `es_${eventId}_${participantId}_${roundNumber}_${endNumber}`;
   const now = new Date().toISOString();
   await setDoc(doc(db, "end_scores", id), {
@@ -492,6 +497,11 @@ export async function createScoringEvent({ event, participants, groups }) {
     created_at: now,
     updated_at: now
   };
+  // Firestore rules use lock_at to reject writes once scoring has closed.
+  eventData.lock_at = lockAtFor(eventData.date, eventData.start_time);
+  if (leagueEventLockFields(eventData).is_locked) {
+    throw new Error("Can't create a league session whose scoring window (8 hours after start) has already closed.");
+  }
   await setDoc(doc(db, "scoring_events", eventId), eventData);
 
   // Construct and save initial groups so they exist immediately in Firestore
@@ -584,13 +594,21 @@ export async function createScoringEvent({ event, participants, groups }) {
   return { success: true, eventId };
 }
 
+// Timestamp after which Firestore rules refuse league scoring writes.
+function lockAtFor(date, startTime) {
+  return new Date(computeEventLockStatus(date, startTime || '18:00').lock_deadline_iso);
+}
+
 // 8. Scoring: Update Event Settings
 export async function updateScoringEvent(eventId, fields) {
   const now = new Date().toISOString();
-  await updateDoc(doc(db, "scoring_events", eventId), {
-    ...fields,
-    updated_at: now
-  });
+  const update = { ...fields, updated_at: now };
+  if (fields.date !== undefined || fields.start_time !== undefined) {
+    const snap = await getDoc(doc(db, "scoring_events", eventId));
+    const current = snap.exists() ? snap.data() : {};
+    update.lock_at = lockAtFor(fields.date ?? current.date, fields.start_time ?? current.start_time);
+  }
+  await updateDoc(doc(db, "scoring_events", eventId), update);
   return { success: true };
 }
 
@@ -1207,7 +1225,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
       participant_summaries: participantSummaries,
       group_count: 1,
       all_scores_filled: allScoresFilled,
-      is_locked: false
+      ...leagueEventLockFields(ev)
     });
   });
 
@@ -1277,7 +1295,7 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
     ev.is_league_synced = true;
     ev.session_category = "League";
     ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-    ev.is_locked = false;
+    Object.assign(ev, leagueEventLockFields(ev));
 
     const matchedParts = [];
     pSnap.forEach(d => {
@@ -1335,7 +1353,7 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
 
     const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
     ev.all_scores_filled = enrichedParticipants.length > 0 && enrichedParticipants.every(p => p.ends_completed >= totalEndsPerArcher);
-    ev.is_finished = ev.all_scores_filled;
+    ev.is_finished = Boolean(ev.all_scores_filled || ev.is_locked);
 
     const leaderboard = [...enrichedParticipants]
       .sort((a, b) => (b.running_total - a.running_total) || (b.x_count - a.x_count) || (b.ten_count - a.ten_count))
