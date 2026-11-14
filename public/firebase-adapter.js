@@ -13,6 +13,7 @@ import {
   orderBy,
   onSnapshot 
 } from "./firebase-config.js";
+import { leagueEventLockFields } from "./event-lock.js";
 
 // Helper: Calculate next upcoming Sunday
 export function getUpcomingSundayStr() {
@@ -201,7 +202,7 @@ export async function getScoringEventsHub() {
       ...ev,
       participant_count: pList.length,
       group_count: groupCount,
-      is_locked: ev.status === 'COMPLETED'
+      ...leagueEventLockFields(ev)
     });
   });
   // Sort by date descending; if same date, sort by created_at / id descending
@@ -287,7 +288,7 @@ export async function getEventData(eventId) {
   const ev = evSnap.data();
 
   ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-  ev.is_locked = ev.status === 'COMPLETED';
+  Object.assign(ev, leagueEventLockFields(ev));
 
   // Participants
   const participants = [];
@@ -432,6 +433,12 @@ export async function getEventData(eventId) {
 
 // 6. Scoring: Submit End Score
 export async function submitEndScore({ eventId, participantId, roundNumber, endNumber, arrows, endTotal, xCount, tenCount, scoredBy }) {
+  const evSnap = await getDoc(doc(db, "scoring_events", eventId));
+  if (!evSnap.exists()) throw new Error("Event not found");
+  const lockInfo = leagueEventLockFields(evSnap.data());
+  if (lockInfo.is_locked) {
+    throw new Error(`Scoring is locked! Scores cannot be changed more than 8 hours after the scheduled event start time (${lockInfo.lock_deadline_display}).`);
+  }
   const id = `es_${eventId}_${participantId}_${roundNumber}_${endNumber}`;
   const now = new Date().toISOString();
   await setDoc(doc(db, "end_scores", id), {
@@ -1207,7 +1214,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
       participant_summaries: participantSummaries,
       group_count: 1,
       all_scores_filled: allScoresFilled,
-      is_locked: false
+      ...leagueEventLockFields(ev)
     });
   });
 
@@ -1277,7 +1284,7 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
     ev.is_league_synced = true;
     ev.session_category = "League";
     ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-    ev.is_locked = false;
+    Object.assign(ev, leagueEventLockFields(ev));
 
     const matchedParts = [];
     pSnap.forEach(d => {
@@ -1335,7 +1342,7 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
 
     const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
     ev.all_scores_filled = enrichedParticipants.length > 0 && enrichedParticipants.every(p => p.ends_completed >= totalEndsPerArcher);
-    ev.is_finished = ev.all_scores_filled;
+    ev.is_finished = Boolean(ev.all_scores_filled || ev.is_locked);
 
     const leaderboard = [...enrichedParticipants]
       .sort((a, b) => (b.running_total - a.running_total) || (b.x_count - a.x_count) || (b.ten_count - a.ten_count))

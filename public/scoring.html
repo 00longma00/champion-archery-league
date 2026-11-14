@@ -1685,7 +1685,7 @@
       savePrivateBaleAssignments,
       updatePrivateParticipantNote,
       getPrivateAnalyticsData
-    } from './firebase-adapter.js?v=20261027b';
+    } from './firebase-adapter.js?v=20261114';
     let appMode = 'league'; // 'league' | 'private'
     let activePrivateHub = null; // { id, name, linked_archers, passkeys }
     let hubData = { events: [], rsvpImport: { yesArchers: [], allArchers: [] } };
@@ -5141,7 +5141,8 @@
         }
         closeKeypad();
       } catch (err) {
-        alert('Network error saving score.');
+        const msg = err && err.message ? String(err.message) : '';
+        alert(msg.startsWith('Scoring is locked') ? msg : 'Network error saving score.');
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;
