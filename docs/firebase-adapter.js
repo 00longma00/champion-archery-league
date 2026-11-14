@@ -13,7 +13,7 @@ import {
   orderBy,
   onSnapshot 
 } from "./firebase-config.js";
-import { leagueEventLockFields } from "./event-lock.js";
+import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
 
 // Helper: Calculate next upcoming Sunday
 export function getUpcomingSundayStr() {
@@ -499,6 +499,11 @@ export async function createScoringEvent({ event, participants, groups }) {
     created_at: now,
     updated_at: now
   };
+  // Firestore rules use lock_at to reject writes once scoring has closed.
+  eventData.lock_at = lockAtFor(eventData.date, eventData.start_time);
+  if (leagueEventLockFields(eventData).is_locked) {
+    throw new Error("Can't create a league session whose scoring window (8 hours after start) has already closed.");
+  }
   await setDoc(doc(db, "scoring_events", eventId), eventData);
 
   // Construct and save initial groups so they exist immediately in Firestore
@@ -591,13 +596,21 @@ export async function createScoringEvent({ event, participants, groups }) {
   return { success: true, eventId };
 }
 
+// Timestamp after which Firestore rules refuse league scoring writes.
+function lockAtFor(date, startTime) {
+  return new Date(computeEventLockStatus(date, startTime || '18:00').lock_deadline_iso);
+}
+
 // 8. Scoring: Update Event Settings
 export async function updateScoringEvent(eventId, fields) {
   const now = new Date().toISOString();
-  await updateDoc(doc(db, "scoring_events", eventId), {
-    ...fields,
-    updated_at: now
-  });
+  const update = { ...fields, updated_at: now };
+  if (fields.date !== undefined || fields.start_time !== undefined) {
+    const snap = await getDoc(doc(db, "scoring_events", eventId));
+    const current = snap.exists() ? snap.data() : {};
+    update.lock_at = lockAtFor(fields.date ?? current.date, fields.start_time ?? current.start_time);
+  }
+  await updateDoc(doc(db, "scoring_events", eventId), update);
   return { success: true };
 }
 

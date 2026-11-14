@@ -1,0 +1,100 @@
+rules_version = '2';
+
+// Firestore security rules for the archery league.
+//
+// The site has no Firebase Auth, so every visitor is anonymous and these rules
+// cannot tell an admin from anyone else. What they do enforce:
+//
+//   * League scoring is final once an event's `lock_at` (8 hours after the
+//     scheduled start, written by the app) has passed, or once its status is
+//     COMPLETED. After that, the event, its participants, groups and end
+//     scores cannot be created, changed or deleted from the browser.
+//     Admins can still make corrections in the Firebase console, which
+//     bypasses these rules.
+//   * `lock_at` must sit within a couple of days of the event's date, so it
+//     cannot be pushed far into the future to keep an event open.
+//
+// Every other collection keeps the open read/write access the app relies on.
+//
+// Deploy: firebase deploy --only firestore:rules
+// (or paste this file into Firebase console -> Firestore -> Rules -> Publish).
+
+service cloud.firestore {
+  match /databases/{database}/documents {
+
+    // ---------- helpers ----------
+
+    function eventPath(eventId) {
+      return /databases/$(database)/documents/scoring_events/$(eventId);
+    }
+
+    // An event without lock_at is treated as locked (run the backfill first).
+    function isLocked(ev) {
+      return !('lock_at' in ev)
+        || !(ev.lock_at is timestamp)
+        || request.time >= ev.lock_at
+        || ev.get('status', '') == 'COMPLETED';
+    }
+
+    // Writes to a child doc are allowed while its event is still open.
+    // If the event no longer exists (cleanup after deleting an unlocked event),
+    // allow it so orphans can be removed.
+    function eventOpen(eventId) {
+      return eventId is string
+        && (!exists(eventPath(eventId)) || !isLocked(get(eventPath(eventId)).data));
+    }
+
+    // lock_at must be a timestamp within [event date - 1 day, event date + 2 days].
+    function validLockAt(ev) {
+      let parts = ev.date.split('-');
+      let day = timestamp.date(int(parts[0]), int(parts[1]), int(parts[2]));
+      return ev.lock_at is timestamp
+        && ev.lock_at >= day - duration.value(1, 'd')
+        && ev.lock_at <= day + duration.value(2, 'd');
+    }
+
+    // ---------- league scoring ----------
+
+    match /scoring_events/{eventId} {
+      allow read: if true;
+      allow create: if validLockAt(request.resource.data)
+                    && !isLocked(request.resource.data);
+      allow update: if !isLocked(resource.data)
+                    && validLockAt(request.resource.data);
+      allow delete: if !isLocked(resource.data);
+    }
+
+    match /end_scores/{id} {
+      allow read: if true;
+      allow create: if eventOpen(request.resource.data.event_id);
+      allow update: if eventOpen(resource.data.event_id)
+                    && request.resource.data.event_id == resource.data.event_id;
+      allow delete: if eventOpen(resource.data.event_id);
+    }
+
+    match /event_participants/{id} {
+      allow read: if true;
+      allow create: if eventOpen(request.resource.data.event_id);
+      allow update: if eventOpen(resource.data.event_id)
+                    && request.resource.data.event_id == resource.data.event_id;
+      allow delete: if eventOpen(resource.data.event_id);
+    }
+
+    match /scoring_groups/{id} {
+      allow read: if true;
+      allow create: if eventOpen(request.resource.data.event_id);
+      allow update: if eventOpen(resource.data.event_id)
+                    && request.resource.data.event_id == resource.data.event_id;
+      allow delete: if eventOpen(resource.data.event_id);
+    }
+
+    // ---------- everything else: unchanged open access ----------
+    // Not a recursive wildcard, and the league collections are excluded,
+    // because any rule that allows a write wins over the ones above.
+
+    match /{collectionName}/{docId} {
+      allow read, write: if !(collectionName in
+        ['scoring_events', 'end_scores', 'event_participants', 'scoring_groups']);
+    }
+  }
+}
