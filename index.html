@@ -414,25 +414,6 @@
           <input type="hidden" id="selected-status" required>
         </div>
 
-        <!-- Saturday Email Reminder Opt-in Toggle (Hidden for now) -->
-        <div id="email-optin-container" class="hidden rounded-xl bg-slate-950/70 border border-slate-800/90 p-3 space-y-2">
-          <div class="flex items-center justify-between">
-            <div class="flex items-center space-x-2">
-              <i class="fa-regular fa-bell text-amber-400 text-sm"></i>
-              <span class="text-xs font-semibold text-slate-200">Saturday Email Reminder</span>
-            </div>
-            <label class="relative inline-flex items-center cursor-pointer">
-              <input type="checkbox" id="email-optin" class="sr-only peer" onchange="toggleEmailField(this.checked)">
-              <div class="w-9 h-5 bg-slate-800 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-4 after:w-4 after:transition-all peer-checked:bg-amber-500"></div>
-            </label>
-          </div>
-          <div id="email-input-wrapper" class="hidden pt-1">
-            <input type="email" id="archer-email" placeholder="Enter your email to get reminded every Saturday..."
-              class="w-full bg-slate-900 border border-slate-700 rounded-lg px-3 py-1.5 text-xs text-white placeholder-slate-500 focus:outline-none focus:ring-1 focus:ring-amber-500">
-            <p id="email-status-hint" class="text-[10px] text-slate-400 mt-1">We'll only email you a reminder if you haven't responded yet by Saturday 10:00 AM.</p>
-          </div>
-        </div>
-
         <!-- Submit Button -->
         <button type="submit" id="btn-submit"
           class="w-full bg-gradient-to-r from-amber-500 to-amber-600 hover:from-amber-400 hover:to-amber-500 text-slate-950 font-bold py-3 rounded-xl transition shadow-lg shadow-amber-500/20 flex items-center justify-center gap-2 disabled:opacity-60 disabled:cursor-not-allowed">
@@ -1751,52 +1732,12 @@
         if (catSelect) catSelect.value = matchedArcher.bowCategory;
       }
 
-      const emailContainer = document.getElementById('email-optin-container');
-      const isEmailVisible = emailContainer && !emailContainer.classList.contains('hidden');
-
-      if (isEmailVisible && matchedArcher) {
-        const optinCheckbox = document.getElementById('email-optin');
-        const emailWrap = document.getElementById('email-input-wrapper');
-        const emailInput = document.getElementById('archer-email');
-        const emailHint = document.getElementById('email-status-hint');
-
-        if (matchedArcher.hasEmail && matchedArcher.remindMe) {
-          optinCheckbox.checked = true;
-          emailWrap.classList.remove('hidden');
-          emailInput.placeholder = "Email saved (leave blank to keep current)";
-          if (emailHint) emailHint.innerHTML = "✅ Saturday reminder is <strong>ENABLED</strong> for you. Leave blank to keep current email, or enter a new one to update.";
-        } else if (matchedArcher.hasEmail && !matchedArcher.remindMe) {
-          optinCheckbox.checked = false;
-          emailWrap.classList.add('hidden');
-          emailInput.placeholder = "Enter email to turn reminders back on...";
-          if (emailHint) emailHint.innerHTML = "⏸️ Saturday reminder is <strong>DISABLED</strong> for you. Flip the toggle ON if you want weekly reminders.";
-        } else {
-          optinCheckbox.checked = false;
-          emailWrap.classList.add('hidden');
-          emailInput.placeholder = "Enter your email to get reminded every Saturday...";
-          if (emailHint) emailHint.textContent = "We'll only email you a reminder if you haven't responded yet by Saturday 10:00 AM.";
-        }
-      }
-
       // Auto pre-fill RSVP status if already responded for this week
       if (matchedArcher) {
         const existingRsvp = (appState.rsvps || []).find(r => r.archerName.toLowerCase() === name);
         if (existingRsvp) {
           selectStatus(existingRsvp.status);
         }
-      }
-    }
-
-    function toggleEmailField(checked) {
-      const wrap = document.getElementById('email-input-wrapper');
-      const emailHint = document.getElementById('email-status-hint');
-      if (checked) {
-        wrap.classList.remove('hidden');
-        document.getElementById('archer-email').focus();
-        if (emailHint) emailHint.textContent = "We'll only email you a reminder if you haven't responded yet by Saturday 10:00 AM.";
-      } else {
-        wrap.classList.add('hidden');
-        if (emailHint) emailHint.textContent = "Email reminders will be disabled for you upon saving.";
       }
     }
 
@@ -1807,11 +1748,6 @@
       const avatarId = document.getElementById('selected-avatar-id').value;
       const bowCategoryEl = document.getElementById('archer-bow-category');
       const bowCategory = bowCategoryEl ? bowCategoryEl.value : 'BAREBOW';
-
-      const emailContainer = document.getElementById('email-optin-container');
-      const isEmailVisible = emailContainer && !emailContainer.classList.contains('hidden');
-      const optin = isEmailVisible ? document.getElementById('email-optin').checked : undefined;
-      const email = isEmailVisible ? document.getElementById('archer-email').value.trim() : undefined;
 
       if (!status) {
         alert('Please choose whether you can make it (Yes or No).');
@@ -1847,9 +1783,7 @@
           status,
           avatarId: avatarId || (activeCustom ? activeCustom.id : undefined),
           customAvatar: activeCustom || null,
-          bowCategory: bowCategory || undefined,
-          email: email ? email : undefined,
-          remindMe: optin
+          bowCategory: bowCategory || undefined
         };
 
         await submitRsvp(payload);
@@ -2082,7 +2016,6 @@
     window.closeAdminModal = closeAdminModal;
     window.saveAdminStatus = saveAdminStatus;
     window.handleRsvpSubmit = handleRsvpSubmit;
-    window.toggleEmailField = toggleEmailField;
 
     if (document.readyState === 'loading') {
       document.addEventListener('DOMContentLoaded', init);

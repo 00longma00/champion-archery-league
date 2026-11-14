@@ -797,8 +797,6 @@ function saveParticipantsAndGroups(eventId, { participants, groups, autoAssign =
           name: p.name,
           avatarId: p.avatar_id || null,
           bowCategory: normCat,
-          email: '',
-          remindMe: false,
           createdAt: now
         };
         rosterDb.archers.push(archer);

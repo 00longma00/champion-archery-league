@@ -84,7 +84,7 @@ export async function getAppState() {
 }
 
 // 2. Submit / Update RSVP
-export async function submitRsvp({ name, status, avatarId, bowCategory, email, remindMe, customAvatar }) {
+export async function submitRsvp({ name, status, avatarId, bowCategory, customAvatar }) {
   const currentSunday = getUpcomingSundayStr();
   const cleanName = name.trim();
   const cleanLower = cleanName.toLowerCase();
@@ -136,8 +136,6 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, email, r
     customAvatar: finalCustom,
     bowCategory: bowCategory || 'BAREBOW'
   };
-  if (email !== undefined) updateData.email = email;
-  if (remindMe !== undefined) updateData.remindMe = remindMe;
 
   await setDoc(rosterRef, updateData, { merge: true });
 

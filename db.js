@@ -10,7 +10,7 @@ const defaultData = {
     defaultStatus: 'PENDING'
   },
   archers: [
-    // { id, name, email, remindMe: true/false, createdAt }
+    // { id, name, avatarId, bowCategory, createdAt }
   ],
   events: {
     // 'YYYY-MM-DD': { date: 'YYYY-MM-DD', status: 'ON' | 'OFF' | 'PENDING', note: '' }
