@@ -14,6 +14,15 @@ rules_version = '2';
 //   * `lock_at` must sit within a couple of days of the event's date, so it
 //     cannot be pushed far into the future to keep an event open.
 //
+//   * Private Hub data can only be changed (including deleted) by a browser
+//     that has signed in with that hub's password. Each browser gets a hidden
+//     Firebase anonymous account; signing in registers it as a member under
+//     private_hub_keys/{hubId}/members/{uid}. The registration is accepted only
+//     if sha256 of the key it presents (PBKDF2 of the password) matches the
+//     hub's key_hash, which nobody can read. Changing the hub key bumps the
+//     hub's `generation`, which signs out every other device. Private data
+//     stays readable, as before.
+//
 // Every other collection keeps the open read/write access the app relies on.
 //
 // Deploy: firebase deploy --only firestore:rules
@@ -88,13 +97,143 @@ service cloud.firestore {
       allow delete: if eventOpen(resource.data.event_id);
     }
 
+    // ---------- private hub ----------
+
+    function hubPath(hubId) {
+      return /databases/$(database)/documents/private_hubs/$(hubId);
+    }
+
+    function hubKeysPath(hubId) {
+      return /databases/$(database)/documents/private_hub_keys/$(hubId);
+    }
+
+    // This browser has registered with the hub's current key.
+    function isMember(hubId) {
+      return request.auth != null
+        && hubId is string
+        && exists(/databases/$(database)/documents/private_hub_keys/$(hubId)/members/$(request.auth.uid))
+        && get(/databases/$(database)/documents/private_hub_keys/$(hubId)/members/$(request.auth.uid)).data.generation
+             == get(hubPath(hubId)).data.generation;
+    }
+
+    function isKeyHash(value) {
+      return value is string && value.matches('^[0-9a-f]{64}$');
+    }
+
+    // A new score, archer or group must belong to a session of the same hub,
+    // so nobody can plant documents in someone else's session.
+    function canCreateInSession() {
+      let d = request.resource.data;
+      return isMember(d.hub_id)
+        && d.event_id is string
+        && get(/databases/$(database)/documents/private_events/$(d.event_id)).data.hub_id == d.hub_id;
+    }
+
+    // Existing private documents stay with their hub (and session).
+    function canUpdateOwned() {
+      return isMember(resource.data.hub_id)
+        && request.resource.data.hub_id == resource.data.hub_id
+        && request.resource.data.get('event_id', null) == resource.data.get('event_id', null);
+    }
+
+    function canDeleteOwned() {
+      return isMember(resource.data.hub_id);
+    }
+
+    match /private_hubs/{hubId} {
+      allow read: if true;
+      // Created together with its key hash (and the creator's membership).
+      allow create: if request.auth != null
+        && !exists(hubKeysPath(hubId))
+        && existsAfter(hubKeysPath(hubId))
+        && request.resource.data.id == hubId
+        && request.resource.data.generation == 1
+        && !('password_hash' in request.resource.data);
+      // Salt and generation change only together with the key hash.
+      allow update: if isMember(hubId)
+        && request.resource.data.get('id', hubId) == resource.data.get('id', hubId)
+        && !('password_hash' in request.resource.data)
+        && ((request.resource.data.salt == resource.data.salt
+             && request.resource.data.generation == resource.data.generation)
+          || (request.resource.data.generation == resource.data.generation + 1
+             && getAfter(hubKeysPath(hubId)).data.key_hash != get(hubKeysPath(hubId)).data.key_hash));
+      allow delete: if false;
+    }
+
+    match /private_hub_keys/{hubId} {
+      allow read: if false;
+      allow create: if request.auth != null
+        && !exists(hubPath(hubId))
+        && existsAfter(hubPath(hubId))
+        && request.resource.data.keys().hasOnly(['key_hash'])
+        && isKeyHash(request.resource.data.key_hash);
+      allow update: if isMember(hubId)
+        && getAfter(hubPath(hubId)).data.generation == get(hubPath(hubId)).data.generation + 1
+        && request.resource.data.keys().hasOnly(['key_hash'])
+        && isKeyHash(request.resource.data.key_hash);
+      allow delete: if false;
+
+      // One document per registered browser; only that browser can see it.
+      match /members/{uid} {
+        allow get: if request.auth != null && request.auth.uid == uid;
+        allow list: if false;
+        allow create, update: if request.auth != null
+          && request.auth.uid == uid
+          && request.resource.data.keys().hasOnly(['key', 'generation', 'registered_at'])
+          && request.resource.data.key is string
+          && hashing.sha256(request.resource.data.key).toHexString().lower()
+               == getAfter(hubKeysPath(hubId)).data.key_hash
+          && request.resource.data.generation == getAfter(hubPath(hubId)).data.generation;
+        allow delete: if request.auth != null && request.auth.uid == uid;
+      }
+    }
+
+    match /private_events/{id} {
+      allow read: if true;
+      allow create: if isMember(request.resource.data.hub_id);
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
+    }
+
+    match /private_end_scores/{id} {
+      allow read: if true;
+      allow create: if canCreateInSession();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
+    }
+
+    match /private_participants/{id} {
+      allow read: if true;
+      allow create: if canCreateInSession();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
+    }
+
+    match /private_groups/{id} {
+      allow read: if true;
+      allow create: if canCreateInSession();
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
+    }
+
+    // Doc ids start with the hub id ("<hub>_<league event>_<archer>").
+    match /private_league_notes/{id} {
+      allow read: if true;
+      allow create: if isMember(request.resource.data.hub_id)
+        && id.matches(request.resource.data.hub_id + '_.+');
+      allow update: if canUpdateOwned();
+      allow delete: if canDeleteOwned();
+    }
+
     // ---------- everything else: unchanged open access ----------
     // Not a recursive wildcard, and the league collections are excluded,
     // because any rule that allows a write wins over the ones above.
 
     match /{collectionName}/{docId} {
       allow read, write: if !(collectionName in
-        ['scoring_events', 'end_scores', 'event_participants', 'scoring_groups']);
+        ['scoring_events', 'end_scores', 'event_participants', 'scoring_groups',
+         'private_hubs', 'private_hub_keys', 'private_events', 'private_end_scores',
+         'private_participants', 'private_groups', 'private_league_notes']);
     }
   }
 }

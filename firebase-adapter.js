@@ -11,11 +11,17 @@ import {
   query, 
   where, 
   orderBy,
-  onSnapshot 
+  onSnapshot,
+  app
 } from "./firebase-config.js";
+import { writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { deriveHubKey, generateSaltHex, sha256Hex, HUB_KEY_VERSION } from "./hub-keys.js";
 import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
 import { archerDirectory } from "./archer-names.js";
 import { isPresetAvatar, leastUsedAvatar, planArcherAvatars, rosterAvatarsByArcher } from "./archer-avatars.js";
+
+// Same SDK version as firebase-config.js; loaded only when the Private Hub needs it.
+const FIREBASE_AUTH_URL = "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
 
 // Roster docs as { id: <doc id>, ...fields }, teaching the name directory as they load.
 // The latest list is cached briefly so pages that refresh every few seconds can show
@@ -849,41 +855,6 @@ export async function updateScoringGroupState(groupId, fields) {
 // MY PRIVATE HUB — MULTI-TENANT SPACES, PRACTICE SCORING & LEAGUE AUTO-SYNC
 // ============================================================================
 
-async function hashPasswordPBKDF2(password, saltHex) {
-  const enc = new TextEncoder();
-  const keyMaterial = await crypto.subtle.importKey(
-    "raw",
-    enc.encode(String(password || "")),
-    { name: "PBKDF2" },
-    false,
-    ["deriveBits"]
-  );
-  const saltBytes = new Uint8Array(
-    (saltHex.match(/.{1,2}/g) || []).map(b => parseInt(b, 16))
-  );
-  const derivedBits = await crypto.subtle.deriveBits(
-    {
-      name: "PBKDF2",
-      salt: saltBytes,
-      iterations: 50000,
-      hash: "SHA-256"
-    },
-    keyMaterial,
-    256
-  );
-  return Array.from(new Uint8Array(derivedBits))
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
-function generateSaltHex() {
-  const bytes = new Uint8Array(16);
-  crypto.getRandomValues(bytes);
-  return Array.from(bytes)
-    .map(b => b.toString(16).padStart(2, "0"))
-    .join("");
-}
-
 function slugifyHubId(name) {
   const clean = String(name || "").trim().toLowerCase();
   if (
@@ -914,17 +885,133 @@ export async function listPrivateHubSpaces() {
   return spaces;
 }
 
+// ---------------------------------------------------------------------------
+// Device access. Firestore only lets a browser change a hub's data once that
+// browser has proved it knows the hub password: each browser gets a hidden
+// Firebase anonymous account, and signing in with the password registers that
+// account as a member of the hub (private_hub_keys/{hubId}/members/{uid}).
+// The rules accept the registration only if sha256(key) matches the hub's
+// unreadable key_hash, and only while its `generation` matches the hub's.
+// Rotating the key bumps the generation, which signs out every other device.
+// ---------------------------------------------------------------------------
+let hubAuthPromise = null;
+
+function loadHubAuth() {
+  if (!hubAuthPromise) {
+    hubAuthPromise = import(FIREBASE_AUTH_URL)
+      .then(async mod => {
+        const auth = mod.getAuth(app);
+        await auth.authStateReady();
+        return { auth, mod };
+      })
+      .catch(err => {
+        hubAuthPromise = null;
+        throw err;
+      });
+  }
+  return hubAuthPromise;
+}
+
+async function hubAuthUser() {
+  const { auth, mod } = await loadHubAuth();
+  if (auth.currentUser) return auth.currentUser;
+  try {
+    return (await mod.signInAnonymously(auth)).user;
+  } catch (err) {
+    if (err && (err.code === "auth/operation-not-allowed" || err.code === "auth/admin-restricted-operation")) {
+      throw new Error("Private Hub sign-in isn't switched on yet. Ask the league admin to enable Anonymous sign-in in Firebase Authentication.");
+    }
+    throw err;
+  }
+}
+
+function hubKeysRef(hubId) {
+  return doc(db, "private_hub_keys", hubId);
+}
+
+function hubMemberRef(hubId, uid) {
+  return doc(db, "private_hub_keys", hubId, "members", uid);
+}
+
+function isPermissionDenied(err) {
+  return Boolean(err && err.code === "permission-denied");
+}
+
+function hubSummary(data, fallbackId) {
+  return {
+    id: data.id || fallbackId,
+    name: data.name,
+    linked_archers: linkedArcherNames(Array.isArray(data.linked_archers) ? data.linked_archers : ["Long", "Weijia"]),
+    passkeys: Array.isArray(data.passkeys) ? data.passkeys : []
+  };
+}
+
+// Hubs get a `generation` when they are secured (new hubs, or by
+// `node scripts/hub-admin.mjs migrate`). Until then they work the old way.
+function isSecuredHub(data) {
+  return Boolean(data) && typeof data.generation === "number";
+}
+
+async function registerHubDevice(hubId, key, generation) {
+  const user = await hubAuthUser();
+  await setDoc(hubMemberRef(hubId, user.uid), {
+    key,
+    generation,
+    registered_at: new Date().toISOString()
+  });
+}
+
+// New salt and key for the hub; this device stays signed in, all others are
+// signed out. Used to retire keys carried over from the old public hash.
+async function rotateHubKey(hubId, password, generation) {
+  const user = await hubAuthUser();
+  const salt = generateSaltHex();
+  const key = await deriveHubKey(password, salt);
+  const next = generation + 1;
+  const now = new Date().toISOString();
+  const batch = writeBatch(db);
+  batch.update(doc(db, "private_hubs", hubId), { salt, generation: next, key_version: HUB_KEY_VERSION, updated_at: now });
+  batch.set(hubKeysRef(hubId), { key_hash: await sha256Hex(key) });
+  batch.set(hubMemberRef(hubId, user.uid), { key, generation: next, registered_at: now });
+  await batch.commit();
+}
+
+// Is this browser allowed to change the hub's data? { ok: true } if so.
+export async function checkPrivateHubDevice(hubId) {
+  const snap = await getDoc(doc(db, "private_hubs", hubId));
+  if (!snap.exists()) return { ok: false, reason: "missing" };
+  const hub = snap.data();
+  if (!isSecuredHub(hub)) return { ok: true, legacy: true };
+  const user = await hubAuthUser();
+  const member = await getDoc(hubMemberRef(hubId, user.uid));
+  if (member.exists() && member.data().generation === hub.generation) return { ok: true };
+  return { ok: false, reason: "device" };
+}
+
+// Lock: this browser can no longer change the hub until the password is entered again.
+export async function forgetPrivateHubDevice(hubId) {
+  if (!hubId) return;
+  try {
+    const { auth } = await loadHubAuth();
+    if (auth.currentUser) await deleteDoc(hubMemberRef(hubId, auth.currentUser.uid));
+  } catch (err) {
+    console.warn("Could not sign this device out of the hub", err);
+  }
+}
+
 export async function registerPrivateHubSpace({ name, password, linkedArchers = [] }) {
   const cleanName = String(name || "My Private Hub").trim();
   const hubId = slugifyHubId(cleanName);
   const ref = doc(db, "private_hubs", hubId);
   const existing = await getDoc(ref);
-  if (existing.exists() && existing.data().password_hash) {
-    throw new Error(`Hub "${cleanName}" is already registered. Please switch to "Sign In" and enter your password.`);
+  if (existing.exists()) {
+    const data = existing.data();
+    if (isSecuredHub(data) || data.password_hash) {
+      throw new Error(`Hub "${cleanName}" is already registered. Please switch to "Sign In" and enter your password.`);
+    }
+    throw new Error(`Hub "${cleanName}" already exists but has no password. Ask the league admin to set one.`);
   }
 
-  const salt = generateSaltHex();
-  const passwordHash = await hashPasswordPBKDF2(password, salt);
   const defaultArchers = linkedArcherNames(
     Array.isArray(linkedArchers) && linkedArchers.length > 0
       ? linkedArchers
@@ -933,27 +1020,36 @@ export async function registerPrivateHubSpace({ name, password, linkedArchers = 
       : [cleanName]
   );
 
+  const user = await hubAuthUser();
+  const salt = generateSaltHex();
+  const key = await deriveHubKey(password, salt);
+  const now = new Date().toISOString();
   const payload = {
     id: hubId,
     name: cleanName,
     salt,
-    password_hash: passwordHash,
+    generation: 1,
+    key_version: HUB_KEY_VERSION,
     linked_archers: defaultArchers,
-    passkeys: existing.exists() && Array.isArray(existing.data().passkeys) ? existing.data().passkeys : [],
-    created_at: new Date().toISOString(),
-    updated_at: new Date().toISOString()
+    passkeys: [],
+    created_at: now,
+    updated_at: now
   };
 
-  await setDoc(ref, payload, { merge: true });
-  return {
-    success: true,
-    hub: {
-      id: hubId,
-      name: cleanName,
-      linked_archers: defaultArchers,
-      passkeys: payload.passkeys
+  // Hub, its secret key hash and this device's membership are created together.
+  const batch = writeBatch(db);
+  batch.set(ref, payload);
+  batch.set(hubKeysRef(hubId), { key_hash: await sha256Hex(key) });
+  batch.set(hubMemberRef(hubId, user.uid), { key, generation: 1, registered_at: now });
+  try {
+    await batch.commit();
+  } catch (err) {
+    if (isPermissionDenied(err)) {
+      throw new Error(`Hub "${cleanName}" is already registered. Please switch to "Sign In" and enter your password.`);
     }
-  };
+    throw err;
+  }
+  return { success: true, hub: hubSummary(payload, hubId) };
 }
 
 export async function loginPrivateHubSpace({ nameOrId, password }) {
@@ -976,20 +1072,37 @@ export async function loginPrivateHubSpace({ nameOrId, password }) {
   }
 
   const data = snap.data();
-  const computedHash = await hashPasswordPBKDF2(password, data.salt || "");
-  if (computedHash !== data.password_hash) {
-    throw new Error("Incorrect password. Please try again.");
+  const id = data.id || snap.id;
+  const key = await deriveHubKey(password, data.salt || "");
+
+  if (!isSecuredHub(data)) {
+    // Not migrated yet: the old in-browser check.
+    if (!data.password_hash) {
+      throw new Error("This hub has no password yet. Ask the league admin to set one.");
+    }
+    if (key !== data.password_hash) {
+      throw new Error("Incorrect password. Please try again.");
+    }
+    return { success: true, hub: hubSummary(data, id) };
   }
 
-  return {
-    success: true,
-    hub: {
-      id: data.id || snap.id,
-      name: data.name,
-      linked_archers: linkedArcherNames(Array.isArray(data.linked_archers) ? data.linked_archers : ["Long", "Weijia"]),
-      passkeys: Array.isArray(data.passkeys) ? data.passkeys : []
+  // Firestore checks the password: it refuses the registration if the key is wrong.
+  try {
+    await registerHubDevice(id, key, data.generation);
+  } catch (err) {
+    if (isPermissionDenied(err)) throw new Error("Incorrect password. Please try again.");
+    throw err;
+  }
+
+  if ((Number(data.key_version) || 1) < HUB_KEY_VERSION) {
+    try {
+      await rotateHubKey(id, password, data.generation);
+    } catch (err) {
+      console.warn("Could not replace the hub's old key", err);
     }
-  };
+  }
+
+  return { success: true, hub: hubSummary(data, id) };
 }
 
 export async function registerPrivateHubPasskey(hubId, deviceLabel = "Phone") {
