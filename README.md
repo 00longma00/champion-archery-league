@@ -45,3 +45,19 @@ To share securely with other archers over HTTPS without port-forwarding:
 cloudflared tunnel --url http://127.0.0.1:3456
 ```
 Copy the generated `https://<random-id>.trycloudflare.com` URL and share it with your group!
+
+## Private Hub sign-in and data protection
+
+Only a browser that has signed in with a hub's password can change or delete that hub's data. Firestore enforces this, not just the app, so the data is protected even from someone using the browser console or the API.
+
+- **How it works:** each browser gets a hidden Firebase anonymous account. Signing in turns the password into a key (PBKDF2, in the browser) and registers that account as a hub member. `firestore.rules` accepts the registration only if the key's sha256 matches the hub's `key_hash` in `private_hub_keys`, which nobody can read. The password itself never leaves the browser.
+- **Day to day:** sign in once per device and you stay signed in. The lock button signs that device out. Private data is still readable by anyone, as before.
+- **Forgotten password or lost phone:** run `node scripts/hub-admin.mjs reset <hub id> <new password>`. It prints three fields to set in the Firebase console, and every device then needs the new password.
+
+### One-time rollout (in this order)
+
+1. In the Firebase console, go to **Authentication → Sign-in method** and enable **Anonymous**. Click **Get started** first if Authentication was never set up.
+2. Publish the site with this code. It still works with the old data and the old rules.
+3. Run `node scripts/hub-admin.mjs migrate` to see the plan, then `node scripts/hub-admin.mjs migrate --write`. This moves each hub's old public `password_hash` out of sight and lists any hubs or documents that would end up read-only.
+4. Immediately run `firebase deploy --only firestore:rules`.
+5. Sign in to your hub once. That first sign-in replaces the key carried over from the old public hash, so a copy of that hash stops working. Every other owner should also sign in soon after the rollout.

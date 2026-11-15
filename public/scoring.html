@@ -322,6 +322,7 @@
           </button>
         </div>
 
+        <div id="private-auth-notice" class="hidden rounded-xl bg-slate-950 border border-sky-500/40 p-3 text-xs text-sky-300 font-semibold"><i class="fa-solid fa-shield-halved mr-1"></i><span id="private-auth-notice-text"></span></div>
         <div id="private-auth-error" class="hidden rounded-xl bg-rose-950/60 border border-rose-500/40 p-3 text-xs text-rose-300 font-semibold"></div>
 
         <!-- TAB 1: SIGN IN FORM -->
@@ -1560,14 +1561,17 @@
       deletePrivateScoringEvent,
       savePrivateBaleAssignments,
       updatePrivateParticipantNote,
-      getPrivateAnalyticsData
-    } from './firebase-adapter.js?v=20261116';
+      getPrivateAnalyticsData,
+      checkPrivateHubDevice,
+      forgetPrivateHubDevice
+    } from './firebase-adapter.js?v=20261117';
     import { archerDirectory } from './archer-names.js';
     import { isPresetAvatar } from './archer-avatars.js';
     // Every spelling of an archer ("Max", "Maxwell Shepherd") compares equal.
     const sameArcher = (a, b) => archerDirectory.key(a) === archerDirectory.key(b);
     let appMode = 'league'; // 'league' | 'private'
     let activePrivateHub = null; // { id, name, linked_archers, passkeys }
+    let confirmedPrivateHubId = null; // hub this browser is known to be signed in to
     let hubData = { events: [], rsvpImport: { yesArchers: [], allArchers: [] } };
     let activeEventData = null; // { event, groups, participants, leaderboard, scores }
     let currentEventTab = 'scoring'; // 'scoring' | 'leaderboard' | 'setup'
@@ -2608,6 +2612,7 @@
 
       const saved = getSavedPrivateHubSession();
       if (saved && saved.id) {
+        if (!(await confirmPrivateDevice(saved, pushHistory))) return;
         activePrivateHub = saved;
         applyModeUIChrome();
         document.getElementById('view-private-auth').classList.add('hidden');
@@ -2620,24 +2625,71 @@
         }
         await loadEventsHub();
       } else {
-        applyModeUIChrome();
-        document.getElementById('view-hub').classList.add('hidden');
-        document.getElementById('view-event').classList.add('hidden');
-        document.getElementById('view-analytics').classList.add('hidden');
-        document.getElementById('view-private-auth').classList.remove('hidden');
-        if (pushHistory) {
-          window.history.pushState({ mode: 'private', view: 'auth' }, '', `${window.location.pathname}?mode=private`);
-        }
-        // Populate hub dropdown from Firestore
-        try {
-          const spaces = await listPrivateHubSpaces();
-          populateLoginHubDropdown(spaces);
-          switchPrivateAuthTab(spaces.length > 0 ? 'login' : 'signup');
-        } catch (e) {
-          populateLoginHubDropdown([]);
-          switchPrivateAuthTab('signup');
-        }
+        await showPrivateAuthView({ pushHistory });
       }
+    }
+
+    async function showPrivateAuthView({ pushHistory = false, hubId = null, notice = '', error = '' } = {}) {
+      applyModeUIChrome();
+      document.getElementById('view-hub').classList.add('hidden');
+      document.getElementById('view-event').classList.add('hidden');
+      document.getElementById('view-analytics').classList.add('hidden');
+      document.getElementById('view-private-auth').classList.remove('hidden');
+      if (pushHistory) {
+        window.history.pushState({ mode: 'private', view: 'auth' }, '', `${window.location.pathname}?mode=private`);
+      }
+      // Populate hub dropdown from Firestore
+      try {
+        const spaces = await listPrivateHubSpaces();
+        populateLoginHubDropdown(spaces);
+        switchPrivateAuthTab(spaces.length > 0 || hubId ? 'login' : 'signup');
+      } catch (e) {
+        populateLoginHubDropdown([]);
+        switchPrivateAuthTab('signup');
+      }
+      const sel = document.getElementById('login-hub-name');
+      if (hubId && sel && Array.from(sel.options).some(o => o.value === hubId)) {
+        sel.value = hubId;
+      }
+      setPrivateAuthNotice(notice);
+      if (error) showPrivateAuthError(error);
+    }
+
+    // A saved session reopens the hub only while this browser is still signed
+    // in to it with the hub password (otherwise Firestore refuses its changes).
+    async function confirmPrivateDevice(saved, pushHistory = false) {
+      if (confirmedPrivateHubId === saved.id) return true;
+      try {
+        const status = await checkPrivateHubDevice(saved.id);
+        if (status.ok) {
+          confirmedPrivateHubId = saved.id;
+          return true;
+        }
+        savePrivateHubSession(null);
+        await showPrivateAuthView({
+          pushHistory,
+          hubId: saved.id,
+          notice: status.reason === 'missing'
+            ? `The hub "${saved.name || saved.id}" no longer exists.`
+            : `Enter the password for "${saved.name || saved.id}" once to secure this device. You'll stay signed in after that.`
+        });
+      } catch (err) {
+        console.error(err);
+        activePrivateHub = null;
+        await showPrivateAuthView({
+          pushHistory,
+          hubId: saved.id,
+          error: `Couldn't confirm this device is signed in: ${err.message || err}`
+        });
+      }
+      return false;
+    }
+
+    function setPrivateAuthNotice(msg) {
+      const box = document.getElementById('private-auth-notice');
+      if (!box) return;
+      document.getElementById('private-auth-notice-text').textContent = msg || '';
+      box.classList.toggle('hidden', !msg);
     }
 
     function populateLoginHubDropdown(spaces = []) {
@@ -2673,8 +2725,13 @@
       loadEventsHub();
     }
 
-    function logoutPrivateHub() {
+    // Locking signs this browser out of the hub: it can't change anything
+    // there until the password is entered again.
+    async function logoutPrivateHub() {
+      const hubId = activePrivateHub && activePrivateHub.id;
+      confirmedPrivateHubId = null;
       savePrivateHubSession(null);
+      if (hubId) await forgetPrivateHubDevice(hubId);
       enterPrivateHubMode(true);
     }
 
@@ -2718,6 +2775,7 @@
       try {
         const res = await loginPrivateHubSpace({ nameOrId: nameVal, password: passVal });
         if (res.success && res.hub) {
+          confirmedPrivateHubId = res.hub.id;
           savePrivateHubSession(res.hub);
           await enterPrivateHubMode(false);
         }
@@ -2760,6 +2818,7 @@
           linkedArchers: linkedArchers.length > 0 ? linkedArchers : ['Long', 'Weijia']
         });
         if (res.success && res.hub) {
+          confirmedPrivateHubId = res.hub.id;
           savePrivateHubSession(res.hub);
           await enterPrivateHubMode(false);
         }
@@ -2841,6 +2900,7 @@
             await enterPrivateHubMode(false);
             return;
           }
+          if (!(await confirmPrivateDevice(saved, false))) return;
           activePrivateHub = saved;
         }
 
