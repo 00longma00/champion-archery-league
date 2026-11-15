@@ -14,6 +14,11 @@ Each archer is shown and saved under one full name, whatever was typed ("Max" â†
 
 To link a new nickname or fix a typo, either add it to `KNOWN_ARCHER_ALIASES` in `archer-names.js` (then copy the file to `public/` and `docs/`), or give the archer's document in the Firestore `roster` collection an `aliases` array, e.g. `["Sam"]`.
 
+## Archer Badges
+Every archer wears one of 18 preset badges, the same one on every event. Returning archers keep the badge they picked or last wore; new archers are given one nobody wears yet (the least-used one once all 18 are taken). Archers can change theirs on the RSVP page with **Change Badge**.
+
+`node scripts/assign-avatars.mjs` previews giving badges to existing roster entries; add `--write` to save them. It only fills in missing badges and never replaces one an archer already has.
+
 ## Quick Start (Run Locally)
 
 1. **Install dependencies:**

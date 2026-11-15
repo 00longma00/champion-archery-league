@@ -15,13 +15,49 @@ import {
 } from "./firebase-config.js";
 import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
 import { archerDirectory } from "./archer-names.js";
+import { isPresetAvatar, leastUsedAvatar, planArcherAvatars, rosterAvatarsByArcher } from "./archer-avatars.js";
 
 // Roster docs as { id: <doc id>, ...fields }, teaching the name directory as they load.
+// The latest list is cached briefly so pages that refresh every few seconds can show
+// each archer's badge without re-reading the roster each time.
+let rosterCache = null;
+let rosterCacheAt = 0;
+const ROSTER_CACHE_MS = 5 * 60 * 1000;
+
 function rosterDocsFrom(snap) {
   const docs = [];
   if (snap) snap.forEach(d => docs.push({ ...d.data(), id: d.id }));
   archerDirectory.learn(docs);
+  rosterCache = docs;
+  rosterCacheAt = Date.now();
   return docs;
+}
+
+async function loadRosterDocs() {
+  if (rosterCache && Date.now() - rosterCacheAt < ROSTER_CACHE_MS) return rosterCache;
+  return rosterDocsFrom(await getDocs(collection(db, "roster")));
+}
+
+function forgetRosterCache() {
+  rosterCache = null;
+}
+
+// The badge an archer wore most recently in a league, from past event participants.
+async function previousBadgeFor(name, rosterDocs) {
+  const [pSnap, evSnap] = await Promise.all([
+    getDocs(collection(db, "event_participants")),
+    getDocs(collection(db, "scoring_events"))
+  ]);
+  const dates = {};
+  evSnap.forEach(d => { dates[d.id] = d.data().date || ""; });
+  const pastEntries = [];
+  pSnap.forEach(d => {
+    const p = d.data();
+    pastEntries.push({ name: p.name, avatar_id: p.avatar_id, date: dates[p.event_id] || "" });
+  });
+  const plan = planArcherAvatars({ roster: rosterDocs, pastEntries, assignNewSince: "9999-12-31" });
+  const entry = plan.get(archerDirectory.key(name));
+  return entry ? entry.avatarId : null;
 }
 
 // One roster entry per archer, under their full name. Older docs saved under a
@@ -121,7 +157,7 @@ export async function getAppState() {
 }
 
 // 2. Submit / Update RSVP
-export async function submitRsvp({ name, status, avatarId, bowCategory, customAvatar }) {
+export async function submitRsvp({ name, status, avatarId, bowCategory }) {
   const currentSunday = getUpcomingSundayStr();
   const now = new Date().toISOString();
   const MAX_RSVPS = 50;
@@ -154,11 +190,13 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, customAv
     throw new Error(`League roster is full (maximum ${MAX_RSVPS} archers allowed).`);
   }
 
-  const isCustomId = avatarId && (avatarId.startsWith('ai_') || avatarId.startsWith('custom_'));
-  const finalCustom = (isCustomId || (!avatarId && customAvatar)) && customAvatar && typeof customAvatar === 'object' && customAvatar.svg
-    ? customAvatar
-    : null;
-  const finalAvatarId = avatarId || (finalCustom && finalCustom.id) || null;
+  // Badge: the one picked on the form, else the archer's own, else the one they wore
+  // before, else one nobody on the roster wears yet.
+  const finalAvatarId = isPresetAvatar(avatarId)
+    ? avatarId
+    : rosterAvatarsByArcher(rosterDocs).get(cleanLower)
+      || await previousBadgeFor(cleanName, rosterDocs)
+      || leastUsedAvatar(rosterDocs.map(r => r.avatarId));
 
   // Save/update RSVP
   const rsvpPayload = {
@@ -166,7 +204,6 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, customAv
     archerName: cleanName,
     status,
     avatarId: finalAvatarId,
-    customAvatar: finalCustom,
     bowCategory: bowCategory || 'BAREBOW',
     note: '',
     updatedAt: now
@@ -177,11 +214,11 @@ export async function submitRsvp({ name, status, avatarId, bowCategory, customAv
   const updateData = {
     name: cleanName,
     avatarId: finalAvatarId,
-    customAvatar: finalCustom,
     bowCategory: bowCategory || 'BAREBOW'
   };
 
   await setDoc(rosterRef, updateData, { merge: true });
+  forgetRosterCache();
 
   return { success: true };
 }
@@ -255,10 +292,22 @@ export async function getScoringEventsHub() {
   });
 
   // Get current roster and RSVPs for event creator modal, one entry per archer under their full name
-  const roster = rosterByArcher(rosterDocsFrom(rosterSnap));
+  const rosterDocs = rosterDocsFrom(rosterSnap);
+  const roster = rosterByArcher(rosterDocs);
   const pastNames = [];
   pSnap.forEach(d => pastNames.push(d.data().name));
   archerDirectory.learn(pastNames);
+
+  // Each archer's badge: their own, else the one they wore most recently in a league.
+  const eventDates = {};
+  eventsSnap.forEach(d => { eventDates[d.id] = d.data().date || ''; });
+  const pastEntries = [];
+  pSnap.forEach(d => {
+    const p = d.data();
+    pastEntries.push({ name: p.name, avatar_id: p.avatar_id, date: eventDates[p.event_id] || '' });
+  });
+  const badgePlan = planArcherAvatars({ roster: rosterDocs, pastEntries, assignNewSince: '9999-12-31' });
+  const badgeOf = (name) => (badgePlan.get(archerDirectory.key(name)) || {}).avatarId || null;
 
   const yesRsvps = [];
   try {
@@ -272,7 +321,7 @@ export async function getScoringEventsHub() {
     .map(r => ({
       name: r.archerName,
       bow_category: r.bowCategory || 'BAREBOW',
-      avatar_id: r.avatarId
+      avatar_id: badgeOf(r.archerName) || r.avatarId
     }));
 
   // Merge roster + any historical event_participants so archers who participated without RSVPing are always included.
@@ -282,7 +331,7 @@ export async function getScoringEventsHub() {
     allArchersMap.set(archerDirectory.key(r.name), {
       name: r.name,
       bow_category: r.bowCategory || 'BAREBOW',
-      avatar_id: r.avatarId || null
+      avatar_id: badgeOf(r.name)
     });
   });
   pSnap.forEach(d => {
@@ -293,7 +342,7 @@ export async function getScoringEventsHub() {
       allArchersMap.set(key, {
         name,
         bow_category: p.bow_category || 'BAREBOW',
-        avatar_id: p.avatar_id || null
+        avatar_id: badgeOf(name)
       });
     }
   });
@@ -314,23 +363,26 @@ export async function getScoringEventsHub() {
 
 // 5. Scoring: Get Event Data (Full participants, scores, leaderboard)
 export async function getEventData(eventId) {
-  const [evSnap, pSnap, sSnap, gSnap] = await Promise.all([
+  const [evSnap, pSnap, sSnap, gSnap, rosterDocs] = await Promise.all([
     getDoc(doc(db, "scoring_events", eventId)),
     getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId))),
     getDocs(query(collection(db, "end_scores"), where("event_id", "==", eventId))),
-    getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId)))
+    getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId))),
+    loadRosterDocs().catch(() => [])
   ]);
+  const rosterBadges = rosterAvatarsByArcher(rosterDocs);
   if (!evSnap.exists()) return { success: false, error: 'Event not found' };
   const ev = evSnap.data();
 
   ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
   Object.assign(ev, leagueEventLockFields(ev));
 
-  // Participants, shown under their full names whatever was typed at the time
+  // Participants, shown under their full names and own badges whatever was saved at the time
   const participants = [];
   pSnap.forEach(d => {
     const p = d.data();
-    participants.push({ ...p, name: archerDirectory.display(p.name) });
+    const name = archerDirectory.display(p.name);
+    participants.push({ ...p, name, avatar_id: rosterBadges.get(archerDirectory.key(name)) || p.avatar_id || null });
   });
   participants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
 
@@ -591,19 +643,32 @@ export async function createScoringEvent({ event, participants, groups }) {
     const rosterDocs = rosterDocsFrom(await getDocs(collection(db, "roster")));
     let rosterCount = rosterDocs.length;
     const knownRosterIds = new Set(rosterDocs.map(r => r.id));
+    const rosterBadges = rosterAvatarsByArcher(rosterDocs);
+    const usedBadges = Array.from(rosterBadges.values());
+    // The archer's own badge, else the one they came in with, else one nobody wears yet.
+    const badgeFor = (name, incoming) => {
+      const key = archerDirectory.key(name);
+      if (!rosterBadges.has(key)) {
+        const badge = isPresetAvatar(incoming) ? incoming : leastUsedAvatar(usedBadges);
+        rosterBadges.set(key, badge);
+        usedBadges.push(badge);
+      }
+      return rosterBadges.get(key);
+    };
 
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}`);
       const bNum = Number(p.bale_number) || 1;
       const cleanName = archerDirectory.display(p.name) || 'Archer';
+      const avatarId = badgeFor(cleanName, p.avatar_id);
       const bowCat = p.bow_category || 'BAREBOW';
       await setDoc(doc(db, "event_participants", pId), {
         id: pId,
         event_id: eventId,
         name: cleanName,
         bow_category: bowCat,
-        avatar_id: p.avatar_id || null,
+        avatar_id: avatarId,
         bale_number: bNum,
         position: p.position || 'A',
         shooting_line: p.shooting_line || 'AB',
@@ -621,8 +686,9 @@ export async function createScoringEvent({ event, participants, groups }) {
             name: cleanName,
             bowCategory: bowCat
           };
-          if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
+          if (avatarId) rosterUpdate.avatarId = avatarId;
           await setDoc(doc(db, "roster", rKey), rosterUpdate, { merge: true });
+          forgetRosterCache();
           if (!knownRosterIds.has(rKey)) {
             knownRosterIds.add(rKey);
             rosterCount++;
@@ -709,6 +775,18 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
     const rosterDocs = rosterDocsFrom(await getDocs(collection(db, "roster")));
     let rosterCount = rosterDocs.length;
     const knownRosterIds = new Set(rosterDocs.map(r => r.id));
+    const rosterBadges = rosterAvatarsByArcher(rosterDocs);
+    const usedBadges = Array.from(rosterBadges.values());
+    // The archer's own badge, else the one they came in with, else one nobody wears yet.
+    const badgeFor = (name, incoming) => {
+      const key = archerDirectory.key(name);
+      if (!rosterBadges.has(key)) {
+        const badge = isPresetAvatar(incoming) ? incoming : leastUsedAvatar(usedBadges);
+        rosterBadges.set(key, badge);
+        usedBadges.push(badge);
+      }
+      return rosterBadges.get(key);
+    };
 
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
@@ -717,6 +795,7 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
       const bNum = Number(p.bale_number) || 1;
       const resolvedGroupId = baleToGroupId[bNum] || p.group_id || (`grp_${eventId}_1`);
       const cleanName = archerDirectory.display(p.name) || 'Archer';
+      const avatarId = badgeFor(cleanName, p.avatar_id);
       const bowCat = p.bow_category || 'BAREBOW';
       await setDoc(doc(db, "event_participants", pId), {
         ...p,
@@ -724,6 +803,7 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
         event_id: eventId,
         name: cleanName,
         bow_category: bowCat,
+        avatar_id: avatarId,
         bale_number: bNum,
         group_id: resolvedGroupId,
         sort_order: idx
@@ -738,8 +818,9 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
             name: cleanName,
             bowCategory: bowCat
           };
-          if (p.avatar_id) rosterUpdate.avatarId = p.avatar_id;
+          if (avatarId) rosterUpdate.avatarId = avatarId;
           await setDoc(doc(db, "roster", rKey), rosterUpdate, { merge: true });
+          forgetRosterCache();
           if (!knownRosterIds.has(rKey)) {
             knownRosterIds.add(rKey);
             rosterCount++;
@@ -1055,6 +1136,11 @@ function addLeagueNote(notesMap, n) {
   }
 }
 
+// An archer's own badge (from the roster) wins over whatever a past entry saved.
+function badgeFrom(rosterBadges, name, saved) {
+  return rosterBadges.get(archerDirectory.key(name)) || saved || null;
+}
+
 // Linked archers as full names, without duplicates.
 function linkedArcherNames(list) {
   const out = [];
@@ -1073,6 +1159,7 @@ function isTestLeagueEventName(name) {
 // List Private Hub Events + Auto-Synced League Events for this Hub's Linked Archers
 export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
   linkedArchers = linkedArcherNames(linkedArchers);
+  const rosterBadges = rosterAvatarsByArcher(await loadRosterDocs().catch(() => []));
   const [
     privEvSnap,
     privPartSnap,
@@ -1106,6 +1193,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
   privPartSnap.forEach(d => {
     const p = { ...d.data() };
     p.name = archerDirectory.display(p.name);
+    p.avatar_id = badgeFrom(rosterBadges, p.name, p.avatar_id);
     if (!privPartsByEvent[p.event_id]) privPartsByEvent[p.event_id] = [];
     privPartsByEvent[p.event_id].push(p);
   });
@@ -1218,7 +1306,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
     allParts.forEach(p => {
       const canonicalName = normalizeLinkedArcherMatch(p.name, linkedArchers);
       if (canonicalName) {
-        matchedParts.push({ ...p, canonicalName });
+        matchedParts.push({ ...p, canonicalName, avatar_id: badgeFrom(rosterBadges, canonicalName, p.avatar_id) });
       }
     });
     if (matchedParts.length === 0) return;
@@ -1326,6 +1414,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
 
 export async function getPrivateEventData(eventId, hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
   linkedArchers = linkedArcherNames(linkedArchers);
+  const rosterBadges = rosterAvatarsByArcher(await loadRosterDocs().catch(() => []));
   if (String(eventId || "").startsWith("league:")) {
     const rawId = String(eventId).replace(/^league:/, "");
     const evSnap = await getDoc(doc(db, "scoring_events", rawId));
@@ -1357,7 +1446,7 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
       const p = d.data();
       const canonical = normalizeLinkedArcherMatch(p.name, linkedArchers);
       if (canonical) {
-        matchedParts.push({ ...p, name: canonical });
+        matchedParts.push({ ...p, name: canonical, avatar_id: badgeFrom(rosterBadges, canonical, p.avatar_id) });
       }
     });
 
@@ -1451,7 +1540,8 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
   const participants = [];
   pSnap.forEach(d => {
     const p = d.data();
-    participants.push({ ...p, name: archerDirectory.display(p.name) });
+    const name = archerDirectory.display(p.name);
+    participants.push({ ...p, name, avatar_id: badgeFrom(rosterBadges, name, p.avatar_id) });
   });
   participants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
 
@@ -1776,6 +1866,7 @@ const VALUE_MAP_NFAA = { X: 5, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
 
 export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
   linkedArchers = linkedArcherNames(linkedArchers);
+  const rosterBadges = rosterAvatarsByArcher(await loadRosterDocs().catch(() => []));
   const [
     privEvSnap,
     privPartSnap,
@@ -1811,7 +1902,8 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
   const participants = [];
   privPartSnap.forEach(d => {
     const p = d.data();
-    participants.push({ ...p, name: archerDirectory.display(p.name) });
+    const name = archerDirectory.display(p.name);
+    participants.push({ ...p, name, avatar_id: badgeFrom(rosterBadges, name, p.avatar_id) });
   });
 
   const scores = [];
@@ -1868,6 +1960,7 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
       participants.push({
         ...lp,
         name: dispName,
+        avatar_id: badgeFrom(rosterBadges, dispName, lp.avatar_id),
         event_id: syncedEvId,
         archer_notes: notesMap[`${lev.id}_${aKey}`] || ""
       });
@@ -1907,7 +2000,7 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
     if (!archerSessionsMap[key]) {
       archerSessionsMap[key] = {
         name: normName,
-        avatar_id: p.avatar_id || (key === "long ma" ? "bengal_cat" : key === "weijia li" ? "devon_rex_cat" : null),
+        avatar_id: badgeFrom(rosterBadges, normName, p.avatar_id),
         bow_category: p.bow_category || "BAREBOW",
         sessions: []
       };
