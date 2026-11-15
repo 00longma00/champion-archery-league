@@ -270,6 +270,7 @@
               class="w-full bg-slate-950 border border-slate-700/80 rounded-xl px-4 py-2.5 text-sm text-white placeholder-slate-500 focus:outline-none focus:ring-2 focus:ring-amber-500/50 focus:border-amber-500 transition">
             <datalist id="archers-datalist"></datalist>
           </div>
+          <div id="archer-name-hint" class="hidden mt-1.5 text-[11px] font-semibold"></div>
         </div>
 
         <!-- Live Archer Avatar Preview & Interactive AI / Preset Studio -->
@@ -503,7 +504,10 @@
   </div>
 
   <script type="module">
-  import { getAppState, submitRsvp, updateAdminStatus } from './firebase-adapter.js?v=20261114i';
+  import { getAppState, submitRsvp, updateAdminStatus } from './firebase-adapter.js?v=20261115';
+  import { archerDirectory } from './archer-names.js';
+    // Every spelling of an archer ("Long", "Long Ma") compares equal.
+    const sameArcher = (a, b) => archerDirectory.key(a) === archerDirectory.key(b);
     let appState = null;
     let currentTab = 'yes';
     let manualAvatarOverride = false;
@@ -1195,15 +1199,16 @@
       if (explicitBowCategory && BOW_STYLE_LABELS[explicitBowCategory]) {
         return explicitBowCategory;
       }
-      const clean = (name || '').trim().toLowerCase();
+      const clean = archerDirectory.key(name);
       if (clean && appState && appState.archers) {
-        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+        const found = appState.archers.find(a => sameArcher(a.name, clean));
         if (found && found.bowCategory && BOW_STYLE_LABELS[found.bowCategory]) {
           return found.bowCategory;
         }
       }
-      if (clean && NAME_TO_DEFAULT_CATEGORY[clean]) {
-        return NAME_TO_DEFAULT_CATEGORY[clean];
+      const defaultKey = clean && archerDirectory.keysFor(clean).find(k => NAME_TO_DEFAULT_CATEGORY[k]);
+      if (defaultKey) {
+        return NAME_TO_DEFAULT_CATEGORY[defaultKey];
       }
       return 'BAREBOW';
     }
@@ -1414,9 +1419,9 @@
         return window.currentCustomAvatar;
       }
 
-      // 3. Match from appState archers roster
+      // 3. Match from appState archers roster (any spelling of the archer's name)
       if (clean && appState && appState.archers) {
-        const found = appState.archers.find(a => a.name.toLowerCase() === clean);
+        const found = appState.archers.find(a => sameArcher(a.name, clean));
         if (found) {
           if (found.avatarId && PET_AVATARS[found.avatarId] && (!found.customAvatar || found.avatarId !== (found.customAvatar && found.customAvatar.id))) {
             return PET_AVATARS[found.avatarId];
@@ -1431,15 +1436,18 @@
         }
       }
 
-      // 4. Custom avatar in memory cache
-      if (clean && window.customAvatars && window.customAvatars[clean]) {
-        return window.customAvatars[clean];
+      // 4. Custom avatar in memory cache, under any spelling of the name
+      const aliasKeys = clean ? archerDirectory.keysFor(clean).concat(clean) : [];
+      for (const k of aliasKeys) {
+        if (window.customAvatars && window.customAvatars[k]) {
+          return window.customAvatars[k];
+        }
       }
 
       // 5. Custom avatar in localStorage for instant recall
-      if (clean) {
+      for (const k of aliasKeys) {
         try {
-          const cached = localStorage.getItem('archery_avatar_' + clean);
+          const cached = localStorage.getItem('archery_avatar_' + k);
           if (cached) {
             const parsed = JSON.parse(cached);
             if (parsed && parsed.svg) {
@@ -1641,9 +1649,40 @@
       });
     }
 
+    // Under the name field: "Saving as Long Ma", or "Did you mean Sam Zhang?" for names we don't know.
+    function updateArcherNameHint(rawName) {
+      const hint = document.getElementById('archer-name-hint');
+      if (!hint) return;
+      const full = rawName ? archerDirectory.resolve(rawName) : null;
+      if (full && full.toLowerCase() !== rawName.toLowerCase()) {
+        hint.className = 'mt-1.5 text-[11px] font-semibold text-emerald-400';
+        hint.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i>Saving as <strong>${escapeHtml(full)}</strong>`;
+        return;
+      }
+      const suggestions = (!full && rawName.length >= 2) ? archerDirectory.suggest(rawName) : [];
+      if (suggestions.length > 0) {
+        hint.className = 'mt-1.5 text-[11px] font-semibold text-amber-400 flex flex-wrap items-center gap-1.5';
+        hint.innerHTML = `<span>Did you mean</span>` + suggestions.map(n =>
+          `<button type="button" data-name="${escapeHtml(n)}" onclick="useSuggestedArcherName(this.dataset.name)" class="px-2 py-0.5 rounded-full border border-amber-500/40 bg-amber-500/10 hover:bg-amber-500/20">${escapeHtml(n)}</button>`
+        ).join('') + `<span>?</span>`;
+        return;
+      }
+      hint.className = 'hidden';
+      hint.innerHTML = '';
+    }
+
+    function useSuggestedArcherName(name) {
+      const input = document.getElementById('archer-name');
+      if (!input) return;
+      input.value = name;
+      onArcherNameChange();
+      input.focus();
+    }
+
     function onArcherNameChange() {
       const rawName = document.getElementById('archer-name').value.trim();
       const name = rawName.toLowerCase();
+      updateArcherNameHint(rawName);
 
       // Whenever the user switches to a different name, reset manual overrides so the person's saved/consistent avatar & style load
       if (name !== lastSelectedArcherName) {
@@ -1658,7 +1697,7 @@
       // Check if this archer has a saved custom avatar or preset avatar
       let savedCustom = null;
       const matched = (name && appState && appState.archers)
-        ? appState.archers.find(a => a.name.toLowerCase() === name)
+        ? appState.archers.find(a => sameArcher(a.name, name))
         : null;
 
       const savedPresetId = (matched && matched.avatarId && PET_AVATARS[matched.avatarId] && (!matched.customAvatar || matched.avatarId !== (matched.customAvatar && matched.customAvatar.id)))
@@ -1726,7 +1765,7 @@
 
       if (!name || !appState) return;
 
-      const matchedArcher = (appState.archers || []).find(a => a.name.toLowerCase() === name);
+      const matchedArcher = (appState.archers || []).find(a => sameArcher(a.name, name));
       if (matchedArcher && matchedArcher.bowCategory && !manualBowCategoryOverride) {
         const catSelect = document.getElementById('archer-bow-category');
         if (catSelect) catSelect.value = matchedArcher.bowCategory;
@@ -1734,7 +1773,7 @@
 
       // Auto pre-fill RSVP status if already responded for this week
       if (matchedArcher) {
-        const existingRsvp = (appState.rsvps || []).find(r => r.archerName.toLowerCase() === name);
+        const existingRsvp = (appState.rsvps || []).find(r => sameArcher(r.archerName, name));
         if (existingRsvp) {
           selectStatus(existingRsvp.status);
         }
@@ -1754,7 +1793,7 @@
         return;
       }
 
-      const existingRsvp = (appState && appState.rsvps || []).find(r => (r.archerName || '').toLowerCase() === name.toLowerCase());
+      const existingRsvp = (appState && appState.rsvps || []).find(r => sameArcher(r.archerName, name));
       if (!existingRsvp && (appState && appState.rsvps || []).length >= 50) {
         alert('Maximum RSVP limit reached (50 RSVPs allowed per session).');
         return;
@@ -1788,6 +1827,13 @@
 
         await submitRsvp(payload);
 
+        // Show (and remember) the name the RSVP was saved under, e.g. "Long" -> "Long Ma".
+        const savedAs = archerDirectory.display(name);
+        document.getElementById('archer-name').value = savedAs;
+        lastSelectedArcherName = savedAs.toLowerCase();
+        try { localStorage.setItem('archery_league_name', savedAs); } catch (e) {}
+        updateArcherNameHint(savedAs);
+
         // Also ensure server persistence in parallel
         fetch('/api/rsvp', {
           method: 'POST',
@@ -1800,14 +1846,14 @@
         await loadState();
 
         if (appState && appState.archers) {
-          const archerInState = appState.archers.find(a => a.name.toLowerCase() === cleanName);
+          const archerInState = appState.archers.find(a => sameArcher(a.name, cleanName));
           if (archerInState) {
             archerInState.avatarId = avatarId || (activeCustom ? activeCustom.id : null);
             archerInState.customAvatar = activeCustom || null;
           }
         }
         if (appState && appState.rsvps) {
-          const rsvpInState = appState.rsvps.find(r => (r.archerName || '').toLowerCase() === cleanName);
+          const rsvpInState = appState.rsvps.find(r => sameArcher(r.archerName, cleanName));
           if (rsvpInState) {
             rsvpInState.avatarId = avatarId || (activeCustom ? activeCustom.id : null);
             rsvpInState.customAvatar = activeCustom || null;
@@ -1985,10 +2031,10 @@
 
     function init() {
       try {
-        const savedName = localStorage.getItem('archery_league_name');
+        const savedName = archerDirectory.display(localStorage.getItem('archery_league_name') || '');
         if (savedName) {
           document.getElementById('archer-name').value = savedName;
-          lastSelectedArcherName = savedName.trim().toLowerCase();
+          lastSelectedArcherName = savedName.toLowerCase();
         }
       } catch (e) {}
       const initialName = document.getElementById('archer-name').value;
@@ -2011,6 +2057,7 @@
     window.onBowCategoryChange = onBowCategoryChange;
     window.selectStatus = selectStatus;
     window.onArcherNameChange = onArcherNameChange;
+    window.useSuggestedArcherName = useSuggestedArcherName;
     window.switchTab = switchTab;
     window.openAdminModal = openAdminModal;
     window.closeAdminModal = closeAdminModal;
