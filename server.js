@@ -3,8 +3,6 @@ const path = require('path');
 const fs = require('fs');
 const { readDB, writeDB, getUpcomingSunday } = require('./db');
 const scoringDB = require('./scoring-db');
-const { generateArcheryInsights } = require('./ai-insights');
-const { generateAIAvatar, generateProceduralAvatar } = require('./ai-avatar');
 
 // Load environment variables if .env exists
 if (fs.existsSync(path.join(__dirname, '.env'))) {
@@ -190,57 +188,6 @@ app.post('/api/rsvp', (req, res) => {
       bowCategory: archer.bowCategory || 'BAREBOW'
     }
   });
-});
-
-// POST /api/avatar/generate - Generate AI Mascot Avatar via Gemini Free Tier
-app.post('/api/avatar/generate', async (req, res) => {
-  try {
-    const { prompt, name } = req.body || {};
-    const result = await generateAIAvatar({ prompt, name });
-    res.json(result);
-  } catch (_err) {
-    const fallbackAvatar = generateProceduralAvatar(req.body?.prompt, req.body?.name || 'Archer');
-    res.json({ success: true, source: 'procedural-fallback', model: 'procedural-engine', avatar: fallbackAvatar });
-  }
-});
-
-// POST /api/avatar/save - Persist custom avatar for an archer by name
-app.post('/api/avatar/save', (req, res) => {
-  try {
-    const { name, avatar } = req.body || {};
-    if (!name || !avatar || !avatar.svg) {
-      return res.status(400).json({ error: 'Name and avatar object with SVG are required' });
-    }
-    const cleanName = String(name).trim();
-    const db = readDB();
-    if (!db.customAvatars) db.customAvatars = {};
-    db.customAvatars[cleanName.toLowerCase()] = avatar;
-
-    let archer = (db.archers || []).find(a => a.name.toLowerCase() === cleanName.toLowerCase());
-    if (archer) {
-      archer.customAvatar = avatar;
-      archer.avatarId = avatar.id;
-    }
-    writeDB(db);
-    res.json({ success: true, avatar });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
-});
-
-// GET /api/avatar/:name - Fetch stored avatar for an archer
-app.get('/api/avatar/:name', (req, res) => {
-  try {
-    const cleanName = String(req.params.name).trim().toLowerCase();
-    const db = readDB();
-    const customAvatars = db.customAvatars || {};
-    const archer = (db.archers || []).find(a => a.name.toLowerCase() === cleanName);
-    const avatar = (archer && archer.customAvatar) || customAvatars[cleanName] || null;
-    if (!avatar) return res.status(404).json({ error: 'No custom avatar found for this archer' });
-    res.json({ success: true, avatar });
-  } catch (err) {
-    res.status(500).json({ error: err.message });
-  }
 });
 
 // POST /api/admin/status - Update status (ON, OFF, PENDING) and league time (open to all)
@@ -429,45 +376,6 @@ app.post('/api/scoring/events/:id/score', (req, res) => {
     res.json({ success: true, data: fullEvent });
   } catch (err) {
     res.status(400).json({ error: err.message });
-  }
-});
-
-// POST /api/scoring/ai-insights - AI-powered archery insights based on 14-day vs 3-month performance
-app.post('/api/scoring/ai-insights', async (req, res) => {
-  try {
-    const result = await generateArcheryInsights(req.body || {});
-    res.json(result);
-  } catch (_err) {
-    res.json({
-      success: true,
-      source: 'analytics-fallback',
-      model: 'archery-analytics-engine',
-      insights: {
-        headline: 'Archery analytics engine ready. Log practice and league ends to reveal training trajectories.',
-        formTrajectory: 'Solidifying Baseline',
-        trajectoryColor: 'sky',
-        comparison14dVs3m: {
-          scoringDelta: 'Consistent baseline metrics established across recent sessions.',
-          volumeAndRhythm: 'Active participation maintained across league calendar.',
-          groupingAndSpread: 'Grouping consistency tracking active.'
-        },
-        environmentBreakdown: {
-          practiceVsLeague: 'Balanced session focus between training ends and competition rounds.'
-        },
-        keyStrengths: [
-          'Consistent stance and shoulder alignment.',
-          'Committed session logging for progressive analysis.'
-        ],
-        actionableFocusAreas: [
-          {
-            title: 'Blank-Bale Expansion Rhythm',
-            description: 'Execute continuous back expansion through shot completion.',
-            targetMetric: 'Focus 15 arrows per practice on smooth follow-through.'
-          }
-        ],
-        coachQuote: 'The arrow does not lie: trust your process and execute smoothly.'
-      }
-    });
   }
 });
 
