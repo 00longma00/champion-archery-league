@@ -4510,7 +4510,7 @@
         if (isLocked) {
           lockedBanner.classList.remove('hidden');
           document.getElementById('scoring-locked-desc').textContent =
-            `Scoring closed at ${ev.lock_deadline_display} (${ev.lock_rule || '8 hours after scheduled event start'}). Scores are finalized and cannot be modified.`;
+            `Scoring closed at ${ev.lock_deadline_display} (8 hours after scheduled event start). Scores are finalized and cannot be modified.`;
         } else {
           lockedBanner.classList.add('hidden');
         }
@@ -4866,7 +4866,7 @@
       if (!activeEventData || !kpParticipantId) return;
       const ev = activeEventData.event;
       if (ev.is_locked) {
-        alert(`Scores are locked: scoring closed ${ev.lock_rule || '8 hours after the scheduled event start'}.`);
+        alert('Scores are locked because more than 8 hours have passed since the scheduled event start.');
         closeKeypad();
         return;
       }
@@ -6004,9 +6004,7 @@
         alert('Cannot delete a synced Sunday League event from your Private Hub.');
         return;
       }
-      if (!confirm(appMode === 'private'
-        ? `Delete "${activeEventData.event.name}"? It will be hidden from your hub (scores are kept and can be restored by an admin).`
-        : `Delete "${activeEventData.event.name}" and all its recorded scores?`)) return;
+      if (!confirm(`Delete "${activeEventData.event.name}" and all its recorded scores?`)) return;
       const btn = document.getElementById('btn-delete-event');
       if (btn) {
         btn.disabled = true;

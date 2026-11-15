@@ -45,12 +45,3 @@ To share securely with other archers over HTTPS without port-forwarding:
 cloudflared tunnel --url http://127.0.0.1:3456
 ```
 Copy the generated `https://<random-id>.trycloudflare.com` URL and share it with your group!
-
-## Private Hub data protection
-
-`firestore.rules` stops anyone from wiping Private Hub data through the site, with no extra login:
-- Nothing in the `private_*` collections can be deleted. Deleting a session in the app only hides it (`deleted: true`). To bring hidden sessions back, run `node scripts/restore-private-events.mjs --write`.
-- A practice session and its scores can be edited for 48 hours after the session is created. After that the scores are frozen, though notes can still be edited.
-- A hub's password hash and salt can't be changed once they're set.
-
-Deploy with `firebase deploy --only firestore:rules`. Sessions created before this change have no lock time, so they're frozen from the moment the rules are deployed.

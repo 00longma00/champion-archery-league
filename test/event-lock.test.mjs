@@ -41,18 +41,3 @@ test('browser lock helper agrees with the server implementation', () => {
     assert.equal(a.lock_deadline_iso, b.lock_deadline_iso);
   }
 });
-
-test('private session stays open for 48 hours after creation, then locks', async () => {
-  const { privateLockAt, privateEventLockFields } = await import('../event-lock.js');
-  const created = new Date(2026, 10, 8, 10, 0);
-  const ev = { date: '2026-10-01', lock_at: privateLockAt(created) }; // logging an old practice is fine
-  assert.equal(privateEventLockFields(ev, new Date(2026, 10, 10, 9, 59)).is_locked, false);
-  assert.equal(privateEventLockFields(ev, new Date(2026, 10, 10, 10, 0)).is_locked, true);
-  // Firestore Timestamp shape
-  assert.equal(privateEventLockFields({ lock_at: { toDate: () => ev.lock_at } }, created).is_locked, false);
-});
-
-test('private session without lock_at counts as locked (matches the rules)', async () => {
-  const { privateEventLockFields } = await import('../event-lock.js');
-  assert.equal(privateEventLockFields({ date: '2026-11-08' }).is_locked, true);
-});
