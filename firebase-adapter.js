@@ -13,7 +13,7 @@ import {
   orderBy,
   onSnapshot 
 } from "./firebase-config.js";
-import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
+import { leagueEventLockFields, computeEventLockStatus, privateLockAt, privateEventLockFields } from "./event-lock.js";
 import { archerDirectory } from "./archer-names.js";
 import { isPresetAvatar, leastUsedAvatar, planArcherAvatars, rosterAvatarsByArcher } from "./archer-avatars.js";
 
@@ -1220,6 +1220,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
 
   privEvSnap.forEach(d => {
     const ev = d.data();
+    if (ev.deleted) return;
     const cat = ev.session_category || "Practice";
     privateDatesSet.add(`${cat}_${ev.date}`);
 
@@ -1276,7 +1277,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
       participant_summaries: participantSummaries,
       group_count: groups.length || 1,
       all_scores_filled: allScoresFilled,
-      is_locked: false
+      is_locked: privateEventLockFields(ev).is_locked
     });
   });
 
@@ -1526,10 +1527,10 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
   }
 
   const evSnap = await getDoc(doc(db, "private_events", eventId));
-  if (!evSnap.exists()) return { success: false, error: "Private session not found" };
+  if (!evSnap.exists() || evSnap.data().deleted) return { success: false, error: "Private session not found" };
   const ev = evSnap.data();
   ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-  ev.is_locked = false;
+  Object.assign(ev, privateEventLockFields(ev));
 
   const [pSnap, gSnap, sSnap] = await Promise.all([
     getDocs(query(collection(db, "private_participants"), where("event_id", "==", eventId))),
@@ -1653,6 +1654,8 @@ export async function createPrivateScoringEvent(hubId = "long_weijia", { event, 
     scoring_type: event.scoring_type || "USAA_10",
     swap_top_bottom: event.swap_top_bottom ? 1 : 0,
     status: "SETUP",
+    // Firestore rules freeze the session and its scores after this.
+    lock_at: privateLockAt(),
     created_at: now,
     updated_at: now
   };
@@ -1756,14 +1759,16 @@ export async function updatePrivateScoringEvent(eventId, fields) {
   return { success: true };
 }
 
+// Soft delete: the session is hidden but its scores stay in Firestore, because
+// the rules refuse real deletes of private data. Undo with
+// scripts/restore-private-events.mjs or by clearing `deleted` in the console.
 export async function deletePrivateScoringEvent(eventId) {
-  await deleteDoc(doc(db, "private_events", eventId));
-  const pSnap = await getDocs(query(collection(db, "private_participants"), where("event_id", "==", eventId)));
-  for (const d of pSnap.docs) { await deleteDoc(d.ref); }
-  const gSnap = await getDocs(query(collection(db, "private_groups"), where("event_id", "==", eventId)));
-  for (const d of gSnap.docs) { await deleteDoc(d.ref); }
-  const sSnap = await getDocs(query(collection(db, "private_end_scores"), where("event_id", "==", eventId)));
-  for (const d of sSnap.docs) { await deleteDoc(d.ref); }
+  const now = new Date().toISOString();
+  await updateDoc(doc(db, "private_events", eventId), {
+    deleted: true,
+    deleted_at: now,
+    updated_at: now
+  });
   return { success: true };
 }
 
@@ -1895,6 +1900,7 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
   const privateDatesSet = new Set();
   privEvSnap.forEach(d => {
     const e = d.data();
+    if (e.deleted) return;
     privateDatesSet.add(`${e.session_category || "Practice"}_${e.date}`);
     events.push(e);
   });

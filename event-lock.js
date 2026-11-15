@@ -51,3 +51,29 @@ export function leagueEventLockFields(ev, now = new Date()) {
     is_locked: Boolean(info.is_locked || (ev && ev.status === 'COMPLETED'))
   };
 }
+
+// Private Hub practice sessions stay editable for 48 hours after they are
+// created (any session date, so past practice can still be logged), then
+// freeze. Firestore rules enforce the same lock_at.
+export const PRIVATE_LOCK_WINDOW_MS = 48 * 60 * 60 * 1000;
+
+export function privateLockAt(now = new Date()) {
+  return new Date(now.getTime() + PRIVATE_LOCK_WINDOW_MS);
+}
+
+// lock_at may be a Date, a Firestore Timestamp, or an ISO string. Sessions
+// saved before locking existed have none and count as locked, like the rules.
+export function privateEventLockFields(ev, now = new Date()) {
+  const raw = ev && ev.lock_at;
+  const lockAt = raw && typeof raw.toDate === 'function' ? raw.toDate() : raw ? new Date(raw) : null;
+  const valid = lockAt && !isNaN(lockAt.getTime());
+  return {
+    lock_deadline_iso: valid ? lockAt.toISOString() : null,
+    lock_deadline_display: valid
+      ? lockAt.toLocaleString('en-US', { month: 'short', day: 'numeric', hour: 'numeric', minute: '2-digit' })
+      : 'creation + 48 hours',
+    lock_rule: '48 hours after the session was created',
+    is_locked: !valid || now.getTime() >= lockAt.getTime(),
+    ms_remaining: valid ? Math.max(0, lockAt.getTime() - now.getTime()) : 0
+  };
+}
