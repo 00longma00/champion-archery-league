@@ -14,6 +14,44 @@ import {
   onSnapshot 
 } from "./firebase-config.js";
 import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
+import { archerDirectory } from "./archer-names.js";
+
+// Roster docs as { id: <doc id>, ...fields }, teaching the name directory as they load.
+function rosterDocsFrom(snap) {
+  const docs = [];
+  if (snap) snap.forEach(d => docs.push({ ...d.data(), id: d.id }));
+  archerDirectory.learn(docs);
+  return docs;
+}
+
+// One roster entry per archer, under their full name. Older docs saved under a
+// short name ("long") fold into the same archer; the first non-empty field wins.
+function rosterByArcher(rosterDocs) {
+  const byKey = new Map();
+  rosterDocs.forEach(({ id, ...r }) => {
+    const name = archerDirectory.display(r.name || id);
+    const key = archerDirectory.key(name);
+    if (!key) return;
+    const merged = byKey.get(key) || { name };
+    for (const [field, value] of Object.entries(r)) {
+      if (field !== 'name' && (merged[field] === undefined || merged[field] === null || merged[field] === '')) merged[field] = value;
+    }
+    byKey.set(key, merged);
+  });
+  return Array.from(byKey.values()).sort((a, b) => a.name.localeCompare(b.name));
+}
+
+// Latest RSVP per archer, under their full name ("Long" and "Long Ma" are one person).
+function latestRsvpPerArcher(rsvps) {
+  const byKey = new Map();
+  rsvps.forEach(r => {
+    const archerName = archerDirectory.display(r.archerName);
+    const key = archerDirectory.key(archerName);
+    const prev = byKey.get(key);
+    if (!prev || String(r.updatedAt || '') >= String(prev.updatedAt || '')) byKey.set(key, { ...r, archerName });
+  });
+  return Array.from(byKey.values());
+}
 
 // Helper: Calculate next upcoming Sunday
 export function getUpcomingSundayStr() {
@@ -35,8 +73,8 @@ export async function getAppState() {
   // Fetch App Config, Roster, and upcoming Sunday RSVPs in parallel
   let config = { leagueTime: "6:00 PM", defaultStatus: "PENDING" };
   let event = { status: "PENDING" };
-  const archers = [];
-  const rsvps = [];
+  let archers = [];
+  let rsvps = [];
 
   const [stateSnap, rosterSnap, rsvpSnap] = await Promise.all([
     getDoc(doc(db, "app_state", "current")).catch(e => { console.error("Error reading app_state:", e); return null; }),
@@ -49,12 +87,11 @@ export async function getAppState() {
     if (data.config) config = { ...config, ...data.config };
     if (data.event) event = { ...event, ...data.event };
   }
-  if (rosterSnap) {
-    rosterSnap.forEach(d => archers.push(d.data()));
-  }
+  archers = rosterByArcher(rosterDocsFrom(rosterSnap));
   if (rsvpSnap) {
     rsvpSnap.forEach(d => rsvps.push(d.data()));
   }
+  rsvps = latestRsvpPerArcher(rsvps);
 
   // Count archers who have checked in (RSVP YES) for upcoming session
   const checkedInCount = rsvps.filter(r => r.status === 'YES').length;
@@ -86,28 +123,35 @@ export async function getAppState() {
 // 2. Submit / Update RSVP
 export async function submitRsvp({ name, status, avatarId, bowCategory, customAvatar }) {
   const currentSunday = getUpcomingSundayStr();
-  const cleanName = name.trim();
-  const cleanLower = cleanName.toLowerCase();
-  const id = `${currentSunday}_${cleanLower}`;
   const now = new Date().toISOString();
   const MAX_RSVPS = 50;
 
+  const [rosterSnap, rsvpDateSnap] = await Promise.all([
+    getDocs(collection(db, "roster")),
+    getDocs(query(collection(db, "rsvps"), where("date", "==", currentSunday)))
+  ]);
+  const rosterDocs = rosterDocsFrom(rosterSnap);
+
+  // Save under the archer's full name ("Long" -> "Long Ma").
+  const cleanName = archerDirectory.display(name);
+  const cleanLower = archerDirectory.key(cleanName);
+  if (!cleanLower) throw new Error('Please enter your name.');
+
+  // Update this archer's existing RSVP for the Sunday, even if it was saved under a short name.
+  let id = `${currentSunday}_${cleanLower}`;
+  rsvpDateSnap.forEach(d => {
+    if (archerDirectory.key(d.data().archerName) === cleanLower) id = d.id;
+  });
+
   // Enforce upper limit of 50 RSVPs for the upcoming session and 50 archers in roster
-  const existingRsvpSnap = await getDoc(doc(db, "rsvps", id));
-  if (!existingRsvpSnap.exists()) {
-    const rsvpDateSnap = await getDocs(query(collection(db, "rsvps"), where("date", "==", currentSunday)));
-    if (rsvpDateSnap.size >= MAX_RSVPS) {
-      throw new Error(`Maximum RSVP limit reached (${MAX_RSVPS} RSVPs allowed per session).`);
-    }
+  if (!rsvpDateSnap.docs.some(d => d.id === id) && rsvpDateSnap.size >= MAX_RSVPS) {
+    throw new Error(`Maximum RSVP limit reached (${MAX_RSVPS} RSVPs allowed per session).`);
   }
 
-  const rosterRef = doc(db, "roster", cleanLower);
-  const existingRosterSnap = await getDoc(rosterRef);
-  if (!existingRosterSnap.exists()) {
-    const allRosterSnap = await getDocs(collection(db, "roster"));
-    if (allRosterSnap.size >= MAX_RSVPS) {
-      throw new Error(`League roster is full (maximum ${MAX_RSVPS} archers allowed).`);
-    }
+  const rosterId = archerDirectory.rosterDocId(cleanName, rosterDocs);
+  const rosterRef = doc(db, "roster", rosterId);
+  if (!rosterDocs.some(r => r.id === rosterId) && rosterDocs.length >= MAX_RSVPS) {
+    throw new Error(`League roster is full (maximum ${MAX_RSVPS} archers allowed).`);
   }
 
   const isCustomId = avatarId && (avatarId.startsWith('ai_') || avatarId.startsWith('custom_'));
@@ -210,50 +254,44 @@ export async function getScoringEventsHub() {
     return (b.created_at || b.id || '').localeCompare(a.created_at || a.id || '');
   });
 
-  // Get current roster and RSVPs for event creator modal
-  const roster = [];
-  rosterSnap.forEach(d => roster.push(d.data()));
-  roster.sort((a, b) => String(a.name || '').localeCompare(String(b.name || '')));
+  // Get current roster and RSVPs for event creator modal, one entry per archer under their full name
+  const roster = rosterByArcher(rosterDocsFrom(rosterSnap));
+  const pastNames = [];
+  pSnap.forEach(d => pastNames.push(d.data().name));
+  archerDirectory.learn(pastNames);
 
-  const yesArchers = [];
+  const yesRsvps = [];
   try {
     rsvpSnap.forEach(d => {
       const r = d.data();
-      if (r.date === sunday && r.status === 'YES') {
-        yesArchers.push({
-          name: r.archerName,
-          bow_category: r.bowCategory || 'BAREBOW',
-          avatar_id: r.avatarId
-        });
-      }
+      if (r.date === sunday) yesRsvps.push(r);
     });
   } catch (e) {}
+  const yesArchers = latestRsvpPerArcher(yesRsvps)
+    .filter(r => r.status === 'YES')
+    .map(r => ({
+      name: r.archerName,
+      bow_category: r.bowCategory || 'BAREBOW',
+      avatar_id: r.avatarId
+    }));
 
-  // Merge roster + any historical event_participants so archers who participated without RSVPing are always included
+  // Merge roster + any historical event_participants so archers who participated without RSVPing are always included.
+  // Every spelling of an archer ("Max", "Maxwell Shepherd") lands on one entry.
   const allArchersMap = new Map();
   roster.forEach(r => {
-    const clean = String(r.name || '').trim();
-    const key = clean.toLowerCase();
-    if (key) {
-      allArchersMap.set(key, {
-        name: clean,
-        bow_category: r.bowCategory || 'BAREBOW',
-        avatar_id: r.avatarId || null
-      });
-    }
+    allArchersMap.set(archerDirectory.key(r.name), {
+      name: r.name,
+      bow_category: r.bowCategory || 'BAREBOW',
+      avatar_id: r.avatarId || null
+    });
   });
-  const aliasSkip = new Set([
-    'long ma', 'weijia li', 'ling fang', 'ling fangng',
-    'xianchu chen', 'xianchuu', 'alex grossman', 'alex grossmanx',
-    'maxwell shepherd', 'wei', 'qihuanan', 'qihuan aixinjueluo', 'magnur gilmutdin', 'joy'
-  ]);
   pSnap.forEach(d => {
     const p = d.data();
-    const clean = String(p.name || '').trim();
-    const key = clean.toLowerCase();
-    if (key && !allArchersMap.has(key) && !aliasSkip.has(key)) {
+    const name = archerDirectory.display(p.name);
+    const key = archerDirectory.key(name);
+    if (key && !allArchersMap.has(key)) {
       allArchersMap.set(key, {
-        name: clean,
+        name,
         bow_category: p.bow_category || 'BAREBOW',
         avatar_id: p.avatar_id || null
       });
@@ -288,9 +326,12 @@ export async function getEventData(eventId) {
   ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
   Object.assign(ev, leagueEventLockFields(ev));
 
-  // Participants
+  // Participants, shown under their full names whatever was typed at the time
   const participants = [];
-  pSnap.forEach(d => participants.push(d.data()));
+  pSnap.forEach(d => {
+    const p = d.data();
+    participants.push({ ...p, name: archerDirectory.display(p.name) });
+  });
   participants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
 
   // Scores
@@ -547,16 +588,15 @@ export async function createScoringEvent({ event, participants, groups }) {
   }
 
   if (participants && participants.length > 0) {
-    const rosterSnap = await getDocs(collection(db, "roster"));
-    let rosterCount = rosterSnap.size;
-    const knownRosterIds = new Set();
-    rosterSnap.forEach(d => knownRosterIds.add(d.id));
+    const rosterDocs = rosterDocsFrom(await getDocs(collection(db, "roster")));
+    let rosterCount = rosterDocs.length;
+    const knownRosterIds = new Set(rosterDocs.map(r => r.id));
 
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
       const pId = p.id || (`p_${eventId}_${idx}`);
       const bNum = Number(p.bale_number) || 1;
-      const cleanName = String(p.name || 'Archer').trim();
+      const cleanName = archerDirectory.display(p.name) || 'Archer';
       const bowCat = p.bow_category || 'BAREBOW';
       await setDoc(doc(db, "event_participants", pId), {
         id: pId,
@@ -574,7 +614,8 @@ export async function createScoringEvent({ event, participants, groups }) {
       });
       // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions (capped at 50)
       if (cleanName) {
-        const rKey = cleanName.toLowerCase();
+        // Reuse the archer's existing roster doc (e.g. "long" for Long Ma)
+        const rKey = archerDirectory.rosterDocId(cleanName, rosterDocs);
         if (knownRosterIds.has(rKey) || rosterCount < 50) {
           const rosterUpdate = {
             name: cleanName,
@@ -665,10 +706,9 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
     const oldPSnap = await getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId)));
     const keepIds = new Set();
 
-    const rosterSnap = await getDocs(collection(db, "roster"));
-    let rosterCount = rosterSnap.size;
-    const knownRosterIds = new Set();
-    rosterSnap.forEach(d => knownRosterIds.add(d.id));
+    const rosterDocs = rosterDocsFrom(await getDocs(collection(db, "roster")));
+    let rosterCount = rosterDocs.length;
+    const knownRosterIds = new Set(rosterDocs.map(r => r.id));
 
     for (let idx = 0; idx < participants.length; idx++) {
       const p = participants[idx];
@@ -676,7 +716,7 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
       keepIds.add(pId);
       const bNum = Number(p.bale_number) || 1;
       const resolvedGroupId = baleToGroupId[bNum] || p.group_id || (`grp_${eventId}_1`);
-      const cleanName = String(p.name || 'Archer').trim();
+      const cleanName = archerDirectory.display(p.name) || 'Archer';
       const bowCat = p.bow_category || 'BAREBOW';
       await setDoc(doc(db, "event_participants", pId), {
         ...p,
@@ -691,7 +731,8 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
 
       // Also persist participant to global roster so walk-in archers who didn't RSVP are saved for future sessions (capped at 50)
       if (cleanName) {
-        const rKey = cleanName.toLowerCase();
+        // Reuse the archer's existing roster doc (e.g. "long" for Long Ma)
+        const rKey = archerDirectory.rosterDocId(cleanName, rosterDocs);
         if (knownRosterIds.has(rKey) || rosterCount < 50) {
           const rosterUpdate = {
             name: cleanName,
@@ -785,7 +826,7 @@ export async function listPrivateHubSpaces() {
     spaces.push({
       id: data.id || d.id,
       name: data.name || d.id,
-      linked_archers: Array.isArray(data.linked_archers) ? data.linked_archers : [],
+      linked_archers: linkedArcherNames(data.linked_archers),
       passkeys: Array.isArray(data.passkeys) ? data.passkeys : []
     });
   });
@@ -803,12 +844,13 @@ export async function registerPrivateHubSpace({ name, password, linkedArchers = 
 
   const salt = generateSaltHex();
   const passwordHash = await hashPasswordPBKDF2(password, salt);
-  const defaultArchers =
+  const defaultArchers = linkedArcherNames(
     Array.isArray(linkedArchers) && linkedArchers.length > 0
       ? linkedArchers
       : hubId === "long_weijia"
       ? ["Long", "Weijia"]
-      : [cleanName];
+      : [cleanName]
+  );
 
   const payload = {
     id: hubId,
@@ -863,7 +905,7 @@ export async function loginPrivateHubSpace({ nameOrId, password }) {
     hub: {
       id: data.id || snap.id,
       name: data.name,
-      linked_archers: Array.isArray(data.linked_archers) ? data.linked_archers : ["Long", "Weijia"],
+      linked_archers: linkedArcherNames(Array.isArray(data.linked_archers) ? data.linked_archers : ["Long", "Weijia"]),
       passkeys: Array.isArray(data.passkeys) ? data.passkeys : []
     }
   };
@@ -987,27 +1029,40 @@ export async function loginPrivateHubWithPasskey(hubIdInput = null) {
     hub: {
       id: matchedHub.id,
       name: matchedHub.name,
-      linked_archers: Array.isArray(matchedHub.linked_archers) ? matchedHub.linked_archers : ["Long", "Weijia"],
+      linked_archers: linkedArcherNames(Array.isArray(matchedHub.linked_archers) ? matchedHub.linked_archers : ["Long", "Weijia"]),
       passkeys: Array.isArray(matchedHub.passkeys) ? matchedHub.passkeys : []
     }
   };
 }
 
 function normalizeLinkedArcherMatch(participantName, linkedArchers = ["Long", "Weijia"]) {
-  const raw = String(participantName || "").trim().toLowerCase();
-  if (!raw) return null;
+  // Any spelling of a linked archer counts ("Alex" matches a hub linked to "Alex Grossman").
+  const key = archerDirectory.key(participantName);
+  if (!key) return null;
   for (const arch of linkedArchers) {
-    const cleanArch = String(arch || "").trim();
-    const lowerArch = cleanArch.toLowerCase();
-    if (
-      raw === lowerArch ||
-      (lowerArch === "long" && raw === "long ma") ||
-      (lowerArch === "weijia" && (raw === "weijia li" || raw === "jiajia"))
-    ) {
-      return cleanArch;
-    }
+    if (archerDirectory.key(arch) === key) return archerDirectory.display(arch);
   }
   return null;
+}
+
+// Private league notes were saved under short names ("long"); file them under the archer's full name.
+function addLeagueNote(notesMap, n) {
+  const k = `${n.league_event_id}_${archerDirectory.key(n.archer_key)}`;
+  const stamp = String(n.updated_at || "");
+  if (!(k in notesMap) || stamp >= (notesMap[`${k}__at`] || "")) {
+    notesMap[k] = n.archer_notes || "";
+    notesMap[`${k}__at`] = stamp;
+  }
+}
+
+// Linked archers as full names, without duplicates.
+function linkedArcherNames(list) {
+  const out = [];
+  (Array.isArray(list) ? list : []).forEach(n => {
+    const name = archerDirectory.display(n);
+    if (name && !out.some(o => archerDirectory.key(o) === archerDirectory.key(name))) out.push(name);
+  });
+  return out;
 }
 
 function isTestLeagueEventName(name) {
@@ -1017,6 +1072,7 @@ function isTestLeagueEventName(name) {
 
 // List Private Hub Events + Auto-Synced League Events for this Hub's Linked Archers
 export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
+  linkedArchers = linkedArcherNames(linkedArchers);
   const [
     privEvSnap,
     privPartSnap,
@@ -1042,13 +1098,14 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
   const notesMap = {};
   leagueNotesSnap.forEach(d => {
     const n = d.data();
-    notesMap[`${n.league_event_id}_${String(n.archer_key || "").toLowerCase()}`] = n.archer_notes || "";
+    addLeagueNote(notesMap, n);
   });
 
   // Group private participants, groups, and scores by event_id
   const privPartsByEvent = {};
   privPartSnap.forEach(d => {
-    const p = d.data();
+    const p = { ...d.data() };
+    p.name = archerDirectory.display(p.name);
     if (!privPartsByEvent[p.event_id]) privPartsByEvent[p.event_id] = [];
     privPartsByEvent[p.event_id].push(p);
   });
@@ -1188,7 +1245,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
 
     matchedParts.forEach(p => {
       const st = byPart[p.id] || { score: 0, arrows: 0, xs: 0, tens: 0, completedEnds: 0 };
-      const aKey = p.canonicalName.toLowerCase();
+      const aKey = archerDirectory.key(p.canonicalName);
       const savedNote = notesMap[`${ev.id}_${aKey}`] || "";
       if (st.arrows > 0 || savedNote) {
         activeCount++;
@@ -1236,19 +1293,16 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
   });
 
   const rosterMap = new Map();
-  rosterSnap.forEach(d => {
-    const r = d.data();
-    if (r.name) {
-      rosterMap.set(r.name.trim().toLowerCase(), {
-        name: r.name.trim(),
-        bow_category: r.bowCategory || "BAREBOW",
-        avatar_id: r.avatarId || null
-      });
-    }
+  rosterByArcher(rosterDocsFrom(rosterSnap)).forEach(r => {
+    rosterMap.set(archerDirectory.key(r.name), {
+      name: r.name,
+      bow_category: r.bowCategory || "BAREBOW",
+      avatar_id: r.avatarId || null
+    });
   });
 
   const yesArchers = linkedArchers.map(name => {
-    const key = String(name || "").trim().toLowerCase();
+    const key = archerDirectory.key(name);
     return (
       rosterMap.get(key) || {
         name,
@@ -1271,6 +1325,7 @@ export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedAr
 }
 
 export async function getPrivateEventData(eventId, hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
+  linkedArchers = linkedArcherNames(linkedArchers);
   if (String(eventId || "").startsWith("league:")) {
     const rawId = String(eventId).replace(/^league:/, "");
     const evSnap = await getDoc(doc(db, "scoring_events", rawId));
@@ -1287,7 +1342,7 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
     const notesMap = {};
     notesSnap.forEach(d => {
       const n = d.data();
-      notesMap[`${n.league_event_id}_${String(n.archer_key || "").toLowerCase()}`] = n.archer_notes || "";
+      addLeagueNote(notesMap, n);
     });
 
     ev.id = `league:${rawId}`;
@@ -1335,7 +1390,7 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
           if (s.arrows.length >= (ev.arrows_per_end || 3)) endsCompleted++;
         }
       });
-      const aKey = p.name.toLowerCase();
+      const aKey = archerDirectory.key(p.name);
       return {
         ...p,
         bow_category: "BAREBOW",
@@ -1394,7 +1449,10 @@ export async function getPrivateEventData(eventId, hubId = "long_weijia", linked
   ]);
 
   const participants = [];
-  pSnap.forEach(d => participants.push(d.data()));
+  pSnap.forEach(d => {
+    const p = d.data();
+    participants.push({ ...p, name: archerDirectory.display(p.name) });
+  });
   participants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
 
   const scoresByParticipant = {};
@@ -1545,7 +1603,7 @@ export async function createPrivateScoringEvent(hubId = "long_weijia", { event, 
         id: pId,
         hub_id: hubId,
         event_id: eventId,
-        name: String(p.name || "Archer").trim(),
+        name: archerDirectory.display(p.name) || "Archer",
         bow_category: p.bow_category || "BAREBOW",
         avatar_id: p.avatar_id || null,
         archer_notes: p.archer_notes || "",
@@ -1620,6 +1678,7 @@ export async function deletePrivateScoringEvent(eventId) {
 }
 
 export async function savePrivateBaleAssignments(hubId = "long_weijia", eventId, { participants, groups, balesPerGroup }, linkedArchers = ["Long", "Weijia"]) {
+  linkedArchers = linkedArcherNames(linkedArchers);
   if (balesPerGroup !== undefined) {
     await updateDoc(doc(db, "private_events", eventId), {
       bales_per_group: Number(balesPerGroup) || 2,
@@ -1665,7 +1724,7 @@ export async function savePrivateBaleAssignments(hubId = "long_weijia", eventId,
         id: pId,
         hub_id: hubId,
         event_id: eventId,
-        name: String(p.name || "Archer").trim(),
+        name: archerDirectory.display(p.name) || "Archer",
         bow_category: p.bow_category || "BAREBOW",
         archer_notes: p.archer_notes || "",
         bale_number: bNum,
@@ -1685,12 +1744,13 @@ export async function savePrivateBaleAssignments(hubId = "long_weijia", eventId,
 }
 
 export async function updatePrivateParticipantNote(hubId = "long_weijia", eventId, { participantId, archerName, archerNotes = "" }, linkedArchers = ["Long", "Weijia"]) {
+  linkedArchers = linkedArcherNames(linkedArchers);
   const cleanNote = String(archerNotes || "").trim();
   const now = new Date().toISOString();
 
   if (String(eventId || "").startsWith("league:")) {
     const rawId = String(eventId).replace(/^league:/, "");
-    const aKey = String(archerName || "long").trim().toLowerCase();
+    const aKey = archerDirectory.key(archerName || "Long");
     const docId = `${hubId}_${rawId}_${aKey}`;
     await setDoc(doc(db, "private_league_notes", docId), {
       hub_id: hubId,
@@ -1715,6 +1775,7 @@ const VALUE_MAP_USAA = { X: 10, "10": 10, "9": 9, "8": 8, "7": 7, "6": 6, "5": 5
 const VALUE_MAP_NFAA = { X: 5, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
 
 export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
+  linkedArchers = linkedArcherNames(linkedArchers);
   const [
     privEvSnap,
     privPartSnap,
@@ -1736,7 +1797,7 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
   const notesMap = {};
   leagueNotesSnap.forEach(d => {
     const n = d.data();
-    notesMap[`${n.league_event_id}_${String(n.archer_key || "").toLowerCase()}`] = n.archer_notes || "";
+    addLeagueNote(notesMap, n);
   });
 
   const events = [];
@@ -1748,7 +1809,10 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
   });
 
   const participants = [];
-  privPartSnap.forEach(d => participants.push(d.data()));
+  privPartSnap.forEach(d => {
+    const p = d.data();
+    participants.push({ ...p, name: archerDirectory.display(p.name) });
+  });
 
   const scores = [];
   privScoreSnap.forEach(d => {
@@ -1800,7 +1864,7 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
 
     lParts.forEach(lp => {
       const dispName = normalizeLinkedArcherMatch(lp.name, linkedArchers) || lp.name;
-      const aKey = dispName.toLowerCase();
+      const aKey = archerDirectory.key(dispName);
       participants.push({
         ...lp,
         name: dispName,
@@ -1838,12 +1902,12 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
       .sort((a, b) => (a.round_number - b.round_number) || (a.end_number - b.end_number));
     if (pScores.length === 0) return;
 
-    const normName = String(p.name || "").trim();
-    const key = normName.toLowerCase();
+    const normName = archerDirectory.display(p.name);
+    const key = archerDirectory.key(normName);
     if (!archerSessionsMap[key]) {
       archerSessionsMap[key] = {
         name: normName,
-        avatar_id: p.avatar_id || (key === "long" ? "bengal_cat" : key === "weijia" ? "devon_rex_cat" : null),
+        avatar_id: p.avatar_id || (key === "long ma" ? "bengal_cat" : key === "weijia li" ? "devon_rex_cat" : null),
         bow_category: p.bow_category || "BAREBOW",
         sessions: []
       };

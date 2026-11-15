@@ -1342,6 +1342,8 @@
           </button>
         </div>
 
+        <p id="add-archer-name-hint" class="hidden mt-1 text-[11px] font-semibold text-emerald-400"></p>
+
         <!-- Autofill Popup Menu for Previous Archers + Discipline Type -->
         <div id="archer-autofill-popup" class="hidden mt-1.5 rounded-xl bg-slate-950 border border-slate-700 shadow-2xl max-h-52 overflow-y-auto divide-y divide-slate-800/70">
           <!-- Populated dynamically by JS -->
@@ -1685,7 +1687,10 @@
       savePrivateBaleAssignments,
       updatePrivateParticipantNote,
       getPrivateAnalyticsData
-    } from './firebase-adapter.js?v=20261114';
+    } from './firebase-adapter.js?v=20261115';
+    import { archerDirectory } from './archer-names.js';
+    // Every spelling of an archer ("Max", "Maxwell Shepherd") compares equal.
+    const sameArcher = (a, b) => archerDirectory.key(a) === archerDirectory.key(b);
     let appMode = 'league'; // 'league' | 'private'
     let activePrivateHub = null; // { id, name, linked_archers, passkeys }
     let hubData = { events: [], rsvpImport: { yesArchers: [], allArchers: [] } };
@@ -2365,15 +2370,16 @@
       if (explicitBowCategory && BOW_CATEGORIES_META[explicitBowCategory]) {
         return explicitBowCategory;
       }
-      const clean = (name || '').trim().toLowerCase();
+      const clean = archerDirectory.key(name);
       if (clean && hubData && hubData.rsvpImport && hubData.rsvpImport.allArchers) {
-        const found = hubData.rsvpImport.allArchers.find(a => a.name.toLowerCase() === clean);
+        const found = hubData.rsvpImport.allArchers.find(a => sameArcher(a.name, clean));
         if (found && found.bow_category && BOW_CATEGORIES_META[found.bow_category]) {
           return found.bow_category;
         }
       }
-      if (clean && NAME_TO_DEFAULT_CATEGORY[clean]) {
-        return NAME_TO_DEFAULT_CATEGORY[clean];
+      const defaultKey = clean && archerDirectory.keysFor(clean).find(k => NAME_TO_DEFAULT_CATEGORY[k]);
+      if (defaultKey) {
+        return NAME_TO_DEFAULT_CATEGORY[defaultKey];
       }
       return 'BAREBOW';
     }
@@ -2381,7 +2387,8 @@
     const AVATAR_KEYS = Object.keys(PET_AVATARS);
 
     function getAvatarForArcher(name, explicitAvatarId) {
-      const clean = (name || '').trim().toLowerCase();
+      const clean = archerDirectory.key(name);
+      const aliasKeys = clean ? archerDirectory.keysFor(clean) : [];
 
       // 1. Explicit preset avatar id always takes precedence!
       if (explicitAvatarId && PET_AVATARS[explicitAvatarId]) {
@@ -2395,7 +2402,7 @@
 
       // 3. Known archer from hubData.rsvpImport.allArchers
       if (clean && typeof hubData !== 'undefined' && hubData && hubData.rsvpImport && hubData.rsvpImport.allArchers) {
-        const found = hubData.rsvpImport.allArchers.find(a => a.name.toLowerCase() === clean);
+        const found = hubData.rsvpImport.allArchers.find(a => sameArcher(a.name, clean));
         if (found) {
           if (found.avatar_id && PET_AVATARS[found.avatar_id] && (!found.custom_avatar || found.avatar_id !== (found.custom_avatar && found.custom_avatar.id))) {
             return PET_AVATARS[found.avatar_id];
@@ -2410,15 +2417,15 @@
       }
 
       // 4. Check custom avatars from server hub data or localStorage
-      if (clean) {
-        if (window.customAvatars && window.customAvatars[clean]) {
-          return window.customAvatars[clean];
+      for (const k of aliasKeys) {
+        if (window.customAvatars && window.customAvatars[k]) {
+          return window.customAvatars[k];
         }
-        if (typeof hubData !== 'undefined' && hubData && hubData.customAvatars && hubData.customAvatars[clean]) {
-          return hubData.customAvatars[clean];
+        if (typeof hubData !== 'undefined' && hubData && hubData.customAvatars && hubData.customAvatars[k]) {
+          return hubData.customAvatars[k];
         }
         try {
-          const cached = localStorage.getItem('archery_avatar_' + clean);
+          const cached = localStorage.getItem('archery_avatar_' + k);
           if (cached) {
             const parsed = JSON.parse(cached);
             if (parsed && parsed.svg) return parsed;
@@ -2426,8 +2433,9 @@
         } catch(e) {}
       }
 
-      if (NAME_TO_DEFAULT_AVATAR[clean] && PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]]) {
-        return PET_AVATARS[NAME_TO_DEFAULT_AVATAR[clean]];
+      const defaultAvatarKey = aliasKeys.find(k => NAME_TO_DEFAULT_AVATAR[k] && PET_AVATARS[NAME_TO_DEFAULT_AVATAR[k]]);
+      if (defaultAvatarKey) {
+        return PET_AVATARS[NAME_TO_DEFAULT_AVATAR[defaultAvatarKey]];
       }
       return DEFAULT_NEUTRAL_AVATAR;
     }
@@ -2737,7 +2745,11 @@
       try {
         const raw = localStorage.getItem('archery_private_hub_session');
         if (!raw) return null;
-        return JSON.parse(raw);
+        const hub = JSON.parse(raw);
+        if (hub && Array.isArray(hub.linked_archers)) {
+          hub.linked_archers = hub.linked_archers.map(n => archerDirectory.display(n));
+        }
+        return hub;
       } catch (e) {
         return null;
       }
@@ -3280,11 +3292,11 @@
       const allArchers = getAllPreviousArchersWithDiscipline();
       const existingNames = new Set(
         (context === 'create' ? createEventParticipantsDraft : setupParticipantsDraft)
-          .map(p => (p.name || '').trim().toLowerCase())
+          .map(p => archerDirectory.key(p.name))
       );
 
       container.innerHTML = allArchers.map(a => {
-        const isSelected = existingNames.has(a.name.toLowerCase());
+        const isSelected = existingNames.has(archerDirectory.key(a.name));
         const catMeta = getBowCategoryMeta(a.bow_category);
         return `
           <label class="flex items-center justify-between p-2 rounded-xl hover:bg-slate-800/60 cursor-pointer transition select-none">
@@ -3326,16 +3338,16 @@
 
     function confirmBulkRosterSelect() {
       const checkboxes = document.querySelectorAll('.bulk-archer-cb:checked');
-      const selectedNames = Array.from(checkboxes).map(cb => cb.value.trim().toLowerCase());
+      const selectedNames = Array.from(checkboxes).map(cb => archerDirectory.key(cb.value));
       const allKnown = getAllPreviousArchersWithDiscipline();
 
       if (bulkSelectContext === 'create') {
         const currentMap = new Map();
-        createEventParticipantsDraft.forEach(p => currentMap.set((p.name || '').trim().toLowerCase(), p));
+        createEventParticipantsDraft.forEach(p => currentMap.set(archerDirectory.key(p.name), p));
 
         selectedNames.forEach(nameKey => {
           if (!currentMap.has(nameKey)) {
-            const known = allKnown.find(a => a.name.toLowerCase() === nameKey);
+            const known = allKnown.find(a => sameArcher(a.name, nameKey));
             if (known) {
               createEventParticipantsDraft.push({
                 name: known.name,
@@ -3348,11 +3360,11 @@
         renderCreateEventParticipantsList();
       } else {
         const currentMap = new Map();
-        setupParticipantsDraft.forEach(p => currentMap.set((p.name || '').trim().toLowerCase(), p));
+        setupParticipantsDraft.forEach(p => currentMap.set(archerDirectory.key(p.name), p));
 
         selectedNames.forEach(nameKey => {
           if (!currentMap.has(nameKey)) {
-            const known = allKnown.find(a => a.name.toLowerCase() === nameKey);
+            const known = allKnown.find(a => sameArcher(a.name, nameKey));
             if (known) {
               setupParticipantsDraft.push({
                 id: null,
@@ -3514,9 +3526,9 @@
         renderCreateEventParticipantsList();
         return;
       }
-      const existingNames = new Set(createEventParticipantsDraft.map(p => (p.name || '').trim().toLowerCase()));
+      const existingNames = new Set(createEventParticipantsDraft.map(p => archerDirectory.key(p.name)));
       for (const a of yesList) {
-        const key = (a.name || '').trim().toLowerCase();
+        const key = archerDirectory.key(a.name);
         if (key && !existingNames.has(key)) {
           existingNames.add(key);
           const resolvedBowCat = getBowCategoryForArcher(a.name, a.bow_category);
@@ -3825,9 +3837,10 @@
       if (!p) return;
       p[field] = val;
       if (field === 'name') {
-        const clean = String(val || '').trim().toLowerCase();
+        p.name = archerDirectory.display(val);
+        const clean = archerDirectory.key(val);
         const allKnown = getAllPreviousArchersWithDiscipline();
-        const known = allKnown.find(a => a.name.toLowerCase() === clean);
+        const known = allKnown.find(a => sameArcher(a.name, clean));
         if (known) {
           p.name = known.name;
           if (known.avatar_id) p.avatar_id = known.avatar_id;
@@ -3847,9 +3860,9 @@
       const map = new Map();
       const allKnown = (hubData.rsvpImport && hubData.rsvpImport.allArchers) || [];
       allKnown.forEach(a => {
-        const clean = (a.name || '').trim();
-        const key = clean.toLowerCase();
-        if (key) {
+        const clean = archerDirectory.display(a.name);
+        const key = archerDirectory.key(clean);
+        if (key && !map.has(key)) {
           map.set(key, {
             name: clean,
             bow_category: getBowCategoryForArcher(clean, a.bow_category),
@@ -3858,9 +3871,10 @@
         }
       });
       // Ensure defaults like Long, Weijia, Ling, Xianchu, Alex, TZ, Val, Max are always available in autofill
-      Object.keys(NAME_TO_DEFAULT_CATEGORY).forEach(key => {
+      Object.keys(NAME_TO_DEFAULT_CATEGORY).forEach(shortKey => {
+        const key = archerDirectory.key(shortKey);
         if (!map.has(key)) {
-          const displayName = key === 'tz' ? 'TZ' : (key.charAt(0).toUpperCase() + key.slice(1));
+          const displayName = archerDirectory.resolve(shortKey) || (shortKey.charAt(0).toUpperCase() + shortKey.slice(1));
           map.set(key, {
             name: displayName,
             bow_category: NAME_TO_DEFAULT_CATEGORY[key],
@@ -3969,6 +3983,7 @@
     function onAddArcherMenuNameInput(val) {
       const raw = String(val || '').trim();
       const autofillBadge = document.getElementById('add-archer-autofill-badge');
+      updateAddArcherNameHint(raw);
       if (!raw) {
         addArcherManualDisciplineOverride = false;
         if (autofillBadge) autofillBadge.classList.add('hidden');
@@ -3976,9 +3991,8 @@
         return;
       }
 
-      const clean = raw.toLowerCase();
       const allPrevious = getAllPreviousArchersWithDiscipline();
-      const exactMatch = allPrevious.find(a => a.name.toLowerCase() === clean);
+      const exactMatch = allPrevious.find(a => sameArcher(a.name, raw));
       if (exactMatch && !addArcherManualDisciplineOverride) {
         selectAddArcherDiscipline(exactMatch.bow_category, false);
         if (autofillBadge) autofillBadge.classList.remove('hidden');
@@ -3988,6 +4002,19 @@
       renderArcherAutofillPopup();
     }
 
+    // "Will be added as Maxwell Shepherd" when a short name or known typo is typed.
+    function updateAddArcherNameHint(raw) {
+      const hint = document.getElementById('add-archer-name-hint');
+      if (!hint) return;
+      const full = raw ? archerDirectory.resolve(raw) : null;
+      if (full && full.toLowerCase() !== raw.toLowerCase()) {
+        hint.innerHTML = `<i class="fa-solid fa-circle-check mr-1"></i>Will be added as <strong>${escapeHtml(full)}</strong>`;
+        hint.classList.remove('hidden');
+      } else {
+        hint.classList.add('hidden');
+      }
+    }
+
     function renderArcherAutofillPopup(showAllRegardlessOfFilter = false) {
       const popup = document.getElementById('archer-autofill-popup');
       const input = document.getElementById('add-archer-name-input');
@@ -3995,13 +4022,16 @@
 
       const query = showAllRegardlessOfFilter ? '' : String(input.value || '').trim().toLowerCase();
       const activeList = addArcherContext === 'create' ? createEventParticipantsDraft : setupParticipantsDraft;
-      const alreadyAddedNames = new Set((activeList || []).map(p => (p.name || '').trim().toLowerCase()));
+      const alreadyAddedNames = new Set((activeList || []).map(p => archerDirectory.key(p.name)));
 
       const allPrevious = getAllPreviousArchersWithDiscipline();
+      const suggested = new Set(query ? archerDirectory.suggest(query, 5).map(n => archerDirectory.key(n)) : []);
       const filtered = allPrevious.filter(a => {
         if (!query) return true;
         const meta = getBowCategoryMeta(a.bow_category);
-        return a.name.toLowerCase().includes(query) || meta.label.toLowerCase().includes(query);
+        return archerDirectory.keysFor(a.name).some(k => k.includes(query))
+          || meta.label.toLowerCase().includes(query)
+          || suggested.has(archerDirectory.key(a.name));
       });
 
       if (filtered.length === 0) {
@@ -4015,7 +4045,7 @@
           <span>Tap to Autofill</span>
         </div>
       ` + filtered.map(a => {
-        const isAdded = alreadyAddedNames.has(a.name.toLowerCase());
+        const isAdded = alreadyAddedNames.has(archerDirectory.key(a.name));
         const escapedNameJs = a.name.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
         return `
           <button type="button" onclick="pickArcherFromAutofillPopup('${escapedNameJs}')"
@@ -4041,9 +4071,10 @@
 
     function pickArcherFromAutofillPopup(archerName) {
       const allPrevious = getAllPreviousArchersWithDiscipline();
-      const matched = allPrevious.find(a => a.name.toLowerCase() === String(archerName || '').toLowerCase());
+      const matched = allPrevious.find(a => sameArcher(a.name, archerName));
       const input = document.getElementById('add-archer-name-input');
       if (input) input.value = matched ? matched.name : archerName;
+      updateAddArcherNameHint('');
 
       if (matched) {
         addArcherManualDisciplineOverride = false;
@@ -4078,18 +4109,18 @@
         return;
       }
 
-      const cleanKey = rawName.toLowerCase();
+      const cleanKey = archerDirectory.key(rawName);
       const allPrevious = getAllPreviousArchersWithDiscipline();
-      const known = allPrevious.find(a => a.name.toLowerCase() === cleanKey);
+      const known = allPrevious.find(a => sameArcher(a.name, cleanKey));
 
-      const finalName = known ? known.name : rawName;
+      const finalName = known ? known.name : archerDirectory.display(rawName);
       const finalCategory = addArcherSelectedDiscipline || (known ? known.bow_category : 'BAREBOW');
       const finalAvatarId = (known && known.avatar_id) || NAME_TO_DEFAULT_AVATAR[cleanKey] || null;
 
       // Remember in session hubData so subsequent autofills immediately reflect this archer & discipline
       if (hubData && hubData.rsvpImport) {
         if (!Array.isArray(hubData.rsvpImport.allArchers)) hubData.rsvpImport.allArchers = [];
-        const existingInHub = hubData.rsvpImport.allArchers.find(a => a.name.toLowerCase() === cleanKey);
+        const existingInHub = hubData.rsvpImport.allArchers.find(a => sameArcher(a.name, cleanKey));
         if (existingInHub) {
           existingInHub.bow_category = finalCategory;
         } else {
@@ -4102,7 +4133,7 @@
       }
 
       if (addArcherContext === 'create') {
-        const existingIdx = createEventParticipantsDraft.findIndex(p => (p.name || '').trim().toLowerCase() === cleanKey);
+        const existingIdx = createEventParticipantsDraft.findIndex(p => sameArcher(p.name, cleanKey));
         if (existingIdx >= 0) {
           createEventParticipantsDraft[existingIdx].bow_category = finalCategory;
           if (appMode === 'private') {
@@ -4120,7 +4151,7 @@
         }
         renderCreateEventParticipantsList();
       } else {
-        const existingIdx = setupParticipantsDraft.findIndex(p => (p.name || '').trim().toLowerCase() === cleanKey);
+        const existingIdx = setupParticipantsDraft.findIndex(p => sameArcher(p.name, cleanKey));
         const autoBale = document.getElementById('add-archer-auto-bale') ? document.getElementById('add-archer-auto-bale').checked : true;
         const chosenBale = Number((document.getElementById('add-archer-bale-select') || {}).value) || 1;
         const chosenPos = String((document.getElementById('add-archer-pos-select') || {}).value || 'A').toUpperCase();
@@ -4434,9 +4465,9 @@
           const savedLocalName = (localStorage.getItem('archery_league_name') || '').trim();
           let matchedGroup = null;
           if (savedLocalName) {
-            matchedGroup = activeEventData.groups.find(g => (g.nominated_scorer || '').toLowerCase() === savedLocalName.toLowerCase());
+            matchedGroup = activeEventData.groups.find(g => sameArcher(g.nominated_scorer || '', savedLocalName));
             if (!matchedGroup) {
-              const myParticipant = (activeEventData.participants || []).find(p => p.name.toLowerCase() === savedLocalName.toLowerCase());
+              const myParticipant = (activeEventData.participants || []).find(p => sameArcher(p.name, savedLocalName));
               if (myParticipant) {
                 matchedGroup = activeEventData.groups.find(g => g.id === myParticipant.group_id || (g.bales || []).includes(Number(myParticipant.bale_number)));
               }
@@ -4680,9 +4711,9 @@
       if (!selectedGroupId || !groups.some(g => g.id === selectedGroupId)) {
         let matchedGroup = null;
         if (savedLocalName) {
-          matchedGroup = groups.find(g => (g.nominated_scorer || '').toLowerCase() === savedLocalName.toLowerCase());
+          matchedGroup = groups.find(g => sameArcher(g.nominated_scorer || '', savedLocalName));
           if (!matchedGroup) {
-            const myParticipant = participants.find(p => p.name.toLowerCase() === savedLocalName.toLowerCase());
+            const myParticipant = participants.find(p => sameArcher(p.name, savedLocalName));
             if (myParticipant) {
               matchedGroup = groups.find(g => g.id === myParticipant.group_id || (g.bales || []).includes(Number(myParticipant.bale_number)));
             }
@@ -4748,7 +4779,7 @@
       scorerSelect.innerHTML = `<option value="">-- Nominate / Hand Off Scorer --</option>` +
         groupArchers.map(a => `
           <option value="${escapeHtml(a.name)}" ${activeGroup.nominated_scorer === a.name ? 'selected' : ''}>
-            ${escapeHtml(a.name)} (${a.bale_number}${a.position})${savedLocalName.toLowerCase() === a.name.toLowerCase() ? ' ★ You' : ''}
+            ${escapeHtml(a.name)} (${a.bale_number}${a.position})${savedLocalName && sameArcher(savedLocalName, a.name) ? ' ★ You' : ''}
           </option>
         `).join('');
 
@@ -5783,9 +5814,9 @@
         alert('No YES RSVPs found in the attendance tracker.');
         return;
       }
-      const existingNames = new Set(setupParticipantsDraft.map(p => p.name.toLowerCase()));
+      const existingNames = new Set(setupParticipantsDraft.map(p => archerDirectory.key(p.name)));
       for (const a of yesList) {
-        const key = a.name.toLowerCase();
+        const key = archerDirectory.key(a.name);
         if (!existingNames.has(key)) {
           existingNames.add(key);
           const resolvedBowCat = getBowCategoryForArcher(a.name, a.bow_category) || 'BAREBOW';
@@ -5813,9 +5844,10 @@
 
       // If name changed to a known archer, update their saved avatar and bow_category
       if (field === 'name') {
-        const clean = String(val || '').trim().toLowerCase();
+        p.name = archerDirectory.display(val);
+        const clean = archerDirectory.key(val);
         const allKnown = (hubData.rsvpImport && hubData.rsvpImport.allArchers) || [];
-        const known = allKnown.find(a => a.name.toLowerCase() === clean);
+        const known = allKnown.find(a => sameArcher(a.name, clean));
         if (known) {
           p.name = known.name;
           if (known.avatar_id) p.avatar_id = known.avatar_id;
@@ -5828,8 +5860,7 @@
 
       // If bow_category changed, also update hubData.rsvpImport.allArchers in memory so re-adding in the same session keeps it
       if (field === 'bow_category' && hubData && hubData.rsvpImport && hubData.rsvpImport.allArchers) {
-        const clean = (p.name || '').trim().toLowerCase();
-        const known = hubData.rsvpImport.allArchers.find(a => a.name.toLowerCase() === clean);
+        const known = hubData.rsvpImport.allArchers.find(a => sameArcher(a.name, p.name));
         if (known) known.bow_category = val;
       }
 

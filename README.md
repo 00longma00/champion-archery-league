@@ -9,6 +9,11 @@ A clean, mobile-responsive attendance tracker for weekly Sunday night archery le
 - **Live Scoring Hub:** Target bale assignments, on-screen target keypad, live leaderboard, and private practice hub.
 - **Zero Cloud Server Setup:** Runs seamlessly with Express and Firebase.
 
+## Archer Names
+Each archer is shown and saved under one full name, whatever was typed ("Max" → "Maxwell Shepherd"), including in past events and the Private Hub. Unknown names are kept as typed, and the RSVP and Add Archer forms suggest close matches ("Did you mean Sam Zhang?").
+
+To link a new nickname or fix a typo, either add it to `KNOWN_ARCHER_ALIASES` in `archer-names.js` (then copy the file to `public/` and `docs/`), or give the archer's document in the Firestore `roster` collection an `aliases` array, e.g. `["Sam"]`.
+
 ## Quick Start (Run Locally)
 
 1. **Install dependencies:**
