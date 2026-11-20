@@ -6475,7 +6475,7 @@
       const archerKey = selectedAnalyticsArcher || 'long';
       const rawTarget = analyticsRawData.archers[archerKey] || {
         name: archerKey.charAt(0).toUpperCase() + archerKey.slice(1),
-        avatar_id: NAME_TO_DEFAULT_AVATAR[archerKey] || 'bengal_cat',
+        avatar_id: NAME_TO_DEFAULT_AVATAR[archerKey] || null,
         bow_category: 'BAREBOW',
         sessions: []
       };
@@ -6583,7 +6583,7 @@
         const archerKey = selectedAnalyticsArcher || 'long';
         const rawTarget = analyticsRawData.archers[archerKey] || {
           name: archerKey.charAt(0).toUpperCase() + archerKey.slice(1),
-          avatar_id: NAME_TO_DEFAULT_AVATAR[archerKey] || 'bengal_cat',
+          avatar_id: NAME_TO_DEFAULT_AVATAR[archerKey] || null,
           bow_category: 'BAREBOW',
           sessions: []
         };

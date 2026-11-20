@@ -3,7 +3,7 @@
 //
 // Every archer keeps one badge: the one they picked, otherwise the one they used
 // most recently in a league. Archers with no badge get one nobody uses yet, or
-// the least-used one once all 18 are taken.
+// a random least-used one once all 18 are taken.
 
 import { archerDirectory } from './archer-names.js';
 
@@ -17,13 +17,14 @@ export function isPresetAvatar(id) {
   return PRESET_AVATAR_IDS.includes(id);
 }
 
-// The preset nobody (or the fewest archers) wears. Ties go to the earliest in the list.
-export function leastUsedAvatar(usedAvatarIds = []) {
+// A preset nobody (or the fewest archers) wears, picked at random among those tied,
+// so new archers don't all start with the same badge. `random` returns [0, 1).
+export function leastUsedAvatar(usedAvatarIds = [], random = Math.random) {
   const counts = new Map(PRESET_AVATAR_IDS.map(id => [id, 0]));
   usedAvatarIds.forEach(id => { if (counts.has(id)) counts.set(id, counts.get(id) + 1); });
-  let best = PRESET_AVATAR_IDS[0];
-  for (const id of PRESET_AVATAR_IDS) if (counts.get(id) < counts.get(best)) best = id;
-  return best;
+  const fewest = Math.min(...counts.values());
+  const candidates = PRESET_AVATAR_IDS.filter(id => counts.get(id) === fewest);
+  return candidates[Math.min(candidates.length - 1, Math.floor(random() * candidates.length))];
 }
 
 // Map of archer key -> preset badge from roster docs ({ name, avatarId }).

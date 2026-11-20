@@ -50,7 +50,7 @@ test('archers without a badge get unused ones, most recently active first', () =
   const tim = plan.get('tim shi').avatarId;
   assert.ok(isPresetAvatar(jay) && !taken.includes(jay));
   assert.ok(isPresetAvatar(tim) && !taken.includes(tim) && tim !== jay);
-  assert.equal(jay, PRESET_AVATAR_IDS.find(id => !taken.includes(id)), 'Jay (Nov 8) picks before Tim (Oct 24)');
+
   assert.equal(plan.get('jay liu').source, 'assigned');
 });
 
@@ -63,8 +63,18 @@ test('archers not seen since the cutoff wait until they come back', () => {
 test('once all 18 badges are used, the least-used one is reused', () => {
   const all = [...PRESET_AVATAR_IDS, ...PRESET_AVATAR_IDS.filter(id => id !== 'poodle_dog')];
   assert.equal(leastUsedAvatar(all), 'poodle_dog');
-  assert.equal(leastUsedAvatar([]), PRESET_AVATAR_IDS[0]);
-  assert.equal(leastUsedAvatar(['tabby_cat']), 'calico_cat');
+  assert.equal(leastUsedAvatar([], () => 0), PRESET_AVATAR_IDS[0]);
+  assert.equal(leastUsedAvatar(['tabby_cat'], () => 0), 'calico_cat');
+});
+
+test('new archers get a random badge among the unused ones', () => {
+  const taken = ['tabby_cat', 'bengal_cat'];
+  const free = PRESET_AVATAR_IDS.filter(id => !taken.includes(id));
+  assert.equal(leastUsedAvatar(taken, () => 0), free[0]);
+  assert.equal(leastUsedAvatar(taken, () => 0.9999), free[free.length - 1]);
+  const seen = new Set(Array.from({ length: 200 }, () => leastUsedAvatar(taken)));
+  assert.ok(seen.size > 1, 'picks vary between calls');
+  seen.forEach(id => assert.ok(free.includes(id)));
 });
 
 test('roster badges are looked up by any spelling of the name', () => {
