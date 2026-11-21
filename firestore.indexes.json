@@ -1,0 +1,13 @@
+{
+  "indexes": [
+    {
+      "collectionGroup": "private_events",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "hub_id", "order": "ASCENDING" },
+        { "fieldPath": "date", "order": "DESCENDING" }
+      ]
+    }
+  ],
+  "fieldOverrides": []
+}

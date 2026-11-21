@@ -14,11 +14,31 @@ import {
   onSnapshot,
   app
 } from "./firebase-config.js";
-import { writeBatch } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
+import { writeBatch, limit, startAfter, deleteField, getCountFromServer } from "https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js";
 import { deriveHubKey, generateSaltHex, sha256Hex, HUB_KEY_VERSION } from "./hub-keys.js";
 import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
 import { archerDirectory } from "./archer-names.js";
 import { isPresetAvatar, leastUsedAvatar, planArcherAvatars, rosterAvatarsByArcher } from "./archer-avatars.js";
+import {
+  chunk,
+  parseArrows,
+  normalizeLinkedArcherMatch,
+  leagueNotesMap,
+  linkedArcherNames,
+  isTestLeagueEventName,
+  sortEventsNewestFirst,
+  buildScoreSummary,
+  summaryEnds,
+  upsertScore,
+  buildLeagueEventData,
+  buildPrivateLeagueEventData,
+  buildPrivateSessionData,
+  buildPrivateSessionCard,
+  buildSyncedLeagueCard,
+  buildLeagueHubCard,
+  buildArcherAnalytics,
+  createMergedPager
+} from "./scoring-data.js";
 
 // Same SDK version as firebase-config.js; loaded only when the Private Hub needs it.
 const FIREBASE_AUTH_URL = "https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js";
@@ -118,9 +138,9 @@ export async function getAppState() {
   let archers = [];
   let rsvps = [];
 
-  const [stateSnap, rosterSnap, rsvpSnap] = await Promise.all([
+  const [stateSnap, rosterDocs, rsvpSnap] = await Promise.all([
     getDoc(doc(db, "app_state", "current")).catch(e => { console.error("Error reading app_state:", e); return null; }),
-    getDocs(collection(db, "roster")).catch(e => { console.error("Error reading roster:", e); return null; }),
+    loadRosterDocs().catch(e => { console.error("Error reading roster:", e); return []; }),
     getDocs(query(collection(db, "rsvps"), where("date", "==", currentSunday))).catch(e => { console.error("Error reading rsvps:", e); return null; })
   ]);
 
@@ -129,7 +149,7 @@ export async function getAppState() {
     if (data.config) config = { ...config, ...data.config };
     if (data.event) event = { ...event, ...data.event };
   }
-  archers = rosterByArcher(rosterDocsFrom(rosterSnap));
+  archers = rosterByArcher(rosterDocs);
   if (rsvpSnap) {
     rsvpSnap.forEach(d => rsvps.push(d.data()));
   }
@@ -244,84 +264,145 @@ export async function updateAdminStatus({ status, leagueTime }) {
   return { success: true };
 }
 
+// ============================================================================
+// SHARED READ HELPERS (paging, `in` queries, score summaries)
+// ============================================================================
+
+// Documents whose `field` is one of `values`, read 30 values per query.
+async function docsWhereIn(collName, field, values) {
+  const uniq = [...new Set((values || []).filter(v => v !== undefined && v !== null && v !== ""))];
+  const snaps = await Promise.all(chunk(uniq, 30).map(part =>
+    getDocs(query(collection(db, collName), where(field, "in", part)))
+  ));
+  const out = [];
+  snaps.forEach(s => s.forEach(d => out.push({ id: d.id, ...d.data() })));
+  return out;
+}
+
+// participant id -> ends. Ends come from each participant's `score_summary`; a
+// participant without one is read from its end scores once, and the summary is
+// saved (when `shouldSave(p)` says so) so the next load does not need them.
+async function endsForParticipants(parts, scoresColl, partsColl, shouldSave = () => false) {
+  const ends = {};
+  const missing = [];
+  parts.forEach(p => {
+    const fromSummary = summaryEnds(p);
+    if (fromSummary) ends[p.id] = fromSummary;
+    else missing.push(p);
+  });
+  if (missing.length === 0) return ends;
+
+  const scores = await docsWhereIn(scoresColl, "participant_id", missing.map(p => p.id));
+  const byPart = {};
+  scores.forEach(s => { (byPart[s.participant_id] = byPart[s.participant_id] || []).push(s); });
+  let saves = 0;
+  missing.forEach(p => {
+    const own = (byPart[p.id] || []).filter(s => !s.event_id || !p.event_id || s.event_id === p.event_id);
+    ends[p.id] = own;
+    if (saves < 60 && shouldSave(p)) {
+      saves++;
+      updateDoc(doc(db, partsColl, p.id), { score_summary: buildScoreSummary(own) })
+        .catch(err => console.debug("Score summary not saved for", p.id, err && err.code));
+    }
+  });
+  return ends;
+}
+
+const byDateDesc = (a, b) => String(b.date || "").localeCompare(String(a.date || ""));
+
+// One newest-first stream of events, read `batchSize` at a time with a cursor.
+// If the query needs an index that is not deployed yet, the whole list is read
+// once and served from memory instead, so the page keeps working.
+function pagedEventSource({ makeQuery, fallbackQuery, enrich, batchSize = 10 }) {
+  let cursor = null;
+  let done = false;
+  let rest = null;
+  return {
+    async fetchMore() {
+      if (done) return { items: [], done: true };
+      let events;
+      if (rest) {
+        events = rest.splice(0, batchSize);
+        done = rest.length === 0;
+      } else {
+        try {
+          const snap = await getDocs(makeQuery(cursor ? [startAfter(cursor), limit(batchSize)] : [limit(batchSize)]));
+          events = snap.docs.map(d => ({ id: d.id, ...d.data() }));
+          if (snap.docs.length) cursor = snap.docs[snap.docs.length - 1];
+          done = snap.docs.length < batchSize;
+        } catch (err) {
+          if (cursor || !err || err.code !== "failed-precondition") throw err;
+          console.warn("Firestore index not deployed yet; loading the full list instead.", err.message);
+          const snap = await getDocs(fallbackQuery());
+          rest = snap.docs.map(d => ({ id: d.id, ...d.data() })).sort(byDateDesc);
+          events = rest.splice(0, batchSize);
+          done = rest.length === 0;
+        }
+      }
+      return { items: events.length ? await enrich(events) : [], done };
+    }
+  };
+}
+
+function hubPage(pager, firstEvents, extra) {
+  return {
+    success: true,
+    events: firstEvents,
+    hasMore: pager.hasMore,
+    // Next `count` events, and whether any remain after them.
+    async loadMore(count = 10) {
+      const events = await pager.next(count);
+      return { events, hasMore: pager.hasMore };
+    },
+    ...extra
+  };
+}
+
+async function countParticipants(eventId) {
+  const q = query(collection(db, "event_participants"), where("event_id", "==", eventId));
+  try {
+    return (await getCountFromServer(q)).data().count;
+  } catch (e) {
+    return (await getDocs(q)).size;
+  }
+}
+
+// A participant from the page, without what the page computed or the stored score
+// summary (which only score saves write), so a bale save cannot overwrite it.
+function participantFields(p) {
+  const { score_summary, scores, running_total, x_count, ten_count, arrows_shot, ends_completed, avg_per_arrow, designation, rank, category_rank, ...rest } = p || {};
+  return rest;
+}
+
 // 4. Scoring: List Events Hub
-export async function getScoringEventsHub() {
+export async function getScoringEventsHub({ pageSize = 10 } = {}) {
   const sunday = getUpcomingSundayStr();
-  const [eventsSnap, pSnap, gSnap, rosterSnap, rsvpSnap] = await Promise.all([
-    getDocs(collection(db, "scoring_events")),
-    getDocs(collection(db, "event_participants")),
-    getDocs(collection(db, "scoring_groups")),
-    getDocs(collection(db, "roster")),
-    getDocs(query(collection(db, "rsvps"), where("date", "==", sunday))).catch(() => ({ forEach: () => {} }))
+  const now = new Date();
+  const batchSize = Math.min(30, Math.max(5, pageSize));
+  const source = pagedEventSource({
+    batchSize,
+    makeQuery: page => query(collection(db, "scoring_events"), orderBy("date", "desc"), ...page),
+    fallbackQuery: () => collection(db, "scoring_events"),
+    enrich: async events => {
+      const counts = await Promise.all(events.map(ev => countParticipants(ev.id).catch(() => 0)));
+      return events.map((ev, i) => buildLeagueHubCard(ev, counts[i], now)).sort(sortEventsNewestFirst);
+    }
+  });
+  const pager = createMergedPager([source], { compare: byDateDesc });
+
+  const [firstEvents, rosterDocs, rsvpSnap] = await Promise.all([
+    pager.next(pageSize),
+    loadRosterDocs(),
+    getDocs(query(collection(db, "rsvps"), where("date", "==", sunday))).catch(() => null)
   ]);
 
-  const participantsByEvent = {};
-  pSnap.forEach(d => {
-    const p = d.data();
-    if (p.event_id) {
-      if (!participantsByEvent[p.event_id]) participantsByEvent[p.event_id] = [];
-      participantsByEvent[p.event_id].push(p);
-    }
-  });
-
-  const groupsByEvent = {};
-  gSnap.forEach(d => {
-    const g = d.data();
-    if (g.event_id) {
-      if (!groupsByEvent[g.event_id]) groupsByEvent[g.event_id] = [];
-      groupsByEvent[g.event_id].push(g);
-    }
-  });
-
-  const events = [];
-  eventsSnap.forEach(d => {
-    const ev = d.data();
-    const pList = participantsByEvent[ev.id] || [];
-    const gList = groupsByEvent[ev.id] || [];
-    const baleSet = new Set();
-    pList.forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
-    const step = Math.max(1, Number(ev.bales_per_group) || 2);
-    const groupCount = gList.length > 0 ? gList.length : Math.max(1, Math.ceil(baleSet.size / step));
-
-    events.push({
-      ...ev,
-      participant_count: pList.length,
-      group_count: groupCount,
-      ...leagueEventLockFields(ev)
-    });
-  });
-  // Sort by date descending; if same date, sort by created_at / id descending
-  events.sort((a, b) => {
-    const dateComp = (b.date || '').localeCompare(a.date || '');
-    if (dateComp !== 0) return dateComp;
-    return (b.created_at || b.id || '').localeCompare(a.created_at || a.id || '');
-  });
-
-  // Get current roster and RSVPs for event creator modal, one entry per archer under their full name
-  const rosterDocs = rosterDocsFrom(rosterSnap);
+  // Roster and RSVPs for the event creator, one entry per archer under their full name.
   const roster = rosterByArcher(rosterDocs);
-  const pastNames = [];
-  pSnap.forEach(d => pastNames.push(d.data().name));
-  archerDirectory.learn(pastNames);
-
-  // Each archer's badge: their own, else the one they wore most recently in a league.
-  const eventDates = {};
-  eventsSnap.forEach(d => { eventDates[d.id] = d.data().date || ''; });
-  const pastEntries = [];
-  pSnap.forEach(d => {
-    const p = d.data();
-    pastEntries.push({ name: p.name, avatar_id: p.avatar_id, date: eventDates[p.event_id] || '' });
-  });
-  const badgePlan = planArcherAvatars({ roster: rosterDocs, pastEntries, assignNewSince: '9999-12-31' });
+  const badgePlan = planArcherAvatars({ roster: rosterDocs, pastEntries: [], assignNewSince: '9999-12-31' });
   const badgeOf = (name) => (badgePlan.get(archerDirectory.key(name)) || {}).avatarId || null;
 
   const yesRsvps = [];
-  try {
-    rsvpSnap.forEach(d => {
-      const r = d.data();
-      if (r.date === sunday) yesRsvps.push(r);
-    });
-  } catch (e) {}
+  if (rsvpSnap) rsvpSnap.forEach(d => { const r = d.data(); if (r.date === sunday) yesRsvps.push(r); });
   const yesArchers = latestRsvpPerArcher(yesRsvps)
     .filter(r => r.status === 'YES')
     .map(r => ({
@@ -330,215 +411,168 @@ export async function getScoringEventsHub() {
       avatar_id: badgeOf(r.archerName) || r.avatarId
     }));
 
-  // Merge roster + any historical event_participants so archers who participated without RSVPing are always included.
-  // Every spelling of an archer ("Max", "Maxwell Shepherd") lands on one entry.
-  const allArchersMap = new Map();
-  roster.forEach(r => {
-    allArchersMap.set(archerDirectory.key(r.name), {
-      name: r.name,
-      bow_category: r.bowCategory || 'BAREBOW',
-      avatar_id: badgeOf(r.name)
-    });
-  });
-  pSnap.forEach(d => {
-    const p = d.data();
-    const name = archerDirectory.display(p.name);
-    const key = archerDirectory.key(name);
-    if (key && !allArchersMap.has(key)) {
-      allArchersMap.set(key, {
-        name,
-        bow_category: p.bow_category || 'BAREBOW',
-        avatar_id: badgeOf(name)
-      });
-    }
-  });
+  const allArchers = roster
+    .map(r => ({ name: r.name, bow_category: r.bowCategory || 'BAREBOW', avatar_id: badgeOf(r.name) }))
+    .sort((a, b) => a.name.localeCompare(b.name));
 
-  const allArchers = Array.from(allArchersMap.values()).sort((a, b) => a.name.localeCompare(b.name));
-
-  return {
-    success: true,
-    events,
+  return hubPage(pager, firstEvents, {
     roster,
-    rsvpImport: {
-      date: sunday,
-      yesArchers,
-      allArchers
-    }
+    rsvpImport: { date: sunday, yesArchers, allArchers }
+  });
+}
+
+// Where an event page's documents live, and how they become the page's data.
+function eventPlan(eventId, { hubId = null, linkedArchers = [] } = {}) {
+  const id = String(eventId || "");
+  if (hubId && id.startsWith("league:")) {
+    const rawId = id.replace(/^league:/, "");
+    const names = linkedArcherNames(linkedArchers);
+    return {
+      key: id,
+      refs: {
+        event: doc(db, "scoring_events", rawId),
+        participants: query(collection(db, "event_participants"), where("event_id", "==", rawId)),
+        scores: query(collection(db, "end_scores"), where("event_id", "==", rawId)),
+        groups: query(collection(db, "scoring_groups"), where("event_id", "==", rawId)),
+        notes: query(collection(db, "private_league_notes"), where("hub_id", "==", hubId))
+      },
+      build: (raw, rosterBadges) => buildPrivateLeagueEventData(raw, { rosterBadges, linkedArchers: names })
+    };
+  }
+  if (hubId) {
+    return {
+      key: id,
+      refs: {
+        event: doc(db, "private_events", id),
+        participants: query(collection(db, "private_participants"), where("event_id", "==", id)),
+        scores: query(collection(db, "private_end_scores"), where("event_id", "==", id)),
+        groups: query(collection(db, "private_groups"), where("event_id", "==", id))
+      },
+      build: (raw, rosterBadges) => buildPrivateSessionData(raw, { rosterBadges })
+    };
+  }
+  return {
+    key: id,
+    refs: {
+      event: doc(db, "scoring_events", id),
+      participants: query(collection(db, "event_participants"), where("event_id", "==", id)),
+      scores: query(collection(db, "end_scores"), where("event_id", "==", id)),
+      groups: query(collection(db, "scoring_groups"), where("event_id", "==", id))
+    },
+    build: (raw, rosterBadges) => buildLeagueEventData(raw, { rosterBadges })
   };
+}
+
+const docList = snap => snap.docs.map(d => ({ id: d.id, ...d.data() }));
+
+async function fetchEvent(plan) {
+  const { refs } = plan;
+  const [evSnap, pSnap, sSnap, gSnap, nSnap, rosterDocs] = await Promise.all([
+    getDoc(refs.event),
+    getDocs(refs.participants),
+    getDocs(refs.scores),
+    getDocs(refs.groups),
+    refs.notes ? getDocs(refs.notes) : Promise.resolve(null),
+    loadRosterDocs().catch(() => [])
+  ]);
+  const raw = {
+    event: evSnap.exists() ? { id: evSnap.id, ...evSnap.data() } : null,
+    participants: docList(pSnap),
+    scores: docList(sSnap),
+    groups: docList(gSnap),
+    notes: nSnap ? docList(nSnap) : []
+  };
+  return plan.build(raw, rosterAvatarsByArcher(rosterDocs));
 }
 
 // 5. Scoring: Get Event Data (Full participants, scores, leaderboard)
 export async function getEventData(eventId) {
-  const [evSnap, pSnap, sSnap, gSnap, rosterDocs] = await Promise.all([
-    getDoc(doc(db, "scoring_events", eventId)),
-    getDocs(query(collection(db, "event_participants"), where("event_id", "==", eventId))),
-    getDocs(query(collection(db, "end_scores"), where("event_id", "==", eventId))),
-    getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", eventId))),
-    loadRosterDocs().catch(() => [])
-  ]);
-  const rosterBadges = rosterAvatarsByArcher(rosterDocs);
-  if (!evSnap.exists()) return { success: false, error: 'Event not found' };
-  const ev = evSnap.data();
+  return fetchEvent(eventPlan(eventId));
+}
 
-  ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-  Object.assign(ev, leagueEventLockFields(ev));
+// The event page currently kept up to date by subscribeToEvent (at most one).
+let liveEvent = null;
 
-  // Participants, shown under their full names and own badges whatever was saved at the time
-  const participants = [];
-  pSnap.forEach(d => {
-    const p = d.data();
-    const name = archerDirectory.display(p.name);
-    participants.push({ ...p, name, avatar_id: rosterBadges.get(archerDirectory.key(name)) || p.avatar_id || null });
-  });
-  participants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
-
-  // Scores
-  const eventScores = [];
-  sSnap.forEach(d => {
-    const s = d.data();
-    eventScores.push({
-      ...s,
-      arrows: Array.isArray(s.arrows) ? s.arrows : (typeof s.arrows_json === 'string' ? JSON.parse(s.arrows_json || '[]') : [])
+// Live event page: calls onData({ success, data }) with the first full load and
+// again whenever any score, archer, group or the event itself changes. After the
+// first load only changed documents are read. Returns a function that stops it.
+// Private Hub pages pass { hubId, linkedArchers }.
+export function subscribeToEvent(eventId, { hubId = null, linkedArchers = [] } = {}, onData = () => {}, onError = () => {}) {
+  const plan = eventPlan(eventId, { hubId, linkedArchers });
+  const raw = { event: undefined, participants: undefined, scores: undefined, groups: undefined, notes: plan.refs.notes ? undefined : [] };
+  const live = { key: plan.key, raw, rosterBadges: null, build: () => plan.build(raw, live.rosterBadges || new Map()) };
+  let stopped = false;
+  let scheduled = false;
+  const ready = () => live.rosterBadges && Object.values(raw).every(v => v !== undefined);
+  const emit = () => {
+    if (scheduled || stopped) return;
+    scheduled = true;
+    queueMicrotask(() => {
+      scheduled = false;
+      if (!stopped && ready()) onData(live.build());
     });
-  });
-
-  const scoresByParticipant = {};
-  participants.forEach(p => { scoresByParticipant[p.id] = []; });
-  eventScores.forEach(s => {
-    if (!scoresByParticipant[s.participant_id]) scoresByParticipant[s.participant_id] = [];
-    scoresByParticipant[s.participant_id].push(s);
-  });
-
-  const enrichedParticipants = participants.map(p => {
-    const pScores = scoresByParticipant[p.id] || [];
-    let runningTotal = 0;
-    let totalXs = 0;
-    let totalTens = 0;
-    let arrowsShot = 0;
-    let endsCompleted = 0;
-
-    pScores.forEach(s => {
-      if (s.arrows && s.arrows.length > 0) {
-        runningTotal += Number(s.end_total) || 0;
-        totalXs += Number(s.x_count) || 0;
-        totalTens += Number(s.ten_count) || 0;
-        arrowsShot += s.arrows.length;
-        if (s.arrows.length >= (ev.arrows_per_end || 3)) {
-          endsCompleted += 1;
-        }
-      }
-    });
-
-    const bowCat = p.bow_category || 'BAREBOW';
-    return {
-      ...p,
-      bow_category: bowCat,
-      designation: `${p.bale_number}${p.position}`,
-      running_total: runningTotal,
-      x_count: totalXs,
-      ten_count: totalTens,
-      arrows_shot: arrowsShot,
-      ends_completed: endsCompleted,
-      avg_per_arrow: arrowsShot > 0 ? (runningTotal / arrowsShot).toFixed(2) : '0.00',
-      scores: pScores
-    };
-  });
-
-  const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
-  const allScoresFilled = enrichedParticipants.length > 0 && enrichedParticipants.every(p => p.ends_completed >= totalEndsPerArcher);
-  ev.all_scores_filled = allScoresFilled;
-  ev.is_finished = Boolean(ev.is_locked || ev.status === 'COMPLETED' || allScoresFilled);
-
-  const categoryRankCounters = { BAREBOW: 0, OLYMPIC_RECURVE: 0, TRADITIONAL: 0, COMPOUND: 0 };
-  const leaderboard = [...enrichedParticipants].sort((a, b) => {
-    if (b.running_total !== a.running_total) return b.running_total - a.running_total;
-    if (b.x_count !== a.x_count) return b.x_count - a.x_count;
-    if (b.ten_count !== a.ten_count) return b.ten_count - a.ten_count;
-    return String(a.designation || '').localeCompare(String(b.designation || ''));
-  }).map((p, idx) => {
-    const cat = p.bow_category || 'BAREBOW';
-    categoryRankCounters[cat] = (categoryRankCounters[cat] || 0) + 1;
-    return {
-      ...p,
-      rank: idx + 1,
-      category_rank: categoryRankCounters[cat]
-    };
-  });
-
-  const leaderboardByCategory = {
-    BAREBOW: leaderboard.filter(p => (p.bow_category || 'BAREBOW') === 'BAREBOW'),
-    OLYMPIC_RECURVE: leaderboard.filter(p => p.bow_category === 'OLYMPIC_RECURVE'),
-    TRADITIONAL: leaderboard.filter(p => p.bow_category === 'TRADITIONAL'),
-    COMPOUND: leaderboard.filter(p => p.bow_category === 'COMPOUND')
   };
+  const fail = err => { if (!stopped) onError(err); };
 
-    // Groupings: Load from scoring_groups collection first, or generate based on event.bales_per_group
-    const groups = [];
-    gSnap.forEach(d => {
-      const g = d.data();
-      groups.push({
-        ...g,
-        bales: Array.isArray(g.bales) ? g.bales.map(Number) : []
-      });
-    });
-    groups.sort((a, b) => String(a.id || '').localeCompare(String(b.id || '')));
+  loadRosterDocs().catch(() => []).then(docs => { live.rosterBadges = rosterAvatarsByArcher(docs); emit(); });
+  const unsubs = [
+    onSnapshot(plan.refs.event, s => { raw.event = s.exists() ? { id: s.id, ...s.data() } : null; emit(); }, fail),
+    onSnapshot(plan.refs.participants, s => { raw.participants = docList(s); emit(); }, fail),
+    onSnapshot(plan.refs.scores, s => { raw.scores = docList(s); emit(); }, fail),
+    onSnapshot(plan.refs.groups, s => { raw.groups = docList(s); emit(); }, fail)
+  ];
+  if (plan.refs.notes) unsubs.push(onSnapshot(plan.refs.notes, s => { raw.notes = docList(s); emit(); }, fail));
 
-    if (groups.length === 0) {
-      const baleSet = new Set();
-      participants.forEach(p => { if (p.bale_number) baleSet.add(Number(p.bale_number)); });
-      const bales = Array.from(baleSet).sort((a, b) => a - b);
-      const step = Math.max(1, Number(ev.bales_per_group) || 2);
-      for (let i = 0; i < bales.length; i += step) {
-        const groupBales = bales.slice(i, i + step);
-        const gNum = Math.floor(i / step) + 1;
-        const baleLabel = groupBales.length > 1 ? `Bales ${groupBales.join(' & ')}` : `Bale ${groupBales[0]}`;
-        groups.push({
-          id: 'grp_' + ev.id + '_' + gNum,
-          event_id: ev.id,
-          name: `Scoring Group ${gNum} (${baleLabel})`,
-          bales: groupBales,
-          nominated_scorer: '',
-          current_round: 1,
-          current_end: 1
-        });
-      }
-      if (groups.length === 0) {
-        groups.push({
-          id: 'grp_' + ev.id + '_1',
-          event_id: ev.id,
-          name: 'Scoring Group 1 (Bale 1)',
-          bales: [1],
-          nominated_scorer: '',
-          current_round: 1,
-          current_end: 1
-        });
-      }
-    }
+  // The lock is time-based, so re-check it every minute (no reads needed).
+  let wasLocked = null;
+  const lockTimer = setInterval(() => {
+    if (!raw.event) return;
+    const locked = leagueEventLockFields(raw.event).is_locked;
+    if (wasLocked !== null && locked !== wasLocked) emit();
+    wasLocked = locked;
+  }, 60 * 1000);
 
-  return {
-    success: true,
-    data: {
-      event: ev,
-      participants: enrichedParticipants,
-      groups,
-      leaderboard,
-      leaderboard_by_category: leaderboardByCategory,
-      scores: eventScores
-    }
+  liveEvent = live;
+  return () => {
+    stopped = true;
+    clearInterval(lockTimer);
+    unsubs.forEach(u => u());
+    if (liveEvent === live) liveEvent = null;
   };
+}
+
+// Save one end in a single round trip: the end score and the archer's updated
+// summary go in one batch. The lock is enforced by firestore.rules, so there is
+// no read first. Returns the refreshed event page when it is being kept live.
+async function saveEndScore({ scoresColl, partsColl, scoreId, score, participantId, partFields, liveKeys, deniedMessage }) {
+  const live = liveEvent && liveKeys.includes(liveEvent.key) && Array.isArray(liveEvent.raw.scores) ? liveEvent : null;
+  let summary = deleteField(); // unknown here: drop it so lists rebuild it from the end scores
+  if (live) {
+    const own = upsertScore(live.raw.scores.filter(s => s.participant_id === participantId), score);
+    summary = buildScoreSummary(own);
+  }
+  const batch = writeBatch(db);
+  batch.set(doc(db, scoresColl, scoreId), score, { merge: true });
+  batch.set(doc(db, partsColl, participantId), { ...partFields, score_summary: summary }, { merge: true });
+  try {
+    await batch.commit();
+  } catch (err) {
+    if (err && err.code === "permission-denied") throw new Error(deniedMessage);
+    throw err;
+  }
+  if (!live) return { success: true };
+  live.raw.scores = upsertScore(live.raw.scores, score);
+  if (Array.isArray(live.raw.participants)) {
+    live.raw.participants = live.raw.participants.map(p => p.id === participantId ? { ...p, score_summary: summary } : p);
+  }
+  const res = live.build();
+  return res.success ? { success: true, data: res.data } : { success: true };
 }
 
 // 6. Scoring: Submit End Score
 export async function submitEndScore({ eventId, participantId, roundNumber, endNumber, arrows, endTotal, xCount, tenCount, scoredBy }) {
-  const evSnap = await getDoc(doc(db, "scoring_events", eventId));
-  if (!evSnap.exists()) throw new Error("Event not found");
-  const lockInfo = leagueEventLockFields(evSnap.data());
-  if (lockInfo.is_locked) {
-    throw new Error(`Scoring is locked! Scores cannot be changed more than 8 hours after the scheduled event start time (${lockInfo.lock_deadline_display}).`);
-  }
   const id = `es_${eventId}_${participantId}_${roundNumber}_${endNumber}`;
-  const now = new Date().toISOString();
-  await setDoc(doc(db, "end_scores", id), {
+  const score = {
     id,
     event_id: eventId,
     participant_id: participantId,
@@ -550,10 +584,20 @@ export async function submitEndScore({ eventId, participantId, roundNumber, endN
     x_count: xCount,
     ten_count: tenCount,
     scored_by: scoredBy,
-    updated_at: now
-  }, { merge: true });
-  return { success: true };
+    updated_at: new Date().toISOString()
+  };
+  return saveEndScore({
+    scoresColl: "end_scores",
+    partsColl: "event_participants",
+    scoreId: id,
+    score,
+    participantId,
+    partFields: { event_id: eventId },
+    liveKeys: [eventId, `league:${eventId}`],
+    deniedMessage: "Scoring is locked! Scores cannot be changed more than 8 hours after the scheduled event start time."
+  });
 }
+
 
 // 7. Scoring: Create Event
 export async function createScoringEvent({ event, participants, groups }) {
@@ -804,7 +848,7 @@ export async function saveBaleAssignments(eventId, { participants, groups, bales
       const avatarId = badgeFor(cleanName, p.avatar_id);
       const bowCat = p.bow_category || 'BAREBOW';
       await setDoc(doc(db, "event_participants", pId), {
-        ...p,
+        ...participantFields(p),
         id: pId,
         event_id: eventId,
         name: cleanName,
@@ -1229,518 +1273,79 @@ export async function loginPrivateHubWithPasskey(hubIdInput = null) {
   };
 }
 
-function normalizeLinkedArcherMatch(participantName, linkedArchers = ["Long", "Weijia"]) {
-  // Any spelling of a linked archer counts ("Alex" matches a hub linked to "Alex Grossman").
-  const key = archerDirectory.key(participantName);
-  if (!key) return null;
-  for (const arch of linkedArchers) {
-    if (archerDirectory.key(arch) === key) return archerDirectory.display(arch);
-  }
-  return null;
-}
-
-// Private league notes were saved under short names ("long"); file them under the archer's full name.
-function addLeagueNote(notesMap, n) {
-  const k = `${n.league_event_id}_${archerDirectory.key(n.archer_key)}`;
-  const stamp = String(n.updated_at || "");
-  if (!(k in notesMap) || stamp >= (notesMap[`${k}__at`] || "")) {
-    notesMap[k] = n.archer_notes || "";
-    notesMap[`${k}__at`] = stamp;
-  }
-}
-
-// An archer's own badge (from the roster) wins over whatever a past entry saved.
-function badgeFrom(rosterBadges, name, saved) {
-  return rosterBadges.get(archerDirectory.key(name)) || saved || null;
-}
-
-// Linked archers as full names, without duplicates.
-function linkedArcherNames(list) {
-  const out = [];
-  (Array.isArray(list) ? list : []).forEach(n => {
-    const name = archerDirectory.display(n);
-    if (name && !out.some(o => archerDirectory.key(o) === archerDirectory.key(name))) out.push(name);
-  });
-  return out;
-}
-
-function isTestLeagueEventName(name) {
-  const n = String(name || "").trim().toLowerCase();
-  return n.startsWith("test") || n.includes("testing");
-}
-
-// List Private Hub Events + Auto-Synced League Events for this Hub's Linked Archers
-export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
+// List Private Hub Events + Auto-Synced League Events for this Hub's Linked Archers,
+// newest first, a page at a time (loadMore for the next ones).
+export async function getPrivateScoringEventsHub(hubId = "long_weijia", linkedArchers = ["Long", "Weijia"], { pageSize = 10 } = {}) {
   linkedArchers = linkedArcherNames(linkedArchers);
-  const rosterBadges = rosterAvatarsByArcher(await loadRosterDocs().catch(() => []));
-  const [
-    privEvSnap,
-    privPartSnap,
-    privGrpSnap,
-    privScoreSnap,
-    leagueEvSnap,
-    leaguePartSnap,
-    leagueScoreSnap,
-    leagueNotesSnap,
-    rosterSnap
-  ] = await Promise.all([
-    getDocs(query(collection(db, "private_events"), where("hub_id", "==", hubId))),
-    getDocs(query(collection(db, "private_participants"), where("hub_id", "==", hubId))),
-    getDocs(query(collection(db, "private_groups"), where("hub_id", "==", hubId))),
-    getDocs(query(collection(db, "private_end_scores"), where("hub_id", "==", hubId))),
-    getDocs(collection(db, "scoring_events")),
-    getDocs(collection(db, "event_participants")),
-    getDocs(collection(db, "end_scores")),
-    getDocs(query(collection(db, "private_league_notes"), where("hub_id", "==", hubId))),
-    getDocs(collection(db, "roster"))
+  const now = new Date();
+  const batchSize = Math.min(30, Math.max(5, pageSize));
+  const [rosterDocs, notesSnap] = await Promise.all([
+    loadRosterDocs().catch(() => []),
+    getDocs(query(collection(db, "private_league_notes"), where("hub_id", "==", hubId))).catch(() => null)
   ]);
+  const rosterBadges = rosterAvatarsByArcher(rosterDocs);
+  const notesMap = leagueNotesMap(notesSnap ? docList(notesSnap) : []);
 
-  const notesMap = {};
-  leagueNotesSnap.forEach(d => {
-    const n = d.data();
-    addLeagueNote(notesMap, n);
+  const privateSource = pagedEventSource({
+    batchSize,
+    makeQuery: page => query(collection(db, "private_events"), where("hub_id", "==", hubId), orderBy("date", "desc"), ...page),
+    fallbackQuery: () => query(collection(db, "private_events"), where("hub_id", "==", hubId)),
+    enrich: async events => {
+      const parts = (await docsWhereIn("private_participants", "event_id", events.map(e => e.id))).filter(p => !p.hub_id || p.hub_id === hubId);
+      const ends = await endsForParticipants(parts, "private_end_scores", "private_participants", () => true);
+      return events.map(ev => buildPrivateSessionCard(ev, parts.filter(p => p.event_id === ev.id), ends, { rosterBadges }));
+    }
   });
 
-  // Group private participants, groups, and scores by event_id
-  const privPartsByEvent = {};
-  privPartSnap.forEach(d => {
-    const p = { ...d.data() };
-    p.name = archerDirectory.display(p.name);
-    p.avatar_id = badgeFrom(rosterBadges, p.name, p.avatar_id);
-    if (!privPartsByEvent[p.event_id]) privPartsByEvent[p.event_id] = [];
-    privPartsByEvent[p.event_id].push(p);
-  });
-  Object.values(privPartsByEvent).forEach(arr =>
-    arr.sort((a, b) => (Number(a.sort_order) || 0) - (Number(b.sort_order) || 0))
-  );
-
-  const privGroupsByEvent = {};
-  privGrpSnap.forEach(d => {
-    const g = d.data();
-    if (!privGroupsByEvent[g.event_id]) privGroupsByEvent[g.event_id] = [];
-    privGroupsByEvent[g.event_id].push(g);
+  const leagueSource = pagedEventSource({
+    batchSize,
+    makeQuery: page => query(collection(db, "scoring_events"), orderBy("date", "desc"), ...page),
+    fallbackQuery: () => collection(db, "scoring_events"),
+    enrich: async events => {
+      const real = events.filter(e => !isTestLeagueEventName(e.name));
+      const parts = (await docsWhereIn("event_participants", "event_id", real.map(e => e.id)))
+        .filter(p => normalizeLinkedArcherMatch(p.name, linkedArchers));
+      // Only a locked event's summary is final, so only those are saved from here.
+      const locked = new Set(real.filter(e => leagueEventLockFields(e, now).is_locked).map(e => e.id));
+      const ends = await endsForParticipants(parts, "end_scores", "event_participants", p => locked.has(p.event_id));
+      return real
+        .map(ev => buildSyncedLeagueCard(ev, parts.filter(p => p.event_id === ev.id), ends, { rosterBadges, linkedArchers, notesMap, now }))
+        .filter(Boolean);
+    }
   });
 
-  const privScoresByEvent = {};
-  privScoreSnap.forEach(d => {
-    const s = d.data();
-    if (!privScoresByEvent[s.event_id]) privScoresByEvent[s.event_id] = [];
-    privScoresByEvent[s.event_id].push(s);
+  // A league night the hub already logged as its own League session is shown once.
+  const pager = createMergedPager([privateSource, leagueSource], {
+    compare: byDateDesc,
+    skip: (item, emitted) => item.is_league_synced
+      && emitted.some(e => !e.is_league_synced && e.session_category === "League" && e.date === item.date)
   });
-
-  const privateEvents = [];
-  const privateDatesSet = new Set();
-
-  privEvSnap.forEach(d => {
-    const ev = d.data();
-    const cat = ev.session_category || "Practice";
-    privateDatesSet.add(`${cat}_${ev.date}`);
-
-    const parts = privPartsByEvent[ev.id] || [];
-    const scores = privScoresByEvent[ev.id] || [];
-    const groups = privGroupsByEvent[ev.id] || [];
-
-    const byPart = {};
-    let completedEndsCount = 0;
-    scores.forEach(s => {
-      const arr = Array.isArray(s.arrows)
-        ? s.arrows
-        : typeof s.arrows_json === "string"
-        ? JSON.parse(s.arrows_json || "[]")
-        : [];
-      if (!byPart[s.participant_id]) byPart[s.participant_id] = { score: 0, arrows: 0, xs: 0, tens: 0 };
-      if (arr.length >= (ev.arrows_per_end || 3)) completedEndsCount++;
-      byPart[s.participant_id].score += Number(s.end_total) || 0;
-      byPart[s.participant_id].arrows += arr.length;
-      byPart[s.participant_id].xs += Number(s.x_count) || 0;
-      byPart[s.participant_id].tens += Number(s.ten_count) || 0;
-    });
-
-    const participantSummaries = [];
-    parts.forEach(p => {
-      const st = byPart[p.id] || { score: 0, arrows: 0, xs: 0, tens: 0 };
-      const effectiveNote = String(p.archer_notes || "").trim();
-      if (st.arrows > 0 || effectiveNote) {
-        participantSummaries.push({
-          id: p.id,
-          name: p.name,
-          avatar_id: p.avatar_id,
-          score: st.score,
-          arrows: st.arrows,
-          avg: st.arrows > 0 ? (st.score / st.arrows).toFixed(2) : null,
-          xs: st.xs,
-          tens: st.tens,
-          archer_notes: effectiveNote
-        });
-      }
-    });
-
-    const totalExpectedEnds = parts.length * (ev.rounds || 1) * (ev.ends_per_round || 10);
-    const allScoresFilled = parts.length > 0 && completedEndsCount >= totalExpectedEnds;
-
-    privateEvents.push({
-      ...ev,
-      start_time: ev.start_time || "18:00",
-      session_category: cat,
-      distance: ev.distance || "18m",
-      target_face: ev.target_face || "Multi-color face",
-      swap_top_bottom: Boolean(ev.swap_top_bottom),
-      participant_count: participantSummaries.length || parts.length,
-      participant_summaries: participantSummaries,
-      group_count: groups.length || 1,
-      all_scores_filled: allScoresFilled,
-      is_locked: false
-    });
-  });
-
-  // Merge Automatic Sunday League Events for Linked Archers
-  const leaguePartsByEvent = {};
-  leaguePartSnap.forEach(d => {
-    const p = d.data();
-    if (!leaguePartsByEvent[p.event_id]) leaguePartsByEvent[p.event_id] = [];
-    leaguePartsByEvent[p.event_id].push(p);
-  });
-
-  const leagueScoresByEvent = {};
-  leagueScoreSnap.forEach(d => {
-    const s = d.data();
-    if (!leagueScoresByEvent[s.event_id]) leagueScoresByEvent[s.event_id] = [];
-    leagueScoresByEvent[s.event_id].push(s);
-  });
-
-  const syncedLeagueEvents = [];
-  leagueEvSnap.forEach(d => {
-    const ev = d.data();
-    if (isTestLeagueEventName(ev.name)) return;
-    if (privateDatesSet.has(`League_${ev.date}`)) return;
-
-    const allParts = leaguePartsByEvent[ev.id] || [];
-    const matchedParts = [];
-    allParts.forEach(p => {
-      const canonicalName = normalizeLinkedArcherMatch(p.name, linkedArchers);
-      if (canonicalName) {
-        matchedParts.push({ ...p, canonicalName, avatar_id: badgeFrom(rosterBadges, canonicalName, p.avatar_id) });
-      }
-    });
-    if (matchedParts.length === 0) return;
-
-    const evScores = leagueScoresByEvent[ev.id] || [];
-    const byPart = {};
-    evScores.forEach(s => {
-      const arr = Array.isArray(s.arrows)
-        ? s.arrows
-        : typeof s.arrows_json === "string"
-        ? JSON.parse(s.arrows_json || "[]")
-        : [];
-      if (!byPart[s.participant_id]) byPart[s.participant_id] = { score: 0, arrows: 0, xs: 0, tens: 0, completedEnds: 0 };
-      if (arr.length >= (ev.arrows_per_end || 3)) byPart[s.participant_id].completedEnds++;
-      byPart[s.participant_id].score += Number(s.end_total) || 0;
-      byPart[s.participant_id].arrows += arr.length;
-      byPart[s.participant_id].xs += Number(s.x_count) || 0;
-      byPart[s.participant_id].tens += Number(s.ten_count) || 0;
-    });
-
-    const participantSummaries = [];
-    let completedEndsCount = 0;
-    let activeCount = 0;
-
-    matchedParts.forEach(p => {
-      const st = byPart[p.id] || { score: 0, arrows: 0, xs: 0, tens: 0, completedEnds: 0 };
-      const aKey = archerDirectory.key(p.canonicalName);
-      const savedNote = notesMap[`${ev.id}_${aKey}`] || "";
-      if (st.arrows > 0 || savedNote) {
-        activeCount++;
-        completedEndsCount += st.completedEnds;
-        participantSummaries.push({
-          id: p.id,
-          name: p.canonicalName,
-          avatar_id: p.avatar_id || null,
-          score: st.score,
-          arrows: st.arrows,
-          avg: st.arrows > 0 ? (st.score / st.arrows).toFixed(2) : null,
-          xs: st.xs,
-          tens: st.tens,
-          archer_notes: savedNote
-        });
-      }
-    });
-
-    if (participantSummaries.length === 0) return;
-    const totalExpectedEnds = activeCount * (ev.rounds || 1) * (ev.ends_per_round || 10);
-    const allScoresFilled = activeCount > 0 && completedEndsCount >= totalExpectedEnds;
-
-    syncedLeagueEvents.push({
-      ...ev,
-      id: `league:${ev.id}`,
-      raw_league_id: ev.id,
-      is_league_synced: true,
-      start_time: ev.start_time || "18:00",
-      session_category: "League",
-      distance: "18m",
-      target_face: "Multi-color face",
-      swap_top_bottom: Boolean(ev.swap_top_bottom),
-      participant_count: participantSummaries.length,
-      participant_summaries: participantSummaries,
-      group_count: 1,
-      all_scores_filled: allScoresFilled,
-      ...leagueEventLockFields(ev)
-    });
-  });
-
-  const combinedEvents = [...privateEvents, ...syncedLeagueEvents].sort((a, b) => {
-    const dc = String(b.date || "").localeCompare(String(a.date || ""));
-    if (dc !== 0) return dc;
-    return String(b.created_at || b.id || "").localeCompare(String(a.created_at || a.id || ""));
-  });
+  const firstEvents = await pager.next(pageSize);
 
   const rosterMap = new Map();
-  rosterByArcher(rosterDocsFrom(rosterSnap)).forEach(r => {
+  rosterByArcher(rosterDocs).forEach(r => {
     rosterMap.set(archerDirectory.key(r.name), {
       name: r.name,
       bow_category: r.bowCategory || "BAREBOW",
       avatar_id: r.avatarId || null
     });
   });
+  const yesArchers = linkedArchers.map(name =>
+    rosterMap.get(archerDirectory.key(name)) || { name, bow_category: "BAREBOW", avatar_id: null }
+  );
 
-  const yesArchers = linkedArchers.map(name => {
-    const key = archerDirectory.key(name);
-    return (
-      rosterMap.get(key) || {
-        name,
-        bow_category: "BAREBOW",
-        avatar_id: null
-      }
-    );
-  });
-
-  return {
-    success: true,
-    events: combinedEvents,
+  return hubPage(pager, firstEvents, {
     roster: Array.from(rosterMap.values()),
     rsvpImport: {
       date: new Date().toISOString().slice(0, 10),
       yesArchers,
       allArchers: Array.from(rosterMap.values())
     }
-  };
+  });
 }
 
 export async function getPrivateEventData(eventId, hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
-  linkedArchers = linkedArcherNames(linkedArchers);
-  const rosterBadges = rosterAvatarsByArcher(await loadRosterDocs().catch(() => []));
-  if (String(eventId || "").startsWith("league:")) {
-    const rawId = String(eventId).replace(/^league:/, "");
-    const evSnap = await getDoc(doc(db, "scoring_events", rawId));
-    if (!evSnap.exists()) return { success: false, error: "League event not found" };
-    const ev = evSnap.data();
-
-    const [pSnap, gSnap, sSnap, notesSnap] = await Promise.all([
-      getDocs(query(collection(db, "event_participants"), where("event_id", "==", rawId))),
-      getDocs(query(collection(db, "scoring_groups"), where("event_id", "==", rawId))),
-      getDocs(query(collection(db, "end_scores"), where("event_id", "==", rawId))),
-      getDocs(query(collection(db, "private_league_notes"), where("hub_id", "==", hubId)))
-    ]);
-
-    const notesMap = {};
-    notesSnap.forEach(d => {
-      const n = d.data();
-      addLeagueNote(notesMap, n);
-    });
-
-    ev.id = `league:${rawId}`;
-    ev.raw_league_id = rawId;
-    ev.is_league_synced = true;
-    ev.session_category = "League";
-    ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-    Object.assign(ev, leagueEventLockFields(ev));
-
-    const matchedParts = [];
-    pSnap.forEach(d => {
-      const p = d.data();
-      const canonical = normalizeLinkedArcherMatch(p.name, linkedArchers);
-      if (canonical) {
-        matchedParts.push({ ...p, name: canonical, avatar_id: badgeFrom(rosterBadges, canonical, p.avatar_id) });
-      }
-    });
-
-    const scoresByPart = {};
-    matchedParts.forEach(p => { scoresByPart[p.id] = []; });
-    const eventScores = [];
-    sSnap.forEach(d => {
-      const s = d.data();
-      const arr = Array.isArray(s.arrows)
-        ? s.arrows
-        : typeof s.arrows_json === "string"
-        ? JSON.parse(s.arrows_json || "[]")
-        : [];
-      const item = { ...s, arrows: arr };
-      if (scoresByPart[s.participant_id]) {
-        scoresByPart[s.participant_id].push(item);
-        eventScores.push(item);
-      }
-    });
-
-    const enrichedParticipants = matchedParts.map(p => {
-      const pScores = (scoresByPart[p.id] || []).sort((a, b) => (a.round_number - b.round_number) || (a.end_number - b.end_number));
-      let runningTotal = 0, totalXs = 0, totalTens = 0, arrowsShot = 0, endsCompleted = 0;
-      pScores.forEach(s => {
-        if (s.arrows && s.arrows.length > 0) {
-          runningTotal += Number(s.end_total) || 0;
-          totalXs += Number(s.x_count) || 0;
-          totalTens += Number(s.ten_count) || 0;
-          arrowsShot += s.arrows.length;
-          if (s.arrows.length >= (ev.arrows_per_end || 3)) endsCompleted++;
-        }
-      });
-      const aKey = archerDirectory.key(p.name);
-      return {
-        ...p,
-        bow_category: "BAREBOW",
-        archer_notes: notesMap[`${rawId}_${aKey}`] || "",
-        designation: `${p.bale_number || 1}${p.position || "A"}`,
-        running_total: runningTotal,
-        x_count: totalXs,
-        ten_count: totalTens,
-        arrows_shot: arrowsShot,
-        ends_completed: endsCompleted,
-        avg_per_arrow: arrowsShot > 0 ? (runningTotal / arrowsShot).toFixed(2) : "0.00",
-        scores: pScores
-      };
-    });
-
-    const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
-    ev.all_scores_filled = enrichedParticipants.length > 0 && enrichedParticipants.every(p => p.ends_completed >= totalEndsPerArcher);
-    ev.is_finished = Boolean(ev.all_scores_filled || ev.is_locked);
-
-    const leaderboard = [...enrichedParticipants]
-      .sort((a, b) => (b.running_total - a.running_total) || (b.x_count - a.x_count) || (b.ten_count - a.ten_count))
-      .map((p, idx) => ({ ...p, rank: idx + 1, category_rank: idx + 1 }));
-
-    const groups = [];
-    gSnap.forEach(d => {
-      const g = d.data();
-      groups.push({
-        ...g,
-        bales: Array.isArray(g.bales) ? g.bales.map(Number) : []
-      });
-    });
-
-    return {
-      success: true,
-      data: {
-        event: ev,
-        participants: enrichedParticipants,
-        groups: groups.length > 0 ? groups : [{ id: `grp_${rawId}_1`, event_id: ev.id, name: "Scoring Group 1", bales: [1, 2, 3, 4, 5, 6], current_round: 1, current_end: 1 }],
-        leaderboard,
-        leaderboard_by_category: { BAREBOW: leaderboard, OLYMPIC_RECURVE: [], TRADITIONAL: [] },
-        scores: eventScores
-      }
-    };
-  }
-
-  const evSnap = await getDoc(doc(db, "private_events", eventId));
-  if (!evSnap.exists()) return { success: false, error: "Private session not found" };
-  const ev = evSnap.data();
-  ev.midpoint_end = Math.floor((ev.ends_per_round || 10) / 2) + 1;
-  ev.is_locked = false;
-
-  const [pSnap, gSnap, sSnap] = await Promise.all([
-    getDocs(query(collection(db, "private_participants"), where("event_id", "==", eventId))),
-    getDocs(query(collection(db, "private_groups"), where("event_id", "==", eventId))),
-    getDocs(query(collection(db, "private_end_scores"), where("event_id", "==", eventId)))
-  ]);
-
-  const participants = [];
-  pSnap.forEach(d => {
-    const p = d.data();
-    const name = archerDirectory.display(p.name);
-    participants.push({ ...p, name, avatar_id: badgeFrom(rosterBadges, name, p.avatar_id) });
-  });
-  participants.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
-
-  const scoresByParticipant = {};
-  participants.forEach(p => { scoresByParticipant[p.id] = []; });
-  const eventScores = [];
-  sSnap.forEach(d => {
-    const s = d.data();
-    const arr = Array.isArray(s.arrows)
-      ? s.arrows
-      : typeof s.arrows_json === "string"
-      ? JSON.parse(s.arrows_json || "[]")
-      : [];
-    const item = { ...s, arrows: arr };
-    eventScores.push(item);
-    if (!scoresByParticipant[s.participant_id]) scoresByParticipant[s.participant_id] = [];
-    scoresByParticipant[s.participant_id].push(item);
-  });
-
-  const enrichedParticipants = participants.map(p => {
-    const pScores = (scoresByParticipant[p.id] || []).sort((a, b) => (a.round_number - b.round_number) || (a.end_number - b.end_number));
-    let runningTotal = 0, totalXs = 0, totalTens = 0, arrowsShot = 0, endsCompleted = 0;
-    pScores.forEach(s => {
-      if (s.arrows && s.arrows.length > 0) {
-        runningTotal += Number(s.end_total) || 0;
-        totalXs += Number(s.x_count) || 0;
-        totalTens += Number(s.ten_count) || 0;
-        arrowsShot += s.arrows.length;
-        if (s.arrows.length >= (ev.arrows_per_end || 3)) endsCompleted++;
-      }
-    });
-    return {
-      ...p,
-      bow_category: p.bow_category || "BAREBOW",
-      archer_notes: p.archer_notes || "",
-      designation: `${p.bale_number || 1}${p.position || "A"}`,
-      running_total: runningTotal,
-      x_count: totalXs,
-      ten_count: totalTens,
-      arrows_shot: arrowsShot,
-      ends_completed: endsCompleted,
-      avg_per_arrow: arrowsShot > 0 ? (runningTotal / arrowsShot).toFixed(2) : "0.00",
-      scores: pScores
-    };
-  });
-
-  const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
-  ev.all_scores_filled = enrichedParticipants.length > 0 && enrichedParticipants.every(p => p.ends_completed >= totalEndsPerArcher);
-  ev.is_finished = ev.all_scores_filled;
-
-  const leaderboard = [...enrichedParticipants]
-    .sort((a, b) => (b.running_total - a.running_total) || (b.x_count - a.x_count) || (b.ten_count - a.ten_count))
-    .map((p, idx) => ({ ...p, rank: idx + 1, category_rank: idx + 1 }));
-
-  const groups = [];
-  gSnap.forEach(d => {
-    const g = d.data();
-    groups.push({
-      ...g,
-      bales: Array.isArray(g.bales) ? g.bales.map(Number) : [1]
-    });
-  });
-
-  if (groups.length === 0) {
-    groups.push({
-      id: `grp_${ev.id}_1`,
-      event_id: ev.id,
-      name: "Scoring Group 1 (Bale 1)",
-      bales: [1, 2],
-      nominated_scorer: "",
-      current_round: 1,
-      current_end: 1
-    });
-  }
-
-  return {
-    success: true,
-    data: {
-      event: ev,
-      participants: enrichedParticipants,
-      groups,
-      leaderboard,
-      leaderboard_by_category: { BAREBOW: leaderboard, OLYMPIC_RECURVE: [], TRADITIONAL: [] },
-      scores: eventScores
-    }
-  };
+  return fetchEvent(eventPlan(eventId, { hubId, linkedArchers }));
 }
 
 export async function createPrivateScoringEvent(hubId = "long_weijia", { event, participants, groups }) {
@@ -1841,8 +1446,7 @@ export async function submitPrivateEndScore(hubId = "long_weijia", { eventId, pa
   }
 
   const id = `scr_${cleanEventId}_${participantId}_r${roundNumber}_e${endNumber}`;
-  const now = new Date().toISOString();
-  await setDoc(doc(db, "private_end_scores", id), {
+  const score = {
     id,
     hub_id: hubId,
     event_id: cleanEventId,
@@ -1855,9 +1459,18 @@ export async function submitPrivateEndScore(hubId = "long_weijia", { eventId, pa
     x_count: xCount,
     ten_count: tenCount,
     scored_by: scoredBy || "",
-    updated_at: now
-  }, { merge: true });
-  return { success: true };
+    updated_at: new Date().toISOString()
+  };
+  return saveEndScore({
+    scoresColl: "private_end_scores",
+    partsColl: "private_participants",
+    scoreId: id,
+    score,
+    participantId,
+    partFields: { hub_id: hubId, event_id: cleanEventId },
+    liveKeys: [cleanEventId],
+    deniedMessage: "This device is not signed in to the Private Hub. Unlock the hub again, then save."
+  });
 }
 
 export async function updatePrivateScoringEvent(eventId, fields) {
@@ -1923,7 +1536,7 @@ export async function savePrivateBaleAssignments(hubId = "long_weijia", eventId,
       keepIds.add(pId);
       const bNum = Number(p.bale_number) || 1;
       await setDoc(doc(db, "private_participants", pId), {
-        ...p,
+        ...participantFields(p),
         id: pId,
         hub_id: hubId,
         event_id: eventId,
@@ -1974,257 +1587,61 @@ export async function updatePrivateParticipantNote(hubId = "long_weijia", eventI
   return await getPrivateEventData(eventId, hubId, linkedArchers);
 }
 
-const VALUE_MAP_USAA = { X: 10, "10": 10, "9": 9, "8": 8, "7": 7, "6": 6, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
-const VALUE_MAP_NFAA = { X: 5, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
-
 export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArchers = ["Long", "Weijia"]) {
   linkedArchers = linkedArcherNames(linkedArchers);
-  const rosterBadges = rosterAvatarsByArcher(await loadRosterDocs().catch(() => []));
-  const [
-    privEvSnap,
-    privPartSnap,
-    privScoreSnap,
-    leagueEvSnap,
-    leaguePartSnap,
-    leagueScoreSnap,
-    leagueNotesSnap
-  ] = await Promise.all([
+  const now = new Date();
+  const [rosterDocs, privEvSnap, privPartSnap, leagueEvSnap, leaguePartSnap, leagueNotesSnap] = await Promise.all([
+    loadRosterDocs().catch(() => []),
     getDocs(query(collection(db, "private_events"), where("hub_id", "==", hubId))),
     getDocs(query(collection(db, "private_participants"), where("hub_id", "==", hubId))),
-    getDocs(query(collection(db, "private_end_scores"), where("hub_id", "==", hubId))),
     getDocs(collection(db, "scoring_events")),
     getDocs(collection(db, "event_participants")),
-    getDocs(collection(db, "end_scores")),
     getDocs(query(collection(db, "private_league_notes"), where("hub_id", "==", hubId)))
   ]);
-
-  const notesMap = {};
-  leagueNotesSnap.forEach(d => {
-    const n = d.data();
-    addLeagueNote(notesMap, n);
-  });
+  const rosterBadges = rosterAvatarsByArcher(rosterDocs);
+  const notesMap = leagueNotesMap(docList(leagueNotesSnap));
 
   const events = [];
   const privateDatesSet = new Set();
-  privEvSnap.forEach(d => {
-    const e = d.data();
+  docList(privEvSnap).forEach(e => {
     privateDatesSet.add(`${e.session_category || "Practice"}_${e.date}`);
     events.push(e);
   });
+  const privateParts = docList(privPartSnap).map(p => ({ ...p, name: archerDirectory.display(p.name) }));
 
-  const participants = [];
-  privPartSnap.forEach(d => {
-    const p = d.data();
-    const name = archerDirectory.display(p.name);
-    participants.push({ ...p, name, avatar_id: badgeFrom(rosterBadges, name, p.avatar_id) });
-  });
+  // League events the hub's archers shot in (not test events, not already logged privately).
+  const leagueEvents = docList(leagueEvSnap).filter(lev => !isTestLeagueEventName(lev.name) && !privateDatesSet.has(`League_${lev.date}`));
+  const leagueById = new Map(leagueEvents.map(e => [e.id, e]));
+  const leagueParts = docList(leaguePartSnap).filter(lp => leagueById.has(lp.event_id) && normalizeLinkedArcherMatch(lp.name, linkedArchers));
 
-  const scores = [];
-  privScoreSnap.forEach(d => {
-    const s = d.data();
-    scores.push({
-      ...s,
-      arrows: Array.isArray(s.arrows) ? s.arrows : JSON.parse(s.arrows_json || "[]")
-    });
-  });
+  const [privateEnds, leagueEnds] = await Promise.all([
+    endsForParticipants(privateParts, "private_end_scores", "private_participants", () => true),
+    endsForParticipants(leagueParts, "end_scores", "event_participants",
+      p => leagueEventLockFields(leagueById.get(p.event_id) || {}, now).is_locked)
+  ]);
 
-  // Merge live League events
-  const lPartsByEv = {};
-  leaguePartSnap.forEach(d => {
-    const p = d.data();
-    if (!lPartsByEv[p.event_id]) lPartsByEv[p.event_id] = [];
-    lPartsByEv[p.event_id].push(p);
-  });
-  const lScoresByEv = {};
-  leagueScoreSnap.forEach(d => {
-    const s = d.data();
-    if (!lScoresByEv[s.event_id]) lScoresByEv[s.event_id] = [];
-    lScoresByEv[s.event_id].push({
-      ...s,
-      arrows: Array.isArray(s.arrows) ? s.arrows : JSON.parse(s.arrows_json || "[]")
-    });
-  });
-
-  leagueEvSnap.forEach(d => {
-    const lev = d.data();
-    if (isTestLeagueEventName(lev.name)) return;
-    if (privateDatesSet.has(`League_${lev.date}`)) return;
-
-    const lParts = (lPartsByEv[lev.id] || []).filter(lp => Boolean(normalizeLinkedArcherMatch(lp.name, linkedArchers)));
-    if (lParts.length === 0) return;
-
-    const lScores = lScoresByEv[lev.id] || [];
-    const hasArrows = lScores.some(ls => lParts.some(lp => lp.id === ls.participant_id) && ls.arrows && ls.arrows.length > 0);
-    if (!hasArrows) return;
-
+  const participants = [...privateParts];
+  const endsByParticipant = { ...privateEnds };
+  leagueEvents.forEach(lev => {
+    const lParts = leagueParts.filter(lp => lp.event_id === lev.id);
+    if (!lParts.some(lp => (leagueEnds[lp.id] || []).some(s => parseArrows(s).length > 0))) return;
     const syncedEvId = `league:${lev.id}`;
-    events.push({
-      ...lev,
-      id: syncedEvId,
-      session_category: "League",
-      distance: "18m",
-      target_face: "Multi-color face",
-      is_league_synced: true
-    });
-
+    events.push({ ...lev, id: syncedEvId, session_category: "League", distance: "18m", target_face: "Multi-color face", is_league_synced: true });
     lParts.forEach(lp => {
       const dispName = normalizeLinkedArcherMatch(lp.name, linkedArchers) || lp.name;
-      const aKey = archerDirectory.key(dispName);
+      const key = `league:${lp.id}`;
       participants.push({
         ...lp,
+        id: key,
         name: dispName,
-        avatar_id: badgeFrom(rosterBadges, dispName, lp.avatar_id),
         event_id: syncedEvId,
-        archer_notes: notesMap[`${lev.id}_${aKey}`] || ""
+        archer_notes: notesMap[`${lev.id}_${archerDirectory.key(dispName)}`] || ""
       });
-    });
-
-    lScores.forEach(ls => {
-      if (lParts.some(lp => lp.id === ls.participant_id)) {
-        scores.push({
-          ...ls,
-          event_id: syncedEvId
-        });
-      }
+      endsByParticipant[key] = leagueEnds[lp.id] || [];
     });
   });
 
-  events.sort((a, b) => String(a.date || "").localeCompare(String(b.date || "")) || String(a.created_at || "").localeCompare(String(b.created_at || "")));
-  const eventMap = {};
-  events.forEach(e => { eventMap[e.id] = e; });
-
-  const scoresByPart = {};
-  scores.forEach(s => {
-    if (!scoresByPart[s.participant_id]) scoresByPart[s.participant_id] = [];
-    scoresByPart[s.participant_id].push(s);
-  });
-
-  const archerSessionsMap = {};
-  participants.forEach(p => {
-    const ev = eventMap[p.event_id];
-    if (!ev) return;
-    const pScores = (scoresByPart[p.id] || [])
-      .filter(s => s.arrows && s.arrows.length > 0)
-      .sort((a, b) => (a.round_number - b.round_number) || (a.end_number - b.end_number));
-    if (pScores.length === 0) return;
-
-    const normName = archerDirectory.display(p.name);
-    const key = archerDirectory.key(normName);
-    if (!archerSessionsMap[key]) {
-      archerSessionsMap[key] = {
-        name: normName,
-        avatar_id: badgeFrom(rosterBadges, normName, p.avatar_id),
-        bow_category: p.bow_category || "BAREBOW",
-        sessions: []
-      };
-    }
-
-    const isNfaa = String(ev.scoring_type || "").startsWith("NFAA");
-    const valMap = isNfaa ? VALUE_MAP_NFAA : VALUE_MAP_USAA;
-    const maxArrowVal = isNfaa ? 5 : 10;
-
-    let totalScore = 0, totalArrows = 0, totalXs = 0, totalTens = 0;
-    const ringCounts = { X: 0, "10": 0, "9": 0, "8": 0, "7": 0, "6": 0, "5": 0, "4": 0, "3": 0, "2": 0, "1": 0, M: 0 };
-    const colorCounts = { Gold: 0, Red: 0, Blue: 0, Black: 0, White: 0, Miss: 0 };
-    const arrowValues = [];
-    const endDetails = [];
-
-    pScores.forEach(s => {
-      totalScore += Number(s.end_total) || 0;
-      totalXs += Number(s.x_count) || 0;
-      totalTens += Number(s.ten_count) || 0;
-      totalArrows += s.arrows.length;
-
-      const endArrowVals = [];
-      s.arrows.forEach(a => {
-        const cleanA = String(a).toUpperCase();
-        const val = valMap[cleanA] ?? 0;
-        arrowValues.push(val);
-        endArrowVals.push(val);
-        if (ringCounts[cleanA] !== undefined) ringCounts[cleanA]++;
-        if (cleanA === "X" || cleanA === "10" || cleanA === "9") colorCounts.Gold++;
-        else if (cleanA === "8" || cleanA === "7") colorCounts.Red++;
-        else if (cleanA === "6" || cleanA === "5") colorCounts.Blue++;
-        else if (cleanA === "4" || cleanA === "3") colorCounts.Black++;
-        else if (cleanA === "2" || cleanA === "1") colorCounts.White++;
-        else colorCounts.Miss++;
-      });
-
-      endDetails.push({
-        round_number: s.round_number,
-        end_number: s.end_number,
-        arrows: s.arrows,
-        arrow_values: endArrowVals,
-        end_total: s.end_total,
-        end_avg: s.arrows.length > 0 ? Number((s.end_total / s.arrows.length).toFixed(2)) : 0,
-        x_count: s.x_count,
-        ten_count: s.ten_count
-      });
-    });
-
-    const avgPerArrow = totalArrows > 0 ? Number((totalScore / totalArrows).toFixed(2)) : 0;
-    const normalized300 = totalArrows > 0 ? Math.round((totalScore / totalArrows) * 30) : 0;
-    const maxPossible = totalArrows * maxArrowVal;
-
-    let arrowStdDev = 0;
-    if (arrowValues.length > 1) {
-      const mean = totalScore / arrowValues.length;
-      const variance = arrowValues.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / arrowValues.length;
-      arrowStdDev = Number(Math.sqrt(variance).toFixed(2));
-    }
-
-    const effectiveNote = String(p.archer_notes || "").trim();
-    archerSessionsMap[key].sessions.push({
-      event_id: ev.id,
-      event_name: ev.name,
-      date: ev.date,
-      session_category: ev.session_category || "Practice",
-      distance: ev.distance || "18m",
-      target_face: ev.target_face || "Multi-color face",
-      notes: effectiveNote,
-      archer_notes: effectiveNote,
-      scoring_type: ev.scoring_type,
-      ends_per_round: ev.ends_per_round,
-      arrows_per_end: ev.arrows_per_end,
-      ends_shot: pScores.length,
-      arrows_shot: totalArrows,
-      total_score: totalScore,
-      max_possible: maxPossible,
-      normalized_300: normalized300,
-      avg_per_arrow: avgPerArrow,
-      x_count: totalXs,
-      golds_10s: totalTens,
-      gold_9plus_count: colorCounts.Gold,
-      gold_pct: totalArrows > 0 ? Number(((colorCounts.Gold / totalArrows) * 100).toFixed(1)) : 0,
-      ten_pct: totalArrows > 0 ? Number(((totalTens / totalArrows) * 100).toFixed(1)) : 0,
-      arrow_std_dev: arrowStdDev,
-      ring_counts: ringCounts,
-      color_counts: colorCounts,
-      ends: endDetails
-    });
-  });
-
-  const archersAnalytics = {};
-  for (const [key, data] of Object.entries(archerSessionsMap)) {
-    const sessions = data.sessions.sort((a, b) => String(a.date).localeCompare(String(b.date)) || String(a.event_id).localeCompare(String(b.event_id)));
-    sessions.forEach((sess, idx) => {
-      const windowSlice = sessions.slice(Math.max(0, idx - 2), idx + 1);
-      const winArrows = windowSlice.reduce((s, x) => s + x.arrows_shot, 0);
-      const winScore = windowSlice.reduce((s, x) => s + x.total_score, 0);
-      sess.rolling_3_avg = winArrows > 0 ? Number((winScore / winArrows).toFixed(2)) : sess.avg_per_arrow;
-    });
-    archersAnalytics[key] = {
-      name: data.name,
-      avatar_id: data.avatar_id,
-      bow_category: data.bow_category,
-      sessions
-    };
-  }
-
-  return {
-    archers: archersAnalytics,
-    total_events: events.length
-  };
+  return buildArcherAnalytics({ events, participants, endsByParticipant, rosterBadges });
 }
 
 // ============================================================================

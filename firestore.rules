@@ -81,11 +81,22 @@ service cloud.firestore {
       allow delete: if eventOpen(resource.data.event_id);
     }
 
+    // An archer's score summary (their ends, copied from end_scores so lists and
+    // analytics need not read every end) may be filled in once on a locked
+    // event that has none yet. Nothing else about a locked archer can change.
+    function fillsMissingSummary() {
+      return !('score_summary' in resource.data)
+        && request.resource.data.diff(resource.data).affectedKeys().hasOnly(['score_summary'])
+        && request.resource.data.score_summary is map
+        && request.resource.data.score_summary.ends is list;
+    }
+
     match /event_participants/{id} {
       allow read: if true;
       allow create: if eventOpen(request.resource.data.event_id);
-      allow update: if eventOpen(resource.data.event_id)
-                    && request.resource.data.event_id == resource.data.event_id;
+      allow update: if (eventOpen(resource.data.event_id)
+                       && request.resource.data.event_id == resource.data.event_id)
+                    || fillsMissingSummary();
       allow delete: if eventOpen(resource.data.event_id);
     }
 
