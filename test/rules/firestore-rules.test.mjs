@@ -258,3 +258,27 @@ test('private: salt, generation and key hash only change together', async () => 
   skip.set(doc(d, 'private_hub_keys/h1'), { key_hash: sha(KEY2) });
   await assertFails(skip.commit());
 });
+
+// ---------- score summaries ----------
+
+const summary = { v: 1, ends: [{ round_number: 1, end_number: 1, arrows: ['X'], end_total: 10, x_count: 1, ten_count: 1 }], updated_at: 'now' };
+
+test('open event: an end score and the archer summary save together in one batch', async () => {
+  const b = writeBatch(db);
+  b.set(doc(db, 'end_scores/es_new'), { event_id: 'open', participant_id: 'p_open', end_total: 30 });
+  b.set(doc(db, 'event_participants/p_open'), { event_id: 'open', score_summary: summary }, { merge: true });
+  await assertSucceeds(b.commit());
+});
+
+test('locked event: a missing summary can be filled in once, and nothing else changes', async () => {
+  await assertSucceeds(updateDoc(doc(db, 'event_participants/p_past'), { score_summary: summary }));
+  await assertFails(updateDoc(doc(db, 'event_participants/p_past'), { score_summary: { ...summary, ends: [] } }));
+  await assertFails(updateDoc(doc(db, 'event_participants/p_done'), { score_summary: summary, name: 'Changed' }));
+  await assertFails(updateDoc(doc(db, 'event_participants/p_done'), { score_summary: 'not a summary' }));
+  await assertFails(updateDoc(doc(db, 'event_participants/p_legacy'), { score_summary: { v: 1 } }));
+  // A save batch on a locked event still fails as a whole.
+  const b = writeBatch(db);
+  b.set(doc(db, 'end_scores/es_x'), { event_id: 'done', participant_id: 'p_done', end_total: 30 });
+  b.set(doc(db, 'event_participants/p_done'), { event_id: 'done', score_summary: summary }, { merge: true });
+  await assertFails(b.commit());
+});

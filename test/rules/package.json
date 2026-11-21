@@ -1,9 +1,9 @@
 {
   "name": "firestore-rules-tests",
   "private": true,
-  "description": "Emulator tests for ../../firestore.rules (needs Java). Run: npm install && npm test",
+  "description": "Emulator tests for ../../firestore.rules and ../../firebase-adapter.js (needs Java). Run: npm install && npm test",
   "scripts": {
-    "test": "firebase emulators:exec --only firestore --project demo-archery --config ../../firebase.json \"node --test firestore-rules.test.mjs\""
+    "test": "firebase emulators:exec --only firestore,auth --project demo-archery --config ../../firebase.json \"node --test firestore-rules.test.mjs && node --import ./adapter-loader.mjs --test adapter.test.mjs\""
   },
   "devDependencies": {
     "@firebase/rules-unit-testing": "^3.0.4",

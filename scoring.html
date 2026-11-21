@@ -1563,8 +1563,9 @@
       updatePrivateParticipantNote,
       getPrivateAnalyticsData,
       checkPrivateHubDevice,
-      forgetPrivateHubDevice
-    } from './firebase-adapter.js?v=20261117';
+      forgetPrivateHubDevice,
+      subscribeToEvent
+    } from './firebase-adapter.js?v=20261121';
     import { archerDirectory } from './archer-names.js';
     import { isPresetAvatar } from './archer-avatars.js';
     // Every spelling of an archer ("Max", "Maxwell Shepherd") compares equal.
@@ -2709,6 +2710,7 @@
     function switchToPublicLeagueMode(pushHistory = true) {
       appMode = 'league';
       hubCurrentPage = 1;
+      stopLiveEvent();
       activeEventData = null;
       closeKeypad();
       closeArcherScorecard();
@@ -2910,11 +2912,12 @@
           console.log("Loading private hub from Firebase...", activePrivateHub.id);
           hubData = await getPrivateScoringEventsHub(
             activePrivateHub.id,
-            activePrivateHub.linked_archers || ['Long', 'Weijia']
+            activePrivateHub.linked_archers || ['Long', 'Weijia'],
+            { pageSize: hubInitialLoadCount() }
           );
         } else {
           console.log("Loading events hub from Firebase...");
-          hubData = await getScoringEventsHub();
+          hubData = await getScoringEventsHub({ pageSize: hubInitialLoadCount() });
         }
         renderEventsHub();
 
@@ -2938,6 +2941,7 @@
     }
 
     function showEventsHub(pushHistory = true) {
+      stopLiveEvent();
       activeEventData = null;
       closeKeypad();
       closeArcherScorecard();
@@ -2975,8 +2979,9 @@
       }
     });
 
-    function buildPaginationControlsHtml(currentPage, totalItems, pageSize, pageFuncName) {
-      if (!pageSize || pageSize === 'all' || totalItems <= pageSize) return '';
+    // hasMore: more items exist than the totalItems loaded so far (shown as "N+").
+    function buildPaginationControlsHtml(currentPage, totalItems, pageSize, pageFuncName, hasMore = false) {
+      if (!pageSize || pageSize === 'all' || (totalItems <= pageSize && !hasMore)) return '';
       const totalPages = Math.max(1, Math.ceil(totalItems / pageSize));
       const safePage = Math.min(Math.max(1, currentPage), totalPages);
       const startItem = (safePage - 1) * pageSize + 1;
@@ -3011,7 +3016,7 @@
       return `
         <div class="flex flex-col sm:flex-row items-center justify-between gap-2.5 bg-slate-900/70 border border-slate-800 rounded-xl px-3.5 py-2.5">
           <div class="text-xs text-slate-400 font-mono">
-            Showing <span class="text-white font-bold">${startItem}–${endItem}</span> of <span class="text-amber-300 font-bold">${totalItems}</span> sessions
+            Showing <span class="text-white font-bold">${startItem}–${endItem}</span> of <span class="text-amber-300 font-bold">${totalItems}${hasMore ? '+' : ''}</span> sessions
           </div>
           <div class="flex items-center gap-1.5 flex-wrap justify-center">
             <button type="button" onclick="${pageFuncName}(${safePage - 1})" ${safePage <= 1 ? 'disabled' : ''}
@@ -3020,7 +3025,7 @@
               <span>Prev</span>
             </button>
             ${pageButtonsHtml}
-            <button type="button" onclick="${pageFuncName}(${safePage + 1})" ${safePage >= totalPages ? 'disabled' : ''}
+            <button type="button" onclick="${pageFuncName}(${safePage + 1})" ${safePage >= totalPages && !hasMore ? 'disabled' : ''}
               class="h-8 px-2.5 rounded-lg text-xs font-bold bg-slate-900 hover:bg-slate-800 text-slate-300 border border-slate-700 disabled:opacity-40 disabled:pointer-events-none transition flex items-center gap-1">
               <span>Next</span>
               <i class="fa-solid fa-chevron-right text-[10px]"></i>
@@ -3030,16 +3035,47 @@
       `;
     }
 
-    function setHubPage(page) {
+    // Sessions are read from Firebase a page at a time, newest first.
+    function hubInitialLoadCount() {
+      return hubPageSize === 'all' ? 1000 : hubPageSize * Math.max(1, hubCurrentPage);
+    }
+
+    let hubLoadingMore = null;
+    // Reads more sessions until at least `count` are loaded or none are left.
+    async function ensureHubEventsLoaded(count) {
+      if (hubLoadingMore) await hubLoadingMore.catch(() => {});
+      if (!hubData || typeof hubData.loadMore !== 'function') return;
+      const countEl = document.getElementById('hub-event-count');
+      hubLoadingMore = (async () => {
+        while (hubData.hasMore && (hubData.events || []).length < count) {
+          if (countEl) countEl.textContent = 'Loading…';
+          const res = await hubData.loadMore(Math.max(10, count - hubData.events.length));
+          hubData.events = (hubData.events || []).concat(res.events);
+          hubData.hasMore = res.hasMore;
+          if (res.events.length === 0) break;
+        }
+      })();
+      try {
+        await hubLoadingMore;
+      } catch (err) {
+        console.error('Could not load more sessions:', err);
+      } finally {
+        hubLoadingMore = null;
+      }
+    }
+
+    async function setHubPage(page) {
       hubCurrentPage = Math.max(1, parseInt(page, 10) || 1);
+      if (hubPageSize !== 'all') await ensureHubEventsLoaded(hubCurrentPage * hubPageSize);
       renderEventsHub();
       const heading = document.getElementById('hub-events-list-heading');
       if (heading) heading.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
     }
 
-    function setHubPageSize(val) {
+    async function setHubPageSize(val) {
       hubPageSize = val === 'all' ? 'all' : (parseInt(val, 10) || 10);
       hubCurrentPage = 1;
+      await ensureHubEventsLoaded(hubPageSize === 'all' ? Infinity : hubPageSize);
       renderEventsHub();
     }
 
@@ -3092,13 +3128,13 @@
         if (hubCurrentPage < 1) hubCurrentPage = 1;
         const startIdx = (hubCurrentPage - 1) * hubPageSize;
         pagedEvents = events.slice(startIdx, startIdx + hubPageSize);
-        document.getElementById('hub-event-count').textContent = `${startIdx + 1}–${Math.min(events.length, startIdx + hubPageSize)} of ${events.length} Session${events.length === 1 ? '' : 's'}`;
+        document.getElementById('hub-event-count').textContent = `${startIdx + 1}–${Math.min(events.length, startIdx + hubPageSize)} of ${events.length}${hubData.hasMore ? '+' : ''} Session${events.length === 1 && !hubData.hasMore ? '' : 's'}`;
       } else {
         document.getElementById('hub-event-count').textContent = `${events.length} Session${events.length === 1 ? '' : 's'}`;
       }
 
       if (paginationEl) {
-        paginationEl.innerHTML = buildPaginationControlsHtml(hubCurrentPage, events.length, hubPageSize, 'setHubPage');
+        paginationEl.innerHTML = buildPaginationControlsHtml(hubCurrentPage, events.length, hubPageSize, 'setHubPage', Boolean(hubData.hasMore));
       }
 
       container.innerHTML = pagedEvents.map(ev => {
@@ -4327,10 +4363,10 @@
     // ========================================================================
     async function openEventWorkspace(eventId, requestedTab = null, pushHistory = true) {
       try {
-        const json = (appMode === 'private' && activePrivateHub)
-          ? await getPrivateEventData(eventId, activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia'])
-          : await getEventData(eventId);
+        // The first load comes from the live listener, which then keeps the page current.
+        const json = await startLiveEvent(eventId);
         if (!json.success) {
+          stopLiveEvent();
           alert(json.error || 'Event not found');
           return;
         }
@@ -4388,6 +4424,91 @@
         console.error('Error opening event:', err);
       }
     }
+
+    // ========================================================================
+    // LIVE EVENT UPDATES
+    // One Firestore listener per open event replaces polling: after the first
+    // load only changed documents are read, and other devices' scores appear
+    // as soon as they are saved. Updates wait while the keypad or the setup
+    // tab is open, so they never interrupt typing.
+    // ========================================================================
+    let liveEventStop = null;
+    let liveEventId = null;
+    let pendingLiveEventData = null;
+    let liveEventPausedId = null;
+    let liveEventPauseTimer = null;
+    const LIVE_PAUSE_AFTER_HIDDEN_MS = 2 * 60 * 1000;
+
+    function stopLiveEvent() {
+      if (liveEventStop) liveEventStop();
+      liveEventStop = null;
+      liveEventId = null;
+      pendingLiveEventData = null;
+    }
+
+    // Starts keeping eventId live; resolves with its first full load.
+    function startLiveEvent(eventId) {
+      stopLiveEvent();
+      liveEventPausedId = null;
+      const opts = (appMode === 'private' && activePrivateHub)
+        ? { hubId: activePrivateHub.id, linkedArchers: activePrivateHub.linked_archers || ['Long', 'Weijia'] }
+        : {};
+      return new Promise((resolve, reject) => {
+        let first = true;
+        liveEventId = eventId;
+        liveEventStop = subscribeToEvent(eventId, opts, json => {
+          if (first) {
+            first = false;
+            resolve(json);
+            return;
+          }
+          handleLiveEventData(eventId, json);
+        }, err => {
+          console.error('Live event updates stopped:', err);
+          if (first) {
+            first = false;
+            reject(err);
+          }
+        });
+      });
+    }
+
+    function handleLiveEventData(eventId, json) {
+      if (!json || !json.success || liveEventId !== eventId) return;
+      if (!activeEventData || !activeEventData.event || activeEventData.event.id !== json.data.event.id) return;
+      pendingLiveEventData = json.data;
+      applyPendingLiveEvent();
+    }
+
+    function applyPendingLiveEvent() {
+      if (!pendingLiveEventData || !activeEventData || currentEventTab === 'setup' || kpParticipantId) return;
+      activeEventData = pendingLiveEventData;
+      pendingLiveEventData = null;
+      syncDraftFromActiveEvent();
+      renderActiveEventWorkspace();
+    }
+
+    // A hidden page keeps its listener for a couple of minutes (a phone locked
+    // between ends), then lets go; coming back reloads and listens again.
+    document.addEventListener('visibilitychange', () => {
+      if (document.hidden) {
+        if (!liveEventStop) return;
+        clearTimeout(liveEventPauseTimer);
+        liveEventPauseTimer = setTimeout(() => {
+          if (!document.hidden || !liveEventStop) return;
+          const id = liveEventId;
+          stopLiveEvent();
+          liveEventPausedId = id;
+        }, LIVE_PAUSE_AFTER_HIDDEN_MS);
+        return;
+      }
+      clearTimeout(liveEventPauseTimer);
+      const id = liveEventPausedId;
+      liveEventPausedId = null;
+      if (id && activeEventData && activeEventData.event && activeEventData.event.id === id) {
+        startLiveEvent(id).then(json => handleLiveEventData(id, json)).catch(err => console.error(err));
+      }
+    });
 
     async function refreshActiveEvent() {
       if (!activeEventData || !activeEventData.event) return;
@@ -4832,7 +4953,9 @@
       kpArrowsBuffer = [];
       const sheet = document.getElementById('archery-keypad-sheet');
       if (sheet) sheet.classList.add('hidden');
-      if (activeEventData && currentEventTab === 'scoring') {
+      if (pendingLiveEventData) {
+        applyPendingLiveEvent();
+      } else if (activeEventData && currentEventTab === 'scoring') {
         renderScoringSubview();
       }
     }
@@ -4922,6 +5045,16 @@
       }, 2800);
     }
 
+    // After a save: the adapter returns the updated page when the event is live;
+    // otherwise (fallbackRes) it was downloaded again.
+    function applySavedScore(saveRes, fallbackRes) {
+      const fresh = saveRes && saveRes.data ? saveRes.data : (fallbackRes && fallbackRes.success ? fallbackRes.data : null);
+      if (fresh) {
+        activeEventData = fresh;
+        pendingLiveEventData = null;
+      }
+    }
+
     async function saveKeypadAndNext(advanceToNextArcher = false) {
       if (!activeEventData || !kpParticipantId) return;
       const ev = activeEventData.event;
@@ -4964,7 +5097,7 @@
 
       try {
         if (appMode === 'private' && activePrivateHub) {
-          await submitPrivateEndScore(activePrivateHub.id, {
+          const saveRes = await submitPrivateEndScore(activePrivateHub.id, {
             eventId: ev.id,
             participantId: p.id,
             roundNumber: activeRound,
@@ -4975,12 +5108,9 @@
             tenCount,
             scoredBy: scoredBy || p.name
           });
-          const refreshRes = await getPrivateEventData(ev.id, activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia']);
-          if (refreshRes.success) {
-            activeEventData = refreshRes.data;
-          }
+          applySavedScore(saveRes, saveRes && saveRes.data ? null : await getPrivateEventData(ev.id, activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia']));
         } else {
-          await submitEndScore({
+          const saveRes = await submitEndScore({
             eventId: ev.id,
             participantId: p.id,
             roundNumber: activeRound,
@@ -4991,10 +5121,7 @@
             tenCount,
             scoredBy: scoredBy || p.name
           });
-          const refreshRes = await getEventData(ev.id);
-          if (refreshRes.success) {
-            activeEventData = refreshRes.data;
-          }
+          applySavedScore(saveRes, saveRes && saveRes.data ? null : await getEventData(ev.id));
         }
 
         if (activeGroup) {
@@ -5053,7 +5180,7 @@
         closeKeypad();
       } catch (err) {
         const msg = err && err.message ? String(err.message) : '';
-        alert(msg.startsWith('Scoring is locked') ? msg : 'Network error saving score.');
+        alert(msg.startsWith('Scoring is locked') || msg.startsWith('This device is not signed in') ? msg : 'Network error saving score.');
       } finally {
         if (saveBtn) {
           saveBtn.disabled = false;
@@ -5987,8 +6114,8 @@
         activeEventData = json.data;
         try {
           hubData = (appMode === 'private' && activePrivateHub)
-            ? await getPrivateScoringEventsHub(activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia'])
-            : await getScoringEventsHub();
+            ? await getPrivateScoringEventsHub(activePrivateHub.id, activePrivateHub.linked_archers || ['Long', 'Weijia'], { pageSize: hubInitialLoadCount() })
+            : await getScoringEventsHub({ pageSize: hubInitialLoadCount() });
         } catch (e) {}
         if (!selectedGroupId || !activeEventData.groups.some(g => g.id === selectedGroupId)) {
           selectedGroupId = activeEventData.groups[0] ? activeEventData.groups[0].id : null;
@@ -6189,12 +6316,7 @@
       }
     }
 
-    // Auto-poll every 10 seconds when viewing an event (unless user is actively typing in setup)
-    setInterval(() => {
-      if (activeEventData && currentEventTab !== 'setup' && !kpParticipantId) {
-        refreshActiveEvent();
-      }
-    }, 10000);
+    // Event pages update live (see LIVE EVENT UPDATES); there is no polling.
 
     // ========================================================================
     // ANALYTICS & PROGRESSION GRAPHS ENGINE (PRIVATE HUB)

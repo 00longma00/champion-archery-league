@@ -427,7 +427,7 @@
   </div>
 
   <script type="module">
-  import { getAppState, submitRsvp, updateAdminStatus } from './firebase-adapter.js?v=20261117';
+  import { getAppState, submitRsvp, updateAdminStatus } from './firebase-adapter.js?v=20261121';
   import { archerDirectory } from './archer-names.js';
   import { PRESET_AVATAR_IDS, isPresetAvatar, leastUsedAvatar } from './archer-avatars.js';
     // Every spelling of an archer ("Long", "Long Ma") compares equal.
@@ -1641,7 +1641,10 @@
       const catSelect = document.getElementById('archer-bow-category');
       if (catSelect) catSelect.value = getBowCategoryForArcher(initialName);
       loadState();
-      setInterval(loadState, 20000);
+      // Refresh every 20 seconds while the page is on screen; a hidden tab reads nothing
+      // and catches up as soon as it is shown again.
+      setInterval(() => { if (!document.hidden) loadState(); }, 20000);
+      document.addEventListener('visibilitychange', () => { if (!document.hidden) loadState(); });
     }
 
     window.toggleAvatarPicker = toggleAvatarPicker;
