@@ -279,9 +279,41 @@ async function docsWhereIn(collName, field, values) {
   return out;
 }
 
+// Summaries rebuilt while reading, waiting to be saved: { coll, id, summary }.
+// They are saved only after the page's reads are done (flushScoreSummaries),
+// never while its queries are still running.
+let summaryQueue = [];
+let summarySaves = Promise.resolve();
+
+// Saves the queued summaries in background batches, one per collection, so a
+// device that may not write one collection (a Private Hub it is not signed in
+// to) still saves the other. Failures only mean the summary is rebuilt next time.
+function flushScoreSummaries() {
+  const queued = summaryQueue;
+  summaryQueue = [];
+  if (queued.length === 0) return summarySaves;
+  const byColl = {};
+  queued.forEach(q => { (byColl[q.coll] = byColl[q.coll] || []).push(q); });
+  const commits = [];
+  Object.values(byColl).forEach(list => {
+    chunk(list, 400).forEach(part => {
+      const batch = writeBatch(db);
+      part.forEach(q => batch.update(doc(db, q.coll, q.id), { score_summary: q.summary }));
+      commits.push(batch.commit().catch(err => console.debug("Score summaries not saved:", err && err.code)));
+    });
+  });
+  summarySaves = Promise.all([summarySaves, ...commits]).then(() => {});
+  return summarySaves;
+}
+
+// Resolves once every summary save started so far has finished (used by tests).
+export function scoreSummariesSaved() {
+  return summarySaves;
+}
+
 // participant id -> ends. Ends come from each participant's `score_summary`; a
-// participant without one is read from its end scores once, and the summary is
-// saved (when `shouldSave(p)` says so) so the next load does not need them.
+// participant without one is read from its end scores once, and its summary is
+// queued to be saved (when `shouldSave(p)` says so) so the next load skips that.
 async function endsForParticipants(parts, scoresColl, partsColl, shouldSave = () => false) {
   const ends = {};
   const missing = [];
@@ -295,14 +327,11 @@ async function endsForParticipants(parts, scoresColl, partsColl, shouldSave = ()
   const scores = await docsWhereIn(scoresColl, "participant_id", missing.map(p => p.id));
   const byPart = {};
   scores.forEach(s => { (byPart[s.participant_id] = byPart[s.participant_id] || []).push(s); });
-  let saves = 0;
   missing.forEach(p => {
     const own = (byPart[p.id] || []).filter(s => !s.event_id || !p.event_id || s.event_id === p.event_id);
     ends[p.id] = own;
-    if (saves < 60 && shouldSave(p)) {
-      saves++;
-      updateDoc(doc(db, partsColl, p.id), { score_summary: buildScoreSummary(own) })
-        .catch(err => console.debug("Score summary not saved for", p.id, err && err.code));
+    if (shouldSave(p) && !summaryQueue.some(q => q.coll === partsColl && q.id === p.id)) {
+      summaryQueue.push({ coll: partsColl, id: p.id, summary: buildScoreSummary(own) });
     }
   });
   return ends;
@@ -345,6 +374,7 @@ function pagedEventSource({ makeQuery, fallbackQuery, enrich, batchSize = 10 }) 
 }
 
 function hubPage(pager, firstEvents, extra) {
+  flushScoreSummaries();
   return {
     success: true,
     events: firstEvents,
@@ -352,6 +382,7 @@ function hubPage(pager, firstEvents, extra) {
     // Next `count` events, and whether any remain after them.
     async loadMore(count = 10) {
       const events = await pager.next(count);
+      flushScoreSummaries();
       return { events, hasMore: pager.hasMore };
     },
     ...extra
@@ -1641,6 +1672,7 @@ export async function getPrivateAnalyticsData(hubId = "long_weijia", linkedArche
     });
   });
 
+  flushScoreSummaries();
   return buildArcherAnalytics({ events, participants, endsByParticipant, rosterBadges });
 }
 

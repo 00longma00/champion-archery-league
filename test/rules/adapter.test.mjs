@@ -49,10 +49,14 @@ async function waitFor(check, ms = 8000) {
   return false;
 }
 
+// Pages one after another, as a person tapping "Next" would. Summary saves from
+// the previous page finish first: the emulator can return wrong query results
+// while unrelated writes to the same collection are being committed.
 async function allPages(firstPage, size = 10) {
   const events = [...firstPage.events];
   let hasMore = firstPage.hasMore;
   while (hasMore) {
+    await adapter.scoreSummariesSaved();
     const res = await firstPage.loadMore(size);
     events.push(...res.events);
     hasMore = res.hasMore;
@@ -149,6 +153,7 @@ test('private hub: sessions and synced league nights merged by date, a page at a
 });
 
 test('first hub load saves score summaries; locked league nights only, open ones stay live', async () => {
+  await adapter.scoreSummariesSaved();
   const saved = await waitFor(async () => {
     const p = await adminGet('private_participants/P0_a');
     const l = await adminGet('event_participants/L7_a');
@@ -167,6 +172,7 @@ test('first hub load saves score summaries; locked league nights only, open ones
 });
 
 test('analytics: every session of the linked archer, from summaries or end scores', async () => {
+  await adapter.scoreSummariesSaved();
   const res = await adapter.getPrivateAnalyticsData(hubId, ['Alice Archer']);
   const alice = res.archers['alice archer'];
   assert.ok(alice);
