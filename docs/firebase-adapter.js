@@ -18,6 +18,7 @@ import { writeBatch, limit, startAfter, deleteField, getCountFromServer } from "
 import { deriveHubKey, generateSaltHex, sha256Hex, HUB_KEY_VERSION } from "./hub-keys.js";
 import { leagueEventLockFields, computeEventLockStatus } from "./event-lock.js";
 import { archerDirectory } from "./archer-names.js";
+import { normalizeBaleCapacities } from "./bale-capacity.js";
 import { isPresetAvatar, leastUsedAvatar, planArcherAvatars, rosterAvatarsByArcher } from "./archer-avatars.js";
 import {
   chunk,
@@ -662,6 +663,7 @@ export async function createScoringEvent({ event, participants, groups }) {
     start_time: event.start_time || '18:00',
     max_bales: Number(event.max_bales) || 6,
     bales_per_group: balesPerGroup,
+    bale_capacities: normalizeBaleCapacities(event.bale_capacities),
     rounds: Number(event.rounds) || 1,
     ends_per_round: Number(event.ends_per_round) || 10,
     arrows_per_end: Number(event.arrows_per_end) || 3,
@@ -815,14 +817,20 @@ export async function deleteScoringEvent(eventId) {
   return { success: true };
 }
 
+// Event fields a bale save changes, or null when it changes none.
+function baleEventUpdate(balesPerGroup, baleCapacities) {
+  const update = {};
+  if (balesPerGroup !== undefined) update.bales_per_group = Number(balesPerGroup) || 2;
+  if (baleCapacities !== undefined) update.bale_capacities = normalizeBaleCapacities(baleCapacities);
+  if (Object.keys(update).length === 0) return null;
+  update.updated_at = new Date().toISOString();
+  return update;
+}
+
 // 10. Scoring: Save Bale & Group Assignments
-export async function saveBaleAssignments(eventId, { participants, groups, balesPerGroup }) {
-  if (balesPerGroup !== undefined) {
-    await updateDoc(doc(db, "scoring_events", eventId), {
-      bales_per_group: Number(balesPerGroup) || 2,
-      updated_at: new Date().toISOString()
-    });
-  }
+export async function saveBaleAssignments(eventId, { participants, groups, balesPerGroup, baleCapacities }) {
+  const eventUpdate = baleEventUpdate(balesPerGroup, baleCapacities);
+  if (eventUpdate) await updateDoc(doc(db, "scoring_events", eventId), eventUpdate);
 
   const baleToGroupId = {};
   if (Array.isArray(groups)) {
@@ -1396,6 +1404,7 @@ export async function createPrivateScoringEvent(hubId = "long_weijia", { event, 
     notes: event.notes || "",
     max_bales: Number(event.max_bales) || 2,
     bales_per_group: balesPerGroup,
+    bale_capacities: normalizeBaleCapacities(event.bale_capacities),
     rounds: Number(event.rounds) || 1,
     ends_per_round: Number(event.ends_per_round) || 10,
     arrows_per_end: Number(event.arrows_per_end) || 3,
@@ -1524,14 +1533,10 @@ export async function deletePrivateScoringEvent(eventId) {
   return { success: true };
 }
 
-export async function savePrivateBaleAssignments(hubId = "long_weijia", eventId, { participants, groups, balesPerGroup }, linkedArchers = ["Long", "Weijia"]) {
+export async function savePrivateBaleAssignments(hubId = "long_weijia", eventId, { participants, groups, balesPerGroup, baleCapacities }, linkedArchers = ["Long", "Weijia"]) {
   linkedArchers = linkedArcherNames(linkedArchers);
-  if (balesPerGroup !== undefined) {
-    await updateDoc(doc(db, "private_events", eventId), {
-      bales_per_group: Number(balesPerGroup) || 2,
-      updated_at: new Date().toISOString()
-    });
-  }
+  const eventUpdate = baleEventUpdate(balesPerGroup, baleCapacities);
+  if (eventUpdate) await updateDoc(doc(db, "private_events", eventId), eventUpdate);
 
   const baleToGroupId = {};
   if (Array.isArray(groups)) {

@@ -19,6 +19,11 @@ Every archer wears one of 18 preset badges, the same one on every event. Returni
 
 `node scripts/assign-avatars.mjs` previews giving badges to existing roster entries; add `--write` to save them. It only fills in missing badges and never replaces one an archer already has.
 
+## Bale Limits
+A bale takes 2 archers at a time, and up to 4 when the AB and CD lines alternate. A bale with room for only 1 archer at a time can be marked **Max 2**: tap the **Max 4** button under the bale when creating an event, or the bale's chip under **Max Archers per Bale** in Setup. Its archers shoot as A (AB line) and C (CD line). Auto-assign fills bales within their limits, and a bale over its limit is flagged. The create form remembers which bales were marked on that device.
+
+The limits live in `bale-capacity.js` (copy it to `public/` and `docs/` after editing) and are saved on the event as `bale_capacities`, e.g. `{ "3": 2 }`.
+
 ## Quick Start (Run Locally)
 
 1. **Install dependencies:**
