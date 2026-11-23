@@ -674,6 +674,11 @@
             <!-- Populated dynamically based on archer count -->
           </div>
 
+          <!-- Per-bale archer limits (exceptions for bales that take 1 archer at a time) -->
+          <div id="setup-bale-capacity-row" class="rounded-xl bg-slate-950/90 border border-slate-800/90 p-3 space-y-2">
+            <!-- Populated by JS -->
+          </div>
+
           <!-- Editable Participant Assignment Table/Cards -->
           <div id="setup-participants-list" class="space-y-2 max-h-[420px] overflow-y-auto pr-1">
             <!-- Populated by JS -->
@@ -1031,7 +1036,7 @@
                 <i class="fa-solid fa-bullseye text-amber-400"></i>
                 <span>Available Bales &amp; Scorer Setup</span>
               </span>
-              <p class="text-[10px] text-slate-400">Set range bales and how many bales each scorer manages.</p>
+              <p class="text-[10px] text-slate-400">Set range bales, each bale's max archers, and how many bales each scorer manages.</p>
             </div>
             <div class="flex items-center gap-3">
               <div class="flex items-center gap-1.5">
@@ -1097,7 +1102,7 @@
           <div class="flex flex-wrap items-center justify-between gap-2">
             <div>
               <label class="block text-slate-300 font-semibold">Participants (<span id="modal-participant-count">0</span> Archers)</label>
-              <p id="modal-participant-subtitle" class="text-[10px] text-slate-400">Drag archers between bales or use the bale selector. Max 4 per bale.</p>
+              <p id="modal-participant-subtitle" class="text-[10px] text-slate-400">Drag archers between bales or use the bale selector. Max 4 per bale (2 on 1-at-a-time bales).</p>
             </div>
             <div class="flex items-center gap-1.5 flex-wrap">
               <button type="button" id="btn-create-auto-assign" onclick="autoDistributeCreateDraft()" class="text-[11px] font-bold text-amber-300 hover:text-amber-200 bg-amber-500/15 border border-amber-500/30 px-2.5 py-1 rounded-lg transition flex items-center gap-1">
@@ -1568,6 +1573,17 @@
     } from './firebase-adapter.js?v=20261122';
     import { archerDirectory } from './archer-names.js';
     import { isPresetAvatar } from './archer-avatars.js';
+    import {
+      normalizeBaleCapacities,
+      baleCapacity,
+      toggleBaleCapacity,
+      positionsForBale,
+      distributeToBales,
+      singleLineCapacity,
+      overCapacityBales,
+      allowedPositions,
+      SINGLE_BALE_CAPACITY
+    } from './bale-capacity.js';
     // Every spelling of an archer ("Max", "Maxwell Shepherd") compares equal.
     const sameArcher = (a, b) => archerDirectory.key(a) === archerDirectory.key(b);
     let appMode = 'league'; // 'league' | 'private'
@@ -1590,6 +1606,9 @@
     let setupParticipantsDraft = [];
     let setupGroupsDraft = [];
     let createEventParticipantsDraft = [];
+    // Bales that only take 1 archer at a time (max 2), e.g. { "3": 2 }.
+    let createBaleCapacities = loadRememberedBaleCapacities();
+    let setupBaleCapacitiesDraft = {};
     let manualSetupCatOverride = false;
     let addArcherContext = 'setup'; // 'setup' | 'create'
     let addArcherSelectedDiscipline = 'BAREBOW';
@@ -2491,7 +2510,7 @@
         if (btnRsvps) btnRsvps.classList.remove('hidden');
         if (btnAddArcherLabel) btnAddArcherLabel.textContent = '+ Archer';
         if (btnBottomAdd) btnBottomAdd.classList.remove('hidden');
-        if (participantSubtitle) participantSubtitle.textContent = 'Drag archers between bales or use the bale selector. Max 4 per bale.';
+        if (participantSubtitle) participantSubtitle.textContent = 'Drag archers between bales or use the bale selector. Max 4 per bale (2 on 1-at-a-time bales).';
         if (createSubmitBtn) createSubmitBtn.innerHTML = `<span>Create Event &amp; Save Bales</span>`;
       }
     }
@@ -3304,21 +3323,54 @@
       closeBulkRosterSelectModal();
     }
 
+    // The organizer's last bale limits, so a range's small bales stay marked.
+    function loadRememberedBaleCapacities() {
+      try {
+        return normalizeBaleCapacities(JSON.parse(localStorage.getItem('cal_bale_capacities') || '{}'));
+      } catch (e) {
+        return {};
+      }
+    }
+
+    function rememberBaleCapacities(capacities) {
+      try {
+        localStorage.setItem('cal_bale_capacities', JSON.stringify(normalizeBaleCapacities(capacities)));
+      } catch (e) {}
+    }
+
+    function baleCapacityLabel(capacity) {
+      return capacity === SINGLE_BALE_CAPACITY ? '1 at a time · max 2' : '2 at a time · max 4';
+    }
+
     function renderBaleCheckboxes(maxBales = 6, previouslyChecked = null) {
       const grid = document.getElementById('bale-checkboxes-grid');
       if (!grid) return;
       let html = '';
       for (let b = 1; b <= maxBales; b++) {
         const isChecked = previouslyChecked ? previouslyChecked.includes(b) : true;
+        const isSmall = baleCapacity(createBaleCapacities, b) === SINGLE_BALE_CAPACITY;
         html += `
-          <label class="bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border ${isChecked ? 'border-amber-500/50 bg-amber-500/10' : 'border-slate-800 bg-slate-950/60 opacity-50'} cursor-pointer transition select-none hover:border-amber-400">
-            <input type="checkbox" name="active_bale" value="${b}" ${isChecked ? 'checked' : ''} onchange="onBaleCheckboxChange(this)" class="sr-only">
-            <span class="text-xs font-black text-amber-300">Bale ${b}</span>
-            <span class="text-[9px] ${isChecked ? 'text-emerald-400' : 'text-slate-500'} font-semibold mt-0.5">${isChecked ? 'Active' : 'Off'}</span>
-          </label>
+          <div class="bale-checkbox-tile flex flex-col items-stretch rounded-xl border ${isChecked ? 'border-amber-500/50 bg-amber-500/10' : 'border-slate-800 bg-slate-950/60'} transition overflow-hidden">
+            <label class="flex flex-col items-center justify-center p-2 cursor-pointer select-none ${isChecked ? '' : 'opacity-50 hover:opacity-80'}">
+              <input type="checkbox" name="active_bale" value="${b}" ${isChecked ? 'checked' : ''} onchange="onBaleCheckboxChange(this)" class="sr-only">
+              <span class="text-xs font-black text-amber-300">Bale ${b}</span>
+              <span class="text-[9px] ${isChecked ? 'text-emerald-400' : 'text-slate-500'} font-semibold mt-0.5">${isChecked ? 'Active' : 'Off'}</span>
+            </label>
+            <button type="button" onclick="toggleCreateBaleCapacity(${b})"
+              title="${baleCapacityLabel(isSmall ? 2 : 4)}. Click to change."
+              aria-label="Bale ${b} maximum archers: ${isSmall ? 2 : 4}. Click to change."
+              class="text-[9px] font-extrabold py-1 border-t transition ${isSmall ? 'bg-sky-500/15 text-sky-300 border-sky-500/30 hover:bg-sky-500/25' : 'bg-slate-950/70 text-slate-400 border-slate-800 hover:text-amber-300'}">
+              <i class="fa-solid fa-users text-[8px] mr-0.5"></i>Max ${isSmall ? 2 : 4}
+            </button>
+          </div>
         `;
       }
       grid.innerHTML = html;
+    }
+
+    function currentCreateMaxBales() {
+      const input = document.getElementById('new-ev-max-bales');
+      return Math.min(24, Math.max(1, parseInt(input && input.value, 10) || 6));
     }
 
     function onMaxBalesCountChange(val) {
@@ -3328,32 +3380,23 @@
       renderCreateEventParticipantsList();
     }
 
-    function onBaleCheckboxChange(cb) {
-      const label = cb.closest('.bale-checkbox-label');
-      if (!label) return;
-      const statusSpan = label.querySelector('span:last-child');
-      if (cb.checked) {
-        label.className = 'bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-amber-500/50 bg-amber-500/10 cursor-pointer transition select-none hover:border-amber-400';
-        if (statusSpan) {
-          statusSpan.textContent = 'Active';
-          statusSpan.className = 'text-[9px] text-emerald-400 font-semibold mt-0.5';
-        }
-      } else {
-        label.className = 'bale-checkbox-label flex flex-col items-center justify-center p-2 rounded-xl border border-slate-800 bg-slate-950/60 opacity-50 cursor-pointer transition select-none hover:opacity-80';
-        if (statusSpan) {
-          statusSpan.textContent = 'Off';
-          statusSpan.className = 'text-[9px] text-slate-500 font-semibold mt-0.5';
-        }
-      }
+    function onBaleCheckboxChange() {
+      renderBaleCheckboxes(currentCreateMaxBales(), getSelectedCreateBalesList());
+      renderCreateEventParticipantsList();
+    }
+
+    function toggleCreateBaleCapacity(baleNum) {
+      createBaleCapacities = toggleBaleCapacity(createBaleCapacities, baleNum);
+      rememberBaleCapacities(createBaleCapacities);
+      renderBaleCheckboxes(currentCreateMaxBales(), getSelectedCreateBalesList());
       renderCreateEventParticipantsList();
     }
 
     function toggleAllBaleCheckboxes(selectAll = true) {
       document.querySelectorAll('#bale-checkboxes-grid input[name="active_bale"]').forEach(cb => {
         cb.checked = selectAll;
-        onBaleCheckboxChange(cb);
       });
-      renderCreateEventParticipantsList();
+      onBaleCheckboxChange();
     }
 
     function getSelectedCreateBalesList() {
@@ -3474,10 +3517,9 @@
         }
       }
 
-      const numBales = activeBales.length;
+      const baleForSlot = distributeToBales(archerIndices.length, activeBales, createBaleCapacities);
       archerIndices.forEach((origIdx, slotIdx) => {
-        const baleIdx = Math.floor(slotIdx / 2) % numBales;
-        createEventParticipantsDraft[origIdx].bale_number = activeBales[baleIdx];
+        createEventParticipantsDraft[origIdx].bale_number = baleForSlot[slotIdx];
       });
 
       renderCreateEventParticipantsList();
@@ -3589,10 +3631,9 @@
         }
       });
       if (needsInitialDistribution) {
-        const numBales = activeBales.length;
+        const baleForSlot = distributeToBales(createEventParticipantsDraft.length, activeBales, createBaleCapacities);
         createEventParticipantsDraft.forEach((p, idx) => {
-          const bIdx = Math.floor(idx / 2) % numBales;
-          p.bale_number = activeBales[bIdx];
+          p.bale_number = baleForSlot[idx];
         });
       }
 
@@ -3605,22 +3646,17 @@
         baleGroups[b].push({ participant: p, draftIndex: idx });
       });
 
-      // Check if any bale exceeds 4 archers
-      let hasOvercapacity = false;
-      const overcapacityBales = [];
-      Object.keys(baleGroups).forEach(bNum => {
-        if (baleGroups[bNum].length > 4) {
-          hasOvercapacity = true;
-          overcapacityBales.push(`Bale ${bNum} (${baleGroups[bNum].length}/4)`);
-        }
-      });
+      // Check if any bale exceeds its limit (4 by default, 2 on 1-at-a-time bales)
+      const overcapacityBales = overCapacityBales(createEventParticipantsDraft.map(p => p.bale_number), createBaleCapacities)
+        .map(r => `Bale ${r.bale} (${r.count}/${r.capacity})`);
+      const hasOvercapacity = overcapacityBales.length > 0;
 
       if (warningBanner) {
         if (hasOvercapacity) {
           warningBanner.classList.remove('hidden');
           const warningText = document.getElementById('create-event-capacity-warning-text');
           if (warningText) {
-            warningText.textContent = `Max capacity exceeded: ${overcapacityBales.join(', ')}. Each bale can hold a maximum of 4 archers (AB/CD).`;
+            warningText.textContent = `Max capacity exceeded: ${overcapacityBales.join(', ')}. A bale holds up to 4 archers (AB/CD), or 2 if it takes 1 archer at a time.`;
           }
         } else {
           warningBanner.classList.add('hidden');
@@ -3634,10 +3670,11 @@
 
       listEl.innerHTML = activeBales.map(bNum => {
         const archersInBale = baleGroups[bNum] || [];
-        const isOver = archersInBale.length > 4;
+        const cap = baleCapacity(createBaleCapacities, bNum);
+        const isOver = archersInBale.length > cap;
         const countBadgeColor = isOver
           ? 'bg-rose-500/20 text-rose-300 border-rose-500/40'
-          : (archersInBale.length >= 3 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40');
+          : (archersInBale.length > cap / 2 ? 'bg-amber-500/20 text-amber-300 border-amber-500/40' : 'bg-emerald-500/20 text-emerald-300 border-emerald-500/40');
 
         let archersHtml = '';
         if (archersInBale.length === 0) {
@@ -3692,10 +3729,11 @@
               <div class="flex items-center gap-2">
                 <span class="w-6 h-6 rounded-lg bg-amber-500/15 border border-amber-500/40 text-amber-400 font-black text-xs flex items-center justify-center">${bNum}</span>
                 <span class="font-extrabold text-white text-xs">Bale ${bNum}</span>
+                ${cap === SINGLE_BALE_CAPACITY ? '<span class="text-[9px] font-bold text-sky-300 bg-sky-500/15 border border-sky-500/30 px-1.5 py-0.5 rounded">1 at a time</span>' : ''}
               </div>
               <div class="flex items-center gap-2">
                 <span class="text-[10px] font-mono px-2 py-0.5 rounded-full border font-bold ${countBadgeColor}">
-                  ${archersInBale.length} / 4 Archers
+                  ${archersInBale.length} / ${cap} Archers
                 </span>
               </div>
             </div>
@@ -4225,18 +4263,13 @@
           });
         });
 
-      // Check if any bale has exceeded max 4 archers
-      let hasOvercapacity = false;
-      const overBales = [];
-      Object.keys(baleGroups).forEach(bNum => {
-        if (baleGroups[bNum].length > 4) {
-          hasOvercapacity = true;
-          overBales.push(`Bale ${bNum} (${baleGroups[bNum].length}/4)`);
-        }
-      });
+      // Check if any bale has exceeded its limit (4, or 2 on 1-at-a-time bales)
+      const overBales = overCapacityBales(
+        Object.values(baleGroups).flat().map(p => p.bale_number), createBaleCapacities
+      ).map(r => `Bale ${r.bale} (${r.count}/${r.capacity})`);
 
-      if (hasOvercapacity) {
-        alert(`Cannot create session: ${overBales.join(', ')} exceed the maximum limit of 4 archers per bale. Please reassign archers before submitting.`);
+      if (overBales.length > 0) {
+        alert(`Cannot create session: ${overBales.join(', ')} ${overBales.length === 1 ? 'is' : 'are'} over the bale's archer limit. Please reassign archers before submitting.`);
         return false;
       }
 
@@ -4255,52 +4288,11 @@
           }
         }
 
-        const count = archers.length;
-        if (count <= 2) {
-          // 1-2 archers: A and B
-          let targetA = 'Top';
-          let targetB = 'Bottom';
-          if (shouldRandomize && Math.random() > 0.5) {
-            targetA = 'Bottom';
-            targetB = 'Top';
-          }
-
-          archers.forEach((p, idx) => {
-            const isSecond = idx === 1;
-            assignedParticipants.push({
-              ...p,
-              bale_number: bNum,
-              position: isSecond ? 'B' : 'A',
-              shooting_line: 'AB',
-              lane: isSecond ? 'Right' : 'Left',
-              initial_target: isSecond ? targetB : targetA
-            });
-          });
-        } else {
-          // 3-4 archers: A, B, C, D
-          let targets = ['Top', 'Top', 'Bottom', 'Bottom'];
-          if (shouldRandomize && Math.random() > 0.5) {
-            targets = ['Bottom', 'Bottom', 'Top', 'Top'];
-          }
-          const posConfig = [
-            { position: 'A', shooting_line: 'AB', lane: 'Left', initial_target: targets[0] },
-            { position: 'B', shooting_line: 'AB', lane: 'Right', initial_target: targets[1] },
-            { position: 'C', shooting_line: 'CD', lane: 'Left', initial_target: targets[2] },
-            { position: 'D', shooting_line: 'CD', lane: 'Right', initial_target: targets[3] }
-          ];
-
-          archers.forEach((p, idx) => {
-            const cfg = posConfig[idx] || posConfig[3];
-            assignedParticipants.push({
-              ...p,
-              bale_number: bNum,
-              position: cfg.position,
-              shooting_line: cfg.shooting_line,
-              lane: cfg.lane,
-              initial_target: cfg.initial_target
-            });
-          });
-        }
+        const flip = shouldRandomize && Math.random() > 0.5;
+        const slots = positionsForBale(archers.length, baleCapacity(createBaleCapacities, bNum), flip);
+        archers.forEach((p, idx) => {
+          assignedParticipants.push({ ...p, bale_number: bNum, ...slots[idx] });
+        });
       });
 
       // Sort by bale number and position
@@ -4315,6 +4307,7 @@
         start_time: document.getElementById('new-ev-time').value || '18:00',
         max_bales: maxBaleNum,
         bales_per_group: balesPerGroup,
+        bale_capacities: normalizeBaleCapacities(createBaleCapacities),
         rounds: parseInt(document.getElementById('new-ev-rounds').value, 10) || 1,
         ends_per_round: parseInt(document.getElementById('new-ev-ends').value, 10) || 10,
         arrows_per_end: parseInt(document.getElementById('new-ev-arrows').value, 10) || 3,
@@ -5371,7 +5364,7 @@
           <div class="rounded-xl bg-slate-950/90 border border-slate-800 p-3 space-y-2">
             <div class="flex items-center justify-between border-b border-slate-800 pb-1.5">
               <span class="text-xs font-black text-amber-400 uppercase">Bale ${bNum}</span>
-              <span class="text-[10px] text-slate-400">${list.length} Archer${list.length === 1 ? '' : 's'}</span>
+              <span class="text-[10px] text-slate-400">${list.length} / ${baleCapacity(activeEventData.event.bale_capacities, bNum)} Archers${baleCapacity(activeEventData.event.bale_capacities, bNum) === SINGLE_BALE_CAPACITY ? ' · 1 at a time' : ''}</span>
             </div>
             <div class="space-y-1.5">
               ${list.map(a => `
@@ -5643,6 +5636,7 @@
     function syncDraftFromActiveEvent() {
       if (!activeEventData) return;
       const ev = activeEventData.event;
+      setupBaleCapacitiesDraft = normalizeBaleCapacities(ev.bale_capacities);
       setupParticipantsDraft = (activeEventData.participants || []).map(p => ({
         id: p.id,
         name: p.name,
@@ -5696,10 +5690,12 @@
 
       // Rule explainer banner
       const explainer = document.getElementById('bale-rule-explainer');
-      if (count <= maxBales * 2) {
+      const allSetupBales = Array.from({ length: maxBales }, (_, i) => i + 1);
+      const lineCapacity = singleLineCapacity(allSetupBales, setupBaleCapacitiesDraft);
+      if (count <= lineCapacity) {
         explainer.innerHTML = `
           <div>
-            <span class="font-extrabold text-emerald-400">Single Line Mode (${count} Archers ≤ ${maxBales * 2}):</span>
+            <span class="font-extrabold text-emerald-400">Single Line Mode (${count} Archers ≤ ${lineCapacity}):</span>
             <span class="text-slate-300 ml-1">Up to 2 archers per bale — <strong>Position A</strong> (Left, Top) &amp; <strong>Position B</strong> (Right, Bottom).</span>
           </div>
           <span class="text-[10px] font-mono bg-emerald-950 text-emerald-300 px-2 py-0.5 rounded border border-emerald-800 shrink-0">1–2 / Bale</span>
@@ -5707,12 +5703,14 @@
       } else {
         explainer.innerHTML = `
           <div>
-            <span class="font-extrabold text-amber-400">AB / CD Matrix Mode (${count} Archers &gt; ${maxBales * 2}):</span>
+            <span class="font-extrabold text-amber-400">AB / CD Matrix Mode (${count} Archers &gt; ${lineCapacity}):</span>
             <span class="text-slate-300 ml-1">3–4 archers per bale — <strong>A</strong> (Top-Left), <strong>B</strong> (Top-Right), <strong>C</strong> (Bottom-Left), <strong>D</strong> (Bottom-Right).</span>
           </div>
           <span class="text-[10px] font-mono bg-amber-950 text-amber-300 px-2 py-0.5 rounded border border-amber-800 shrink-0">AB/CD Line</span>
         `;
       }
+
+      renderSetupBaleCapacityRow(maxBales);
 
       // Render Participants Draft Rows with Bow Category Selector & Custom SVG Logo
       const pListEl = document.getElementById('setup-participants-list');
@@ -5753,10 +5751,8 @@
 
                 <select onchange="updateDraftParticipant(${idx}, 'position', this.value)"
                   class="bg-slate-900 border border-slate-700 rounded-lg px-2 py-1 text-[11px] text-amber-300 font-bold">
-                  <option value="A" ${p.position === 'A' ? 'selected' : ''}>Pos A</option>
-                  <option value="B" ${p.position === 'B' ? 'selected' : ''}>Pos B</option>
-                  <option value="C" ${p.position === 'C' ? 'selected' : ''}>Pos C</option>
-                  <option value="D" ${p.position === 'D' ? 'selected' : ''}>Pos D</option>
+                  ${allowedPositions(baleCapacity(setupBaleCapacitiesDraft, p.bale_number)).map(pos =>
+                    `<option value="${pos}" ${p.position === pos ? 'selected' : ''}>Pos ${pos}</option>`).join('')}
                 </select>
 
                 <select onchange="updateDraftParticipant(${idx}, 'lane', this.value)"
@@ -5813,6 +5809,50 @@
           `;
         }).join('');
       }
+    }
+
+    function renderSetupBaleCapacityRow(maxBales) {
+      const row = document.getElementById('setup-bale-capacity-row');
+      if (!row) return;
+      const counts = {};
+      setupParticipantsDraft.forEach(p => { const b = Number(p.bale_number) || 1; counts[b] = (counts[b] || 0) + 1; });
+      const over = overCapacityBales(setupParticipantsDraft.map(p => p.bale_number), setupBaleCapacitiesDraft);
+      let chips = '';
+      for (let b = 1; b <= maxBales; b++) {
+        const cap = baleCapacity(setupBaleCapacitiesDraft, b);
+        const isSmall = cap === SINGLE_BALE_CAPACITY;
+        const isOver = (counts[b] || 0) > cap;
+        chips += `
+          <button type="button" onclick="toggleSetupBaleCapacity(${b})"
+            title="Bale ${b}: ${baleCapacityLabel(cap)}. Click to change."
+            class="px-2.5 py-1 rounded-lg text-[11px] font-bold border transition ${isOver ? 'border-rose-500 text-rose-300 bg-rose-500/10' : (isSmall ? 'bg-sky-500/15 text-sky-300 border-sky-500/30' : 'bg-slate-900 text-slate-400 border-slate-800 hover:border-slate-700')}">
+            Bale ${b} · <span class="font-mono">${counts[b] || 0}/${cap}</span>
+          </button>
+        `;
+      }
+      row.innerHTML = `
+        <div class="flex flex-wrap items-center justify-between gap-1">
+          <span class="text-[11px] font-extrabold text-white"><i class="fa-solid fa-users text-sky-400 mr-1"></i>Max Archers per Bale</span>
+          <span class="text-[10px] text-slate-400">Default 2 at a time, max 4. Tap a bale to switch it to 1 at a time, max 2.</span>
+        </div>
+        <div class="flex flex-wrap gap-1.5">${chips}</div>
+        ${over.length > 0 ? `<p class="text-[11px] font-bold text-rose-300"><i class="fa-solid fa-triangle-exclamation mr-1"></i>Over the limit: ${over.map(r => `Bale ${r.bale} (${r.count}/${r.capacity})`).join(', ')}.</p>` : ''}
+      `;
+    }
+
+    // A 1-at-a-time bale has no B or D spot: its archers shoot A (AB line) and C (CD line).
+    function fitPositionToBale(p) {
+      const cap = baleCapacity(setupBaleCapacitiesDraft, p.bale_number);
+      if (allowedPositions(cap).includes(p.position)) return;
+      p.position = p.position === 'D' ? 'C' : 'A';
+      p.shooting_line = p.position === 'C' ? 'CD' : 'AB';
+      p.lane = 'Left';
+    }
+
+    function toggleSetupBaleCapacity(baleNum) {
+      setupBaleCapacitiesDraft = toggleBaleCapacity(setupBaleCapacitiesDraft, baleNum);
+      setupParticipantsDraft.forEach(fitPositionToBale);
+      renderSetupSubview();
     }
 
     function importYesRsvpsIntoSetup() {
@@ -5874,6 +5914,7 @@
       // If bale_number changed manually, re-sort by bale and position so they visually move to that bale
       if (field === 'bale_number') {
         p.bale_number = Number(val) || 1;
+        fitPositionToBale(p);
         const matchedGrp = setupGroupsDraft.find(g => (g.bales || []).includes(p.bale_number));
         if (matchedGrp && matchedGrp.id) {
           p.group_id = matchedGrp.id;
@@ -5884,7 +5925,8 @@
       // If position changed manually, auto-adjust lane, shooting_line, and default initial_target
       if (field === 'position') {
         const maxBales = (activeEventData && activeEventData.event && activeEventData.event.max_bales) || 6;
-        const isSingleLine = setupParticipantsDraft.length <= maxBales * 2;
+        const allBales = Array.from({ length: maxBales }, (_, i) => i + 1);
+        const isSingleLine = setupParticipantsDraft.length <= singleLineCapacity(allBales, setupBaleCapacitiesDraft);
         if (val === 'A') {
           p.shooting_line = 'AB';
           p.lane = 'Left';
@@ -5940,65 +5982,21 @@
         }
       }
 
-      const numBales = activeBales.length;
-
-      if (count <= numBales * 2) {
-        // 1-2 archers per bale across activeBales
-        // If randomized: also randomly decide whether slot 1 gets Top or Bottom
-        archerIndices.forEach((origIdx, slotIdx) => {
-          const baleIdx = Math.floor(slotIdx / 2);
-          const baleNum = activeBales[baleIdx % numBales];
-          const isSecond = (slotIdx % 2) === 1;
-
-          let targetA = 'Top';
-          let targetB = 'Bottom';
-          if (shouldRandomize && Math.random() > 0.5) {
-            targetA = 'Bottom';
-            targetB = 'Top';
-          }
-
-          const p = setupParticipantsDraft[origIdx];
-          p.bale_number = baleNum;
-          p.position = isSecond ? 'B' : 'A';
-          p.shooting_line = 'AB';
-          p.lane = isSecond ? 'Right' : 'Left';
-          p.initial_target = isSecond ? targetB : targetA;
+      // Fill bales within their limits (2 at a time / max 4, or 1 at a time / max 2)
+      const baleForSlot = distributeToBales(count, activeBales, setupBaleCapacitiesDraft);
+      const byBale = {};
+      archerIndices.forEach((origIdx, slotIdx) => {
+        const b = baleForSlot[slotIdx];
+        (byBale[b] = byBale[b] || []).push(origIdx);
+      });
+      Object.keys(byBale).forEach(bStr => {
+        const baleNum = Number(bStr);
+        const flip = shouldRandomize && Math.random() > 0.5;
+        const slots = positionsForBale(byBale[bStr].length, baleCapacity(setupBaleCapacitiesDraft, baleNum), flip);
+        byBale[bStr].forEach((origIdx, s) => {
+          Object.assign(setupParticipantsDraft[origIdx], { bale_number: baleNum, ...slots[s] });
         });
-      } else {
-        // 3-4 archers per bale (AB/CD matrix) across specified activeBales
-        const basePerBale = Math.floor(count / numBales);
-        const extraBales = count % numBales;
-
-        let slotPointer = 0;
-        for (let bIdx = 0; bIdx < numBales; bIdx++) {
-          const baleNum = activeBales[bIdx];
-          const onThisBale = Math.min(4, basePerBale + (bIdx < extraBales ? 1 : 0));
-
-          let targets = ['Top', 'Top', 'Bottom', 'Bottom'];
-          if (shouldRandomize && Math.random() > 0.5) {
-            targets = ['Bottom', 'Bottom', 'Top', 'Top'];
-          }
-
-          const posConfig = [
-            { position: 'A', shooting_line: 'AB', lane: 'Left', initial_target: targets[0] },
-            { position: 'B', shooting_line: 'AB', lane: 'Right', initial_target: targets[1] },
-            { position: 'C', shooting_line: 'CD', lane: 'Left', initial_target: targets[2] },
-            { position: 'D', shooting_line: 'CD', lane: 'Right', initial_target: targets[3] }
-          ];
-
-          for (let s = 0; s < onThisBale && slotPointer < count; s++) {
-            const origIdx = archerIndices[slotPointer];
-            const cfg = posConfig[s];
-            const p = setupParticipantsDraft[origIdx];
-            p.bale_number = baleNum;
-            p.position = cfg.position;
-            p.shooting_line = cfg.shooting_line;
-            p.lane = cfg.lane;
-            p.initial_target = cfg.initial_target;
-            slotPointer++;
-          }
-        }
-      }
+      });
 
       // Sort draft neatly by bale number then position for clean UI display
       setupParticipantsDraft.sort((a, b) => (Number(a.bale_number) - Number(b.bale_number)) || String(a.position).localeCompare(String(b.position)));
@@ -6089,6 +6087,11 @@
       try {
         const ratioSelect = document.getElementById('setup-bales-per-scorer');
         const balesPerGroup = ratioSelect ? Number(ratioSelect.value) : undefined;
+        const baleCapacities = normalizeBaleCapacities(setupBaleCapacitiesDraft);
+        const over = overCapacityBales(setupParticipantsDraft.map(p => p.bale_number), baleCapacities);
+        if (over.length > 0 && !confirm(`${over.map(r => `Bale ${r.bale} has ${r.count} archers (max ${r.capacity})`).join('\n')}\n\nSave anyway?`)) {
+          return;
+        }
         let json;
         if (appMode === 'private' && activePrivateHub) {
           if (String(activeEventData.event.id).startsWith('league:')) {
@@ -6098,13 +6101,15 @@
           json = await savePrivateBaleAssignments(activePrivateHub.id, activeEventData.event.id, {
             participants: setupParticipantsDraft,
             groups: setupGroupsDraft,
-            balesPerGroup
+            balesPerGroup,
+            baleCapacities
           }, activePrivateHub.linked_archers || ['Long', 'Weijia']);
         } else {
           json = await saveBaleAssignments(activeEventData.event.id, {
             participants: setupParticipantsDraft,
             groups: setupGroupsDraft,
-            balesPerGroup
+            balesPerGroup,
+            baleCapacities
           });
         }
         if (!json.success) {
@@ -7029,6 +7034,8 @@
       confirmBulkRosterSelect,
       onMaxBalesCountChange,
       onBaleCheckboxChange,
+      toggleCreateBaleCapacity,
+      toggleSetupBaleCapacity,
       toggleAllBaleCheckboxes,
       autoDistributeCreateDraft,
       onCreateArcherDragStart,
