@@ -9,6 +9,7 @@
   <meta property="og:description" content="Weekly Archery League Attendance, RSVP Tracker, and Live Tournament Scoring Hub">
   <script src="https://cdn.tailwindcss.com"></script>
   <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+  <script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
   <style>
     @import url('https://fonts.googleapis.com/css2?family=Plus+Jakarta+Sans:wght@400;500;600;700;800&display=swap');
     body {
@@ -193,8 +194,16 @@
           <i class="fa-solid fa-arrow-up-right-from-square text-[9px] opacity-75"></i>
         </a>
 
-        <!-- Separator for RSVP-Only Admin Action -->
+        <!-- Separator for RSVP Page Actions -->
         <span class="h-4 w-px bg-slate-800 hidden sm:inline-block mx-0.5" aria-hidden="true"></span>
+
+        <!-- QR Code for RSVP Page -->
+        <button onclick="openQrModal()"
+                class="text-xs bg-amber-500/15 hover:bg-amber-500/25 text-amber-300 px-2.5 py-1.5 rounded-lg border border-amber-500/40 font-bold transition flex items-center gap-1.5 shadow-sm"
+                title="Show QR Code for RSVP Page">
+          <i class="fa-solid fa-qrcode text-amber-400"></i>
+          <span>QR Code</span>
+        </button>
 
         <!-- RSVP Only Admin Functionality: Update Status -->
         <button onclick="openAdminModal()" 
@@ -421,6 +430,41 @@
 
         <button type="button" id="btn-save-admin-status" onclick="saveAdminStatus()" class="w-full bg-amber-500 hover:bg-amber-400 text-slate-950 font-bold py-2 rounded-xl text-xs transition flex items-center justify-center gap-1.5 disabled:opacity-60 disabled:cursor-not-allowed">
           <span>Update League Status</span>
+        </button>
+      </div>
+    </div>
+  </div>
+
+  <!-- QR Code Modal for RSVP Page -->
+  <div id="qr-modal" onclick="if(event.target.id==='qr-modal') closeQrModal()" class="fixed inset-0 bg-black/80 backdrop-blur-sm z-50 hidden flex items-start sm:items-center justify-center p-4 overflow-y-auto">
+    <div class="bg-slate-900 border border-slate-800 rounded-2xl w-full max-w-sm p-5 space-y-4 shadow-2xl text-center my-auto">
+      <div class="flex items-center justify-between border-b border-slate-800 pb-3">
+        <h3 class="text-sm font-extrabold text-white flex items-center gap-2">
+          <i class="fa-solid fa-qrcode text-amber-400"></i>
+          <span>Scan to Open RSVP</span>
+        </h3>
+        <button onclick="closeQrModal()" class="text-slate-400 hover:text-white p-1">
+          <i class="fa-solid fa-xmark"></i>
+        </button>
+      </div>
+
+      <!-- High-Contrast White Card for Instant Phone Camera Scanning -->
+      <div class="bg-white p-4 rounded-2xl inline-flex flex-col items-center justify-center mx-auto shadow-inner border border-slate-200">
+        <div id="qr-canvas-container" class="flex items-center justify-center"></div>
+      </div>
+
+      <div class="space-y-1">
+        <div id="qr-caption-title" class="text-xs font-extrabold text-amber-300">Sunday Night Archery League — RSVP</div>
+        <div id="qr-url-preview" class="text-[10px] font-mono text-slate-400 break-all bg-slate-950 px-2.5 py-1.5 rounded-lg border border-slate-800"></div>
+      </div>
+
+      <div class="grid grid-cols-2 gap-2 pt-1">
+        <button type="button" onclick="copyQrLink()" id="btn-copy-qr-link" class="bg-slate-800 hover:bg-slate-700 text-slate-200 font-bold py-2.5 rounded-xl text-xs border border-slate-700 transition flex items-center justify-center gap-1.5">
+          <i class="fa-regular fa-copy text-amber-400"></i>
+          <span>Copy Link</span>
+        </button>
+        <button type="button" onclick="closeQrModal()" class="bg-amber-500 hover:bg-amber-400 text-slate-950 font-extrabold py-2.5 rounded-xl text-xs transition">
+          Done
         </button>
       </div>
     </div>
@@ -1610,6 +1654,60 @@
 
 
 
+    // ========================================================================
+    // QR CODE GENERATOR MODAL (RSVP Page Link)
+    // ========================================================================
+    const PUBLIC_BASE_ORIGIN = 'https://00longma00.github.io/champion-archery-league';
+
+    function getPublicRsvpUrl() {
+      const origin = window.location.origin;
+      if (!origin || origin === 'null' || origin.includes('127.0.0.1') || origin.includes('localhost')) {
+        return `${PUBLIC_BASE_ORIGIN}/`;
+      }
+      const path = window.location.pathname.replace(/\/index\.html$/, '/');
+      return `${origin}${path.endsWith('/') ? path : path + '/'}`;
+    }
+
+    function openQrModal() {
+      const url = getPublicRsvpUrl();
+      document.getElementById('qr-url-preview').textContent = url;
+
+      const container = document.getElementById('qr-canvas-container');
+      container.innerHTML = '';
+      if (typeof QRCode !== 'undefined') {
+        new QRCode(container, {
+          text: url,
+          width: 210,
+          height: 210,
+          colorDark: '#0b0f17',
+          colorLight: '#ffffff',
+          correctLevel: QRCode.CorrectLevel.M
+        });
+      } else {
+        container.innerHTML = `<div class="text-xs text-slate-800 p-4">QR Library loading...</div>`;
+      }
+
+      document.getElementById('qr-modal').classList.remove('hidden');
+    }
+
+    function closeQrModal() {
+      document.getElementById('qr-modal').classList.add('hidden');
+    }
+
+    async function copyQrLink() {
+      const url = getPublicRsvpUrl();
+      const btn = document.getElementById('btn-copy-qr-link');
+      try {
+        await navigator.clipboard.writeText(url);
+        btn.innerHTML = `<i class="fa-solid fa-check text-emerald-400"></i> <span>Copied!</span>`;
+        setTimeout(() => {
+          btn.innerHTML = `<i class="fa-regular fa-copy text-amber-400"></i> <span>Copy Link</span>`;
+        }, 2000);
+      } catch (e) {
+        prompt('Copy this RSVP link:', url);
+      }
+    }
+
     function timeAgo(dateString) {
       if (!dateString) return '';
       const seconds = Math.floor((new Date() - new Date(dateString)) / 1000);
@@ -1658,6 +1756,9 @@
     window.openAdminModal = openAdminModal;
     window.closeAdminModal = closeAdminModal;
     window.saveAdminStatus = saveAdminStatus;
+    window.openQrModal = openQrModal;
+    window.closeQrModal = closeQrModal;
+    window.copyQrLink = copyQrLink;
     window.handleRsvpSubmit = handleRsvpSubmit;
 
     if (document.readyState === 'loading') {
