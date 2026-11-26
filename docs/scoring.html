@@ -1387,16 +1387,17 @@
           <div id="sc-modal-total" class="text-base font-black text-emerald-400">0</div>
         </div>
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-2">
-          <div class="text-[9px] uppercase font-bold text-slate-400">X Count</div>
-          <div id="sc-modal-xs" class="text-base font-black text-amber-300">0X</div>
-        </div>
-        <div class="bg-slate-950 border border-slate-800 rounded-xl p-2">
-          <div class="text-[9px] uppercase font-bold text-slate-400">10s / Max</div>
-          <div id="sc-modal-tens" class="text-base font-black text-sky-300">0</div>
+          <div id="sc-modal-gold-label" class="text-[9px] uppercase font-bold text-slate-400">X / 10 / 9</div>
+          <div id="sc-modal-gold-split" class="text-sm font-black font-mono text-amber-300 mt-0.5">0/0/0</div>
         </div>
         <div class="bg-slate-950 border border-slate-800 rounded-xl p-2">
           <div class="text-[9px] uppercase font-bold text-slate-400">Arrow Avg</div>
           <div id="sc-modal-avg" class="text-base font-black text-white">0.00</div>
+        </div>
+        <div class="bg-slate-950 border border-slate-800 rounded-xl p-2">
+          <div class="text-[9px] uppercase font-bold text-slate-400">Std Dev</div>
+          <div id="sc-modal-stddev" class="text-base font-black font-mono text-slate-400 leading-tight">—</div>
+          <div id="sc-modal-stddev-tier" class="text-[9px] font-bold leading-none mt-0.5 hidden"></div>
         </div>
       </div>
 
@@ -1570,7 +1571,7 @@
       checkPrivateHubDevice,
       forgetPrivateHubDevice,
       subscribeToEvent
-    } from './firebase-adapter.js?v=20261122';
+    } from './firebase-adapter.js?v=20261126';
     import { archerDirectory } from './archer-names.js';
     import { isPresetAvatar } from './archer-avatars.js';
     import {
@@ -2582,6 +2583,58 @@
       return arrows.reduce((sum, a) => sum + (fmt.values[a] || 0), 0);
     }
 
+    function getGoldSplitLabel(scoringType = 'USAA_10') {
+      return String(scoringType || '').startsWith('NFAA') ? 'X / 5 / 4' : 'X / 10 / 9';
+    }
+
+    function getStdDevTierMeta(stdDev, scoringType = 'USAA_10') {
+      if (stdDev === null || stdDev === undefined || Number.isNaN(Number(stdDev))) {
+        return { label: '', textClass: 'text-slate-400', formatted: '—', hasValue: false };
+      }
+      const val = Number(stdDev);
+      const scale = String(scoringType || '').startsWith('NFAA') ? 0.5 : 1;
+      const formatted = `±${val.toFixed(2)}`;
+      if (val <= 0.85 * scale) return { label: 'Tight', textClass: 'text-emerald-400', formatted, hasValue: true };
+      if (val <= 1.25 * scale) return { label: 'Solid', textClass: 'text-sky-400', formatted, hasValue: true };
+      if (val <= 1.80 * scale) return { label: 'Medium', textClass: 'text-amber-400', formatted, hasValue: true };
+      return { label: 'Wide', textClass: 'text-rose-400', formatted, hasValue: true };
+    }
+
+    function getParticipantGoldAndStdDev(p, scoringType = 'USAA_10') {
+      const isNfaa = String(scoringType || '').startsWith('NFAA');
+      const hasPrecomputed = p && p.pure_ten_count !== undefined && p.nine_count !== undefined && p.arrow_std_dev !== undefined;
+      if (hasPrecomputed) {
+        return {
+          xs: Number(p.x_count) || 0,
+          pureTens: Number(p.pure_ten_count) || 0,
+          nines: Number(p.nine_count) || 0,
+          stdDev: p.arrow_std_dev
+        };
+      }
+      const fmt = FORMAT_META[scoringType] || FORMAT_META.USAA_10;
+      const topKey = isNfaa ? '5' : '10';
+      const secondKey = isNfaa ? '4' : '9';
+      let xs = 0, pureTens = 0, nines = 0;
+      const values = [];
+      ((p && p.scores) || []).forEach(s => {
+        const arrows = Array.isArray(s.arrows) ? s.arrows : [];
+        arrows.forEach(a => {
+          const clean = String(a).toUpperCase();
+          if (clean === 'X') xs++;
+          else if (clean === topKey) pureTens++;
+          else if (clean === secondKey) nines++;
+          values.push(fmt.values[clean] ?? 0);
+        });
+      });
+      let stdDev = null;
+      if (values.length > 1) {
+        const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+        const variance = values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / values.length;
+        stdDev = Number(Math.sqrt(variance).toFixed(2));
+      }
+      return { xs, pureTens, nines, stdDev };
+    }
+
     // Target Face Height calculation (handles Midpoint Swap!)
     function getEffectiveTargetFace(initialTarget, endNumber, endsPerRound, swapEnabled) {
       const base = initialTarget === 'Bottom' ? 'Bottom' : 'Top';
@@ -3168,14 +3221,19 @@
 
         const summariesHtml = (appMode === 'private' && ev.participant_summaries && ev.participant_summaries.length > 0) ? `
           <div class="space-y-1.5 pt-1.5">
-            ${ev.participant_summaries.map(ps => `
+            ${ev.participant_summaries.map(ps => {
+              const sdMeta = getStdDevTierMeta(ps.std_dev, ev.scoring_type);
+              const sdPart = sdMeta.hasValue
+                ? ` • <span class="${sdMeta.textClass}" title="Session Std Dev (${sdMeta.label})">${sdMeta.formatted}</span>`
+                : '';
+              return `
               <div class="flex flex-col sm:flex-row sm:items-center gap-1 sm:gap-2.5 bg-slate-950 border border-slate-800 px-2.5 py-1.5 rounded-xl min-w-0">
                 <div class="flex items-center gap-1.5 shrink-0 flex-wrap">
                   ${renderArcherAvatarCircle(ps.name, ps.avatar_id, 'w-5 h-5')}
                   <span class="text-xs font-extrabold text-white">${escapeHtml(ps.name)}:</span>
                   ${ps.arrows > 0 ? `
                     <span class="text-xs text-emerald-400 font-black">${ps.score}</span>
-                    <span class="text-amber-300 font-mono text-[10px] font-bold">(${ps.avg}/shot • ${ps.tens}×10+)</span>
+                    <span class="text-amber-300 font-mono text-[10px] font-bold">(${ps.avg}/shot • ${ps.tens}×10+${sdPart})</span>
                   ` : `<span class="text-[10px] text-slate-400 italic">No arrows</span>`}
                 </div>
                 ${ps.archer_notes ? `
@@ -3184,7 +3242,8 @@
                   </div>
                 ` : ''}
               </div>
-            `).join('')}
+            `;
+            }).join('')}
           </div>
         ` : '';
 
@@ -5200,6 +5259,8 @@
       };
       const container = document.getElementById('leaderboard-container');
 
+      const goldLabel = getGoldSplitLabel(ev.scoring_type);
+
       if (board.length === 0) {
         container.innerHTML = `<div class="py-8 text-center text-xs text-slate-500">No participants registered yet.</div>`;
       } else if (appMode === 'private') {
@@ -5211,6 +5272,11 @@
           if (rank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-black flex items-center justify-center">🥉</span>`;
 
           const av = getAvatarForArcher(p.name, p.avatar_id);
+          const stats = getParticipantGoldAndStdDev(p, ev.scoring_type);
+          const sdMeta = getStdDevTierMeta(stats.stdDev, ev.scoring_type);
+          const sdInline = sdMeta.hasValue
+            ? ` • <span class="font-mono font-bold ${sdMeta.textClass}" title="Session Std Dev (${sdMeta.label})">${sdMeta.formatted}</span>`
+            : '';
           return `
             <div onclick="openArcherScorecard('${p.id}')" class="cursor-pointer py-3 px-3 sm:px-3.5 flex items-center justify-between gap-2 hover:bg-slate-900/70 active:bg-slate-900 transition group">
               <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -5233,7 +5299,7 @@
                     </span>
                   </div>` : ''}
                   <div class="text-[10px] text-slate-400 mt-1 leading-tight flex items-center gap-2 flex-wrap">
-                    <span>${p.ends_completed}/${ev.ends_per_round * ev.rounds} Ends • Avg ${p.avg_per_arrow} • <span class="text-amber-400/80 underline">Scorecard</span></span>
+                    <span>${p.ends_completed}/${ev.ends_per_round * ev.rounds} Ends • Avg ${p.avg_per_arrow}${sdInline} • <span class="text-amber-400/80 underline">Scorecard</span></span>
                     <button type="button" onclick="event.stopPropagation(); openArcherNoteModal('${p.id}')" class="text-[10px] font-bold text-amber-300 hover:underline">
                       <i class="fa-regular fa-pen-to-square mr-0.5"></i>${p.archer_notes ? 'Edit Note' : '+ Add Note'}
                     </button>
@@ -5248,8 +5314,8 @@
 
               <div class="flex items-center gap-2.5 sm:gap-4 text-right shrink-0">
                 <div>
-                  <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">X Count</div>
-                  <div class="text-xs font-extrabold text-amber-300">${p.x_count}X <span class="text-slate-500">(${p.ten_count}×10)</span></div>
+                  <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">${goldLabel}</div>
+                  <div class="text-xs font-extrabold font-mono text-amber-300">${stats.xs}<span class="text-slate-500 font-normal">/</span>${stats.pureTens}<span class="text-slate-500 font-normal">/</span>${stats.nines}</div>
                 </div>
                 <div class="min-w-[44px] sm:min-w-[52px]">
                   <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">Score</div>
@@ -5280,6 +5346,11 @@
                 if (catRank === 3) rankBadge = `<span class="w-7 h-7 rounded-full bg-amber-600 text-white text-xs font-black flex items-center justify-center">🥉</span>`;
 
                 const av = getAvatarForArcher(p.name, p.avatar_id);
+                const stats = getParticipantGoldAndStdDev(p, ev.scoring_type);
+                const sdMeta = getStdDevTierMeta(stats.stdDev, ev.scoring_type);
+                const sdInline = sdMeta.hasValue
+                  ? ` • <span class="font-mono font-bold ${sdMeta.textClass}" title="Session Std Dev (${sdMeta.label})">${sdMeta.formatted}</span>`
+                  : '';
                 return `
                   <div onclick="openArcherScorecard('${p.id}')" class="cursor-pointer py-3 px-3 sm:px-3.5 flex items-center justify-between gap-2 hover:bg-slate-900/70 active:bg-slate-900 transition group">
                     <div class="flex items-center gap-2 sm:gap-3 min-w-0 flex-1">
@@ -5302,15 +5373,15 @@
                           </span>
                         </div>` : ''}
                         <div class="text-[10px] text-slate-400 mt-1 leading-tight">
-                          ${p.ends_completed}/${ev.ends_per_round * ev.rounds} Ends • Avg ${p.avg_per_arrow} • <span class="text-amber-400/80 underline">Ends</span>
+                          ${p.ends_completed}/${ev.ends_per_round * ev.rounds} Ends • Avg ${p.avg_per_arrow}${sdInline} • <span class="text-amber-400/80 underline">Ends</span>
                         </div>
                       </div>
                     </div>
 
                     <div class="flex items-center gap-2.5 sm:gap-4 text-right shrink-0">
                       <div>
-                        <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">X Count</div>
-                        <div class="text-xs font-extrabold text-amber-300">${p.x_count}X <span class="text-slate-500">(${p.ten_count}×10)</span></div>
+                        <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">${goldLabel}</div>
+                        <div class="text-xs font-extrabold font-mono text-amber-300">${stats.xs}<span class="text-slate-500 font-normal">/</span>${stats.pureTens}<span class="text-slate-500 font-normal">/</span>${stats.nines}</div>
                       </div>
                       <div class="min-w-[44px] sm:min-w-[52px]">
                         <div class="text-[9px] sm:text-[10px] text-slate-400 font-bold uppercase">Score</div>
@@ -5415,10 +5486,11 @@
       if (!activeEventData || !activeEventData.leaderboard) return;
       const ev = activeEventData.event;
       const rows = [
-        ['Division', 'Division_Rank', 'Overall_Rank', 'Bale_Position', 'Name', 'Shooting_Line', 'Lane', 'Initial_Target', 'Ends_Completed', 'Arrows_Shot', 'Running_Score', 'X_Count', 'Ten_Count', 'Avg_Per_Arrow']
+        ['Division', 'Division_Rank', 'Overall_Rank', 'Bale_Position', 'Name', 'Shooting_Line', 'Lane', 'Initial_Target', 'Ends_Completed', 'Arrows_Shot', 'Running_Score', 'X_Count', 'Ten_Count', 'Nine_Count', 'Avg_Per_Arrow', 'Std_Dev']
       ];
       activeEventData.leaderboard.forEach(p => {
         const meta = getBowCategoryMeta(p.bow_category);
+        const stats = getParticipantGoldAndStdDev(p, ev.scoring_type);
         rows.push([
           meta.label,
           p.category_rank || p.rank,
@@ -5433,7 +5505,9 @@
           p.running_total,
           p.x_count,
           p.ten_count,
-          p.avg_per_arrow
+          stats.nines,
+          p.avg_per_arrow,
+          stats.stdDev !== null && stats.stdDev !== undefined ? stats.stdDev.toFixed(2) : ''
         ]);
       });
       downloadCSV(rows, `${ev.date}_${ev.name.replace(/\s+/g, '_')}_scores.csv`);
@@ -5459,10 +5533,26 @@
       document.getElementById('sc-modal-meta').innerHTML =
         `${renderBowCategoryBadge(p.bow_category, 'sm')} <span class="ml-1">${p.category_rank ? '• Division Rank #' + p.category_rank : ''}${av.species && av.species !== 'Cat Archer' && av.species !== 'Dog Archer' && av.species !== 'New Archer' ? ' • ' + av.emoji + ' ' + escapeHtml(av.species) : ''}</span>`;
 
+      const stats = getParticipantGoldAndStdDev(p, ev.scoring_type);
+      const sdMeta = getStdDevTierMeta(stats.stdDev, ev.scoring_type);
+
       document.getElementById('sc-modal-total').textContent = p.running_total;
-      document.getElementById('sc-modal-xs').textContent = `${p.x_count}X`;
-      document.getElementById('sc-modal-tens').textContent = p.ten_count;
+      document.getElementById('sc-modal-gold-label').textContent = getGoldSplitLabel(ev.scoring_type);
+      document.getElementById('sc-modal-gold-split').innerHTML =
+        `${stats.xs}<span class="text-slate-500 font-normal mx-0.5">/</span>${stats.pureTens}<span class="text-slate-500 font-normal mx-0.5">/</span>${stats.nines}`;
       document.getElementById('sc-modal-avg').textContent = p.avg_per_arrow;
+
+      const sdEl = document.getElementById('sc-modal-stddev');
+      const sdTierEl = document.getElementById('sc-modal-stddev-tier');
+      sdEl.textContent = sdMeta.formatted;
+      sdEl.className = `text-base font-black font-mono leading-tight ${sdMeta.textClass}`;
+      if (sdMeta.hasValue) {
+        sdTierEl.textContent = sdMeta.label;
+        sdTierEl.className = `text-[9px] font-bold leading-none mt-0.5 ${sdMeta.textClass}`;
+      } else {
+        sdTierEl.textContent = '';
+        sdTierEl.className = 'text-[9px] font-bold leading-none mt-0.5 hidden';
+      }
 
       const scoreMap = {};
       (p.scores || []).forEach(s => {

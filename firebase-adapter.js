@@ -402,7 +402,7 @@ async function countParticipants(eventId) {
 // A participant from the page, without what the page computed or the stored score
 // summary (which only score saves write), so a bale save cannot overwrite it.
 function participantFields(p) {
-  const { score_summary, scores, running_total, x_count, ten_count, arrows_shot, ends_completed, avg_per_arrow, designation, rank, category_rank, ...rest } = p || {};
+  const { score_summary, scores, running_total, x_count, ten_count, pure_ten_count, nine_count, arrow_std_dev, arrows_shot, ends_completed, avg_per_arrow, designation, rank, category_rank, ...rest } = p || {};
   return rest;
 }
 

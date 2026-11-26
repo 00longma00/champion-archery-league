@@ -6,6 +6,7 @@ import {
   hasScoreSummary,
   summaryEnds,
   scoreTotals,
+  computeArrowStats,
   upsertScore,
   buildLeagueEventData,
   buildPrivateSessionData,
@@ -78,6 +79,20 @@ test('scoreTotals adds up ends and counts completed ones', () => {
   assert.deepEqual(t, { score: 44, arrows: 5, xs: 1, tens: 2, completedEnds: 1 });
 });
 
+test('computeArrowStats splits pure top ring, second ring, and computes session StdDev', () => {
+  // USAA: ['X', '10', '9', '9', '9', '9'] -> values [10, 10, 9, 9, 9, 9], mean = 9.333..., stdDev = 0.47
+  const usaa = computeArrowStats([end('p1', 1, ['X', '10', '9']), end('p1', 2, ['9', '9', '9'])], 'USAA_10');
+  assert.deepEqual(usaa, { pureTens: 1, nines: 4, stdDev: 0.47 });
+
+  // NFAA 5-ring: ['X', '5', '4', '4'] -> values [5, 5, 4, 4], mean = 4.5, stdDev = 0.5
+  const nfaa = computeArrowStats([{ arrows: ['X', '5', '4', '4'] }], 'NFAA_5SPOT');
+  assert.deepEqual(nfaa, { pureTens: 1, nines: 2, stdDev: 0.5 });
+
+  // Fewer than 2 arrows -> stdDev is null
+  assert.deepEqual(computeArrowStats([{ arrows: ['10'] }], 'USAA_10'), { pureTens: 1, nines: 0, stdDev: null });
+  assert.deepEqual(computeArrowStats([], 'USAA_10'), { pureTens: 0, nines: 0, stdDev: null });
+});
+
 test('upsertScore replaces the same end and adds a new one', () => {
   const list = [end('p1', 1, ['9', '9', '9']), end('p2', 1, ['8', '8', '8'])];
   const replaced = upsertScore(list, end('p1', 1, ['X', 'X', 'X']));
@@ -120,6 +135,9 @@ test('league event page: totals, ranks, categories and default groups', () => {
   assert.equal(alice.ends_completed, 2);
   assert.equal(alice.designation, '1A');
   assert.equal(alice.avg_per_arrow, '9.33');
+  assert.equal(alice.pure_ten_count, 1);
+  assert.equal(alice.nine_count, 4);
+  assert.equal(alice.arrow_std_dev, 0.47);
   // Alice and Bob tie on 56 and on Xs; Bob has more 10s.
   assert.deepEqual(leaderboard.map(p => p.id), ['p2', 'p1', 'p3']);
   assert.equal(leaderboard_by_category.COMPOUND[0].category_rank, 1);

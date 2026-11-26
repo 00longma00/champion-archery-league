@@ -115,6 +115,9 @@ export function summaryEnds(p) {
   return hasScoreSummary(p) ? p.score_summary.ends.map(e => ({ ...e, participant_id: p.id, event_id: p.event_id })) : null;
 }
 
+const VALUE_MAP_USAA = { X: 10, "10": 10, "9": 9, "8": 8, "7": 7, "6": 6, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
+const VALUE_MAP_NFAA = { X: 5, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
+
 // Totals of a list of ends.
 export function scoreTotals(ends = [], arrowsPerEnd = 3) {
   const t = { score: 0, arrows: 0, xs: 0, tens: 0, completedEnds: 0 };
@@ -128,6 +131,35 @@ export function scoreTotals(ends = [], arrowsPerEnd = 3) {
     if (arrows.length >= (arrowsPerEnd || 3)) t.completedEnds++;
   });
   return t;
+}
+
+// Ring split (pure top ring excluding X, plus second ring) and per-session arrow standard deviation.
+export function computeArrowStats(ends = [], scoringType = "USAA_10") {
+  const isNfaa = String(scoringType || "").startsWith("NFAA");
+  const valMap = isNfaa ? VALUE_MAP_NFAA : VALUE_MAP_USAA;
+  const topKey = isNfaa ? "5" : "10";
+  const secondKey = isNfaa ? "4" : "9";
+  let pureTens = 0;
+  let nines = 0;
+  const values = [];
+
+  (ends || []).forEach(s => {
+    const arrows = parseArrows(s);
+    arrows.forEach(a => {
+      const clean = String(a).toUpperCase();
+      if (clean === topKey) pureTens++;
+      else if (clean === secondKey) nines++;
+      values.push(valMap[clean] ?? 0);
+    });
+  });
+
+  let stdDev = null;
+  if (values.length > 1) {
+    const mean = values.reduce((sum, v) => sum + v, 0) / values.length;
+    const variance = values.reduce((acc, v) => acc + Math.pow(v - mean, 2), 0) / values.length;
+    stdDev = Number(Math.sqrt(variance).toFixed(2));
+  }
+  return { pureTens, nines, stdDev };
 }
 
 // Replace (or add) one end score in a list, matched by participant, round and end.
@@ -145,8 +177,9 @@ export function upsertScore(scores = [], score) {
 // raw = { event, participants: [], scores: [], groups: [], notes: [] } (document data)
 // ---------------------------------------------------------------------------
 
-function enrichParticipant(p, pScores, arrowsPerEnd, extra = {}) {
+function enrichParticipant(p, pScores, arrowsPerEnd, extra = {}, scoringType = "USAA_10") {
   const t = scoreTotals(pScores, arrowsPerEnd);
+  const stats = computeArrowStats(pScores, scoringType);
   return {
     ...p,
     ...extra,
@@ -154,6 +187,9 @@ function enrichParticipant(p, pScores, arrowsPerEnd, extra = {}) {
     running_total: t.score,
     x_count: t.xs,
     ten_count: t.tens,
+    pure_ten_count: stats.pureTens,
+    nine_count: stats.nines,
+    arrow_std_dev: stats.stdDev,
     arrows_shot: t.arrows,
     ends_completed: t.completedEnds,
     avg_per_arrow: t.arrows > 0 ? (t.score / t.arrows).toFixed(2) : "0.00",
@@ -198,7 +234,7 @@ export function buildLeagueEventData(raw, { rosterBadges = new Map(), now = new 
   const byPart = groupScores(eventScores, participants.map(p => p.id));
 
   const enrichedParticipants = participants.map(p =>
-    enrichParticipant(p, byPart[p.id] || [], ev.arrows_per_end, { bow_category: p.bow_category || "BAREBOW" })
+    enrichParticipant(p, byPart[p.id] || [], ev.arrows_per_end, { bow_category: p.bow_category || "BAREBOW" }, ev.scoring_type)
   );
 
   const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
@@ -292,7 +328,7 @@ export function buildPrivateLeagueEventData(raw, { rosterBadges = new Map(), lin
     return enrichParticipant(p, (byPart[p.id] || []).sort(sortByRoundEnd), ev.arrows_per_end, {
       bow_category: "BAREBOW",
       archer_notes: notesMap[`${rawId}_${aKey}`] || ""
-    });
+    }, ev.scoring_type);
   });
 
   const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
@@ -335,7 +371,7 @@ export function buildPrivateSessionData(raw, { rosterBadges = new Map() } = {}) 
     enrichParticipant(p, (byPart[p.id] || []).sort(sortByRoundEnd), ev.arrows_per_end, {
       bow_category: p.bow_category || "BAREBOW",
       archer_notes: p.archer_notes || ""
-    })
+    }, ev.scoring_type)
   );
 
   const totalEndsPerArcher = (ev.rounds || 1) * (ev.ends_per_round || 10);
@@ -366,8 +402,9 @@ export function buildPrivateSessionData(raw, { rosterBadges = new Map() } = {}) 
 // endsByParticipant: participant id -> ends (from score_summary, or end scores as a fallback)
 // ---------------------------------------------------------------------------
 
-function participantSummary(p, ends, arrowsPerEnd, note) {
+function participantSummary(p, ends, arrowsPerEnd, note, scoringType = "USAA_10") {
   const t = scoreTotals(ends, arrowsPerEnd);
+  const arrowStats = computeArrowStats(ends, scoringType);
   return {
     stats: t,
     card: {
@@ -379,6 +416,9 @@ function participantSummary(p, ends, arrowsPerEnd, note) {
       avg: t.arrows > 0 ? (t.score / t.arrows).toFixed(2) : null,
       xs: t.xs,
       tens: t.tens,
+      pure_tens: arrowStats.pureTens,
+      nines: arrowStats.nines,
+      std_dev: arrowStats.stdDev,
       archer_notes: note
     }
   };
@@ -396,7 +436,7 @@ export function buildPrivateSessionCard(ev, parts = [], endsByParticipant = {}, 
   let completedEndsCount = 0;
   const participantSummaries = [];
   people.forEach(p => {
-    const { stats, card } = participantSummary(p, endsByParticipant[p.id] || [], ev.arrows_per_end, String(p.archer_notes || "").trim());
+    const { stats, card } = participantSummary(p, endsByParticipant[p.id] || [], ev.arrows_per_end, String(p.archer_notes || "").trim(), ev.scoring_type);
     completedEndsCount += stats.completedEnds;
     if (stats.arrows > 0 || card.archer_notes) participantSummaries.push(card);
   });
@@ -428,7 +468,7 @@ export function buildSyncedLeagueCard(ev, parts = [], endsByParticipant = {}, { 
     if (!canonicalName) return;
     const note = notesMap[`${ev.id}_${archerDirectory.key(canonicalName)}`] || "";
     const person = { ...p, name: canonicalName, avatar_id: badgeFrom(rosterBadges, canonicalName, p.avatar_id) };
-    const { stats, card } = participantSummary(person, endsByParticipant[p.id] || [], ev.arrows_per_end, note);
+    const { stats, card } = participantSummary(person, endsByParticipant[p.id] || [], ev.arrows_per_end, note, ev.scoring_type);
     if (stats.arrows > 0 || note) {
       activeCount++;
       completedEndsCount += stats.completedEnds;
@@ -467,9 +507,6 @@ export function buildLeagueHubCard(ev, participantCount = 0, now = new Date()) {
 // ---------------------------------------------------------------------------
 // Analytics (Private Hub progression charts)
 // ---------------------------------------------------------------------------
-
-const VALUE_MAP_USAA = { X: 10, "10": 10, "9": 9, "8": 8, "7": 7, "6": 6, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
-const VALUE_MAP_NFAA = { X: 5, "5": 5, "4": 4, "3": 3, "2": 2, "1": 1, M: 0 };
 
 // events: [{ id, date, ... }], participants: [{ id, event_id, name, ... }],
 // endsByParticipant: participant id -> ends.
