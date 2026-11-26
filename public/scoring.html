@@ -2594,9 +2594,9 @@
       const val = Number(stdDev);
       const scale = String(scoringType || '').startsWith('NFAA') ? 0.5 : 1;
       const formatted = `±${val.toFixed(2)}`;
-      if (val <= 0.85 * scale) return { label: 'Tight', textClass: 'text-emerald-400', formatted, hasValue: true };
-      if (val <= 1.25 * scale) return { label: 'Solid', textClass: 'text-sky-400', formatted, hasValue: true };
-      if (val <= 1.80 * scale) return { label: 'Medium', textClass: 'text-amber-400', formatted, hasValue: true };
+      if (val <= 1.15 * scale) return { label: 'Tight', textClass: 'text-emerald-400', formatted, hasValue: true };
+      if (val <= 1.60 * scale) return { label: 'Solid', textClass: 'text-sky-400', formatted, hasValue: true };
+      if (val <= 2.15 * scale) return { label: 'Medium', textClass: 'text-amber-400', formatted, hasValue: true };
       return { label: 'Wide', textClass: 'text-rose-400', formatted, hasValue: true };
     }
 
